@@ -7,7 +7,7 @@ services:
     tty: true
     network_mode: "host"
     volumes:
-      - /home/hardik/Research/hsr/code:/home/code
+      - /home/hardik/Research/hsr/:/home/hsr
     environment:
       - DISPLAY=$DISPLAY
       - NVIDIA_VISIBLE_DEVICES=all
