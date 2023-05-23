@@ -7,5 +7,49 @@
     <include>
       <uri>model://hsr_ground_plane</uri>
     </include>
+    <!-- BH: Human actors -->
+    <actor name="actor1">
+      <skin>
+        <filename>walk.dae</filename>
+      </skin>
+      <animation name="walking">
+        <filename>moonwalk.dae</filename>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <trajectory id="1" type="walking">
+          <waypoint>
+            <time>0</time>
+            <pose>-5 -1 0 0 0 0</pose>
+          </waypoint>
+          <waypoint>
+            <time>10</time>
+            <pose>5 -1 0 0 0 0</pose>
+          </waypoint>
+        </trajectory>
+      </script>
+    </actor>
+
+    <actor name="actor1">
+      <skin>
+        <filename>walk.dae</filename>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <trajectory id="1" type="walking">
+          <waypoint>
+            <time>0</time>
+            <pose>-5 -1 0 0 0 0</pose>
+          </waypoint>
+          <waypoint>
+            <time>10</time>
+            <pose>5 -1 0 0 0 0</pose>
+          </waypoint>
+        </trajectory>
+      </script>
+    </actor>
   </world>
 </sdf>
