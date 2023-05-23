@@ -9,7 +9,7 @@
       <skin>
         <filename>walk.dae</filename>
       </skin>
-      <animation name="walking">
+      <!--animation name="walking">
         <filename>moonwalk.dae</filename>
         <interpolate_x>true</interpolate_x>
       </animation>
@@ -24,7 +24,7 @@
             <pose>5 -1 0 0 0 0</pose>
           </waypoint>
         </trajectory>
-      </script>
+      </script-->
     </actor>
 
     <actor name="actor2">
