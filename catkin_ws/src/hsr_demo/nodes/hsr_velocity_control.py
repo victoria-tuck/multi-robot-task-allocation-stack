@@ -12,7 +12,6 @@ def wrap_angle(angle):
 
 rospy.init_node('test')
 
-
  #get robot Pose
 rospy.wait_for_service('/gazebo/get_model_state')
 get_model_srv = rospy.ServiceProxy(
@@ -48,7 +47,7 @@ while running is False:
 
 # fill ROS message
 tw = geometry_msgs.msg.Twist()
-tw.linear.x = 0.0#1.0
+tw.linear.x = 1.0
 
 # publish ROS message
 pub.publish(tw)

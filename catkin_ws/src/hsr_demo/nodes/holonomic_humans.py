@@ -33,15 +33,10 @@ class human_controller:
         
         self.vel_pub = [ rospy.Publisher("/human"+str(i+1)+"/cmd_vel", Twist, queue_size=10)  for i in range(self.num_human) ]
         self.path_pub = [ rospy.Publisher("/human"+str(i+1)+"/cmd_path", Twist, queue_size=10)  for i in range(self.num_human) ]
+        
         # self.pose_sub = [ rospy.Subscriber("/human"+str(i+1)+"/pose", PoseStamped, functools.partial(self.pose_callback, i) ) for i in range(self.num_human) ]
         self.get_model_srv = rospy.ServiceProxy(
-            '/gazebo/get_model_state', GetModelState)
-        
-    # def pose_callback(self, index, data):
-        # self.poses[0,index] = data.pose.position.x
-        # self.poses[1,index] = data.pose.position.y
-        # self.poses[2,index] = 2*np.arctan2(data.pose.orientation.z, data.pose.orientation.w)
-        
+            '/gazebo/get_model_state', GetModelState)        
         
 def wrap_angle(angle):
     return np.arctan2( np.sin(angle), np.cos(angle) ) 
@@ -77,7 +72,7 @@ def talker():
     human_speeds = (human_positions - human_position_prev)/dt
     
     
-    rospy.init_node('main', anonymous=True)
+    rospy.init_node('human_controller', anonymous=True)
     rate = rospy.Rate(sim_frequency) # 10hz
     
     # Set initial human location
