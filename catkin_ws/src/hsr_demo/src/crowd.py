@@ -38,6 +38,8 @@ class crowd:
             with open(paths_file,'rb') as f:
                 self.paths = np.load(f)
             # self.X = self.paths[0,0: self.num_people], self.paths[1,0: self.num_people] + 1.0 # 1.0
+            # print(f"paths: {self.paths[0:2,1]}, {self.paths[0:2,1+self.num_people]}, {self.paths[0:2,1+2*self.num_people]}, {self.paths[0:2,1+3*self.num_people]}")
+            # exit()
             self.X = self.paths[0:2,0: self.num_people] #+ np.array([0,1]).reshape(-1,1) # 1.0
             self.X_init = np.copy(self.X)
             self.U_init = (self.paths[0:2,self.num_people: 2*self.num_people] - self.X_init)/dt
@@ -94,6 +96,7 @@ class crowd:
     
     def reset_pose(self):
         self.X = np.copy(self.X_init)
+        self.counter = 0
         
     def render_plot(self, current_pos):# t, dt):
         # counter = int(1.001*t/self.dt)

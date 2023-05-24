@@ -252,17 +252,14 @@
       <pose>0 0 1.2138 0 0 0</pose>
       <skin>
         <filename>moonwalk.dae</filename>
-        <!-- <filename>model://DoctorFemaleWalk/meshes/DoctorFemaleWalk.dae</filename> -->
         <scale>1.0</scale>
       </skin>
       <animation name="walking">
         <filename>walk.dae</filename>
-        <!-- <filename>model://DoctorFemaleWalk/meshes/DoctorFemaleWalk.dae</filename> -->
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
-        <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
         <vel_topic>/human10/cmd_vel</vel_topic>
         <path_topic>/human10_cmd_path</path_topic>
@@ -276,7 +273,7 @@
     </actor>
 
     <!-- BH: Human actors -->
-    <actor name="actor11">
+    <!-- <actor name="human11">
       <skin>
         <filename>walk.dae</filename>
       </skin>
@@ -288,15 +285,15 @@
         <trajectory id="1" type="walking">
           <waypoint>
             <time>0</time>
-            <pose>-5 1 0 0 0 0</pose>
+            <pose>0 0 0 0 0 0</pose>
           </waypoint>
           <waypoint>
             <time>20</time>
-            <pose>5 1 0 0 0 0</pose>
+            <pose>0 0 0 0 0 0</pose>
           </waypoint>
         </trajectory>
       </script>
-    </actor>
+    </actor> -->
 
   </world>
 </sdf>

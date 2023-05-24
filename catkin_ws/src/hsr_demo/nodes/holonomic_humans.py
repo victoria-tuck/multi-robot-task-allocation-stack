@@ -22,11 +22,12 @@ import numpy as np
 
 class human_controller:    
     def __init__(self, num_human = 10):
-        print(f"hello1")
-        # rospy.wait_for_service('/gazebo/get_model_state')
+
+        rospy.wait_for_service('/gazebo/get_model_state')
+        rospy.wait_for_service('/gazebo/set_model_state')
         self.get_model_srv = rospy.ServiceProxy(
             '/gazebo/get_model_state', GetModelState)
-        print("hello2")
+
         self.num_human = num_human
         self.poses = np.zeros((3,num_human))        
         
@@ -42,7 +43,8 @@ class human_controller:
         # self.poses[2,index] = 2*np.arctan2(data.pose.orientation.z, data.pose.orientation.w)
         
         
-        
+def wrap_angle(angle):
+    return np.arctan2( np.sin(angle), np.cos(angle) ) 
         
         
 
@@ -59,7 +61,7 @@ def talker():
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
     
-    sim_frequency = 20
+    sim_frequency = 15
     dt = 1.0/sim_frequency
 
     # Load human trajectories    
@@ -72,9 +74,7 @@ def talker():
     t = 0
     human_position_prev = humans.current_position(t, dt)    
     human_positions = humans.current_position(t, dt)
-    human_current_and_next = humans.get_future_states(t,dt,2)
     human_speeds = (human_positions - human_position_prev)/dt
-    # human_future_positions = humans.get_future_states(t,dt,mpc_horizon)
     
     
     rospy.init_node('main', anonymous=True)
@@ -90,22 +90,89 @@ def talker():
     rospy.wait_for_service('/gazebo/set_model_state')
     for i in range(num_human):
         
-        # des_speed
-        # des_vel = human_current_and_next[0:2,i+num_human] - human_positions[0:2,i]
+        vel = Twist()
+        vel.linear.x = 0
+        vel.linear.y = 0.0
+        vel.linear.z = 0.0            
+        vel.angular.x = 0.0
+        vel.angular.y = 0.0 
+        vel.angular.z = 0.0        
+        human_controller_gazebo.vel_pub[i].publish(vel)
+        
+
         des_heading = np.arctan2(humans.U_init[1,i], humans.U_init[0,i])
+        # des_heading = 0.0 * np.pi / 4 
         # print(f"***********************heading:{des_heading}")
+        state_msg = ModelState()
         state_msg.model_name = 'human'+str(i+1)
         state_msg.pose.position.x = humans.X_init[0,i]
         state_msg.pose.position.y = humans.X_init[1,i]
-        state_msg.pose.orientation.z = np.sin(des_heading/2.0)
-        state_msg.pose.orientation.w = np.cos(des_heading/2.0)
+        state_msg.pose.position.z = 1.2138
+        state_msg.pose.orientation.x = 0
+        state_msg.pose.orientation.y = 0
+        state_msg.pose.orientation.z = np.sin((des_heading+np.pi/2)/2.0)
+        state_msg.pose.orientation.w = np.cos((des_heading+np.pi/2)/2.0)
+        
         try:
             set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
             resp = set_state( state_msg )
         except rospy.ServiceException as e:
             print(f"Service call failed: :{e}")
+            exit()
     
+    reset_vel = False
+    reset_pos = False
+    reset_iter = 0
     while not rospy.is_shutdown():
+
+        if ( (t > tf_human) or (reset_vel == True) or (reset_pos == True) ):
+            t = 0
+            humans.reset_pose()
+            human_position_prev = humans.current_position(t, dt)    
+            human_positions = humans.current_position(t, dt)
+            human_speeds = (human_positions - human_position_prev)/dt
+            
+            if (reset_vel==True):
+                for i in range(num_human):
+
+                    vel = Twist()
+                    vel.linear.x = 0.0
+                    vel.linear.y = 0.0
+                    vel.linear.z = 0.0            
+                    vel.angular.x = 0.0
+                    vel.angular.y = 0.0 
+                    vel.angular.z = 0.0        
+                    human_controller_gazebo.vel_pub[i].publish(vel)
+                reset_iter += 1
+                if reset_iter>2:
+                    reset_vel = False
+                    reset_iter = 0
+            elif (reset_pos==True):
+                for i in range(num_human):
+                    des_heading = np.arctan2(humans.U_init[1,i], humans.U_init[0,i])
+                    state_msg = ModelState()
+                    state_msg.model_name = 'human'+str(i+1)
+                    state_msg.pose.position.x = humans.X_init[0,i]
+                    state_msg.pose.position.y = humans.X_init[1,i]
+                    state_msg.pose.position.z = 1.2138
+                    state_msg.pose.orientation.x = 0
+                    state_msg.pose.orientation.y = 0
+                    state_msg.pose.orientation.z = np.sin((des_heading+np.pi/2)/2.0)
+                    state_msg.pose.orientation.w = np.cos((des_heading+np.pi/2)/2.0)
+                    
+                    try:
+                        set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+                        resp = set_state( state_msg )
+                    except rospy.ServiceException as e:
+                        print(f"Service call failed: :{e}")
+                        exit()
+                reset_iter += 1
+                if reset_iter>2:
+                    reset_pos = False
+                    reset_iter = 0
+
+            rate.sleep()
+            continue
 
         human_positions = humans.current_position(t, dt)
         human_speeds = (human_positions - human_position_prev)/dt
@@ -118,59 +185,48 @@ def talker():
             result = human_controller_gazebo.get_model_srv(model)
             human_poses[0,i] = result.pose.position.x
             human_poses[1,i] = result.pose.position.y
-            human_poses[2,i] = 2.0*np.arctan2(result.pose.orientation.z, result.pose.orientation.w) #- np.pi
-            if i==0:
-                print(f"pose: {human_poses[0,i]}, {human_poses[1,i]}, {human_poses[2,i]*180.0/np.pi}")
+            human_poses[2,i] = wrap_angle(2.0*np.arctan2(result.pose.orientation.z, result.pose.orientation.w) - np.pi/2)
+            # if i==0:
+            #     print(f"pose: {human_poses[0,i]}, {human_poses[1,i]}, {human_poses[2,i]*180.0/np.pi}")
+            
             # Publish pose
             # state_msg.model_name = 'human'+str(i+1)
             # state_msg.pose.position.x = human_positions[0,i]
             # state_msg.pose.position.y = human_positions[1,i]
-            # # state_msg.pose.position.x = -2.0#human_positions[0,i]
-            # # state_msg.pose.position.y = -4.0#human_positions[1,i]
+            # state_msg.pose.position.x = -2.0#human_positions[0,i]
+            # state_msg.pose.position.y = -4.0#human_positions[1,i]
             # des_heading = np.arctan2(human_speeds[1,i], human_speeds[0,i]) 
-            # # des_heading = 1*np.pi/2 + np.pi/2
-            # state_msg.pose.orientation.z = np.cos(des_heading/2.0)
-            # state_msg.pose.orientation.w = np.sin(des_heading/2.0)
+            # print(f"desired heading:{des_heading}")
+            # des_heading = 1*np.pi/2 + np.pi/2
+            # state_msg.pose.orientation.z = np.sin((des_heading+np.pi/2)/2.0)
+            # state_msg.pose.orientation.w = np.cos((des_heading+np.pi/2)/2.0)
             # try:
             #     set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
             #     resp = set_state( state_msg )
             # except rospy.ServiceException as e:
             #     print(f"Service call failed: :{e}")
-        
+    
         # Publish speed
         for i in range(num_human):
             vel = Twist()
-            vel.linear.x = human_speeds[0,i]
-            vel.linear.y = human_speeds[1,i]
+            vel.linear.x = np.linalg.norm( human_speeds[0:2,i] )
+            vel.linear.y = 0.0
             vel.linear.z = 0.0            
             des_heading = np.arctan2( human_speeds[1,i], human_speeds[0,i] )
             vel.angular.x = 0.0
             vel.angular.y = 0.0 
-            vel.angular.z = -2.0 * ( des_heading - human_poses[2,i] )
+            vel.angular.z = 2.0 * wrap_angle( human_poses[2,i] - des_heading )
             
-        #     human_controller_gazebo.vel_pub[i].publish(vel)
+            human_controller_gazebo.vel_pub[i].publish(vel)
         
         # humans.render_plot(human_positions)
         human_position_prev = np.copy(human_positions)
 
         t = t + dt
         if t > tf_human:
-            t = 0
-            humans.reset_pose()
-            for i in range(num_human):
-                state_msg.model_name = 'human'+str(i+1)
-                state_msg.pose.position.x = humans.X_init[0,i]
-                state_msg.pose.position.y = humans.X_init[1,i]
+            reset_pos = True
+            reset_vel = True
                 
-                des_heading = np.arctan2(humans.U_init[1,i], humans.U_init[0,i])
-                state_msg.pose.orientation.z = np.sin(des_heading/2.0)
-                state_msg.pose.orientation.w = np.cos(des_heading/2.0)
-                try:
-                    set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
-                    resp = set_state( state_msg )
-                except rospy.ServiceException as e:
-                    print(f"Service call failed: :{e}")
-        
         rate.sleep()
         
         
