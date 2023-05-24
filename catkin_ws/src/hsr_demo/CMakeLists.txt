@@ -55,6 +55,10 @@ catkin_install_python(PROGRAMS nodes/holonomic_humans.py
        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
+catkin_install_python(PROGRAMS nodes/hsr_velocity_control.py
+       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 #add_executable(controller_node src/controller_node.cpp)
 #add_dependencies(controller_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 

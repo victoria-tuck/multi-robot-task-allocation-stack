@@ -12,7 +12,7 @@
   <arg name="use_task" default="true" />
   <arg name="use_teleop" default="true" />
   <arg name="use_web" default="true" />
-  <arg name="use_laser_odom" default="false" />
+  <arg name="use_laser_odom" default="true" />
   <arg name="paused" default="true" />
   <arg name="fast_physics" default="false" />
   <arg name="robot_name" default="$(optenv ROBOT_NAME hsrb)" />
