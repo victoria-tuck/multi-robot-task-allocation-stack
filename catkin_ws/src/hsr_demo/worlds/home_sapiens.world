@@ -8,7 +8,7 @@
   <actor name="human1">
       <pose>0 0 1.2138 0 0 0</pose>
       <skin>
-        <filename>moonwalk.dae</filename>
+        <filename>walk.dae</filename>
         <!-- <filename>model://DoctorFemaleWalk/meshes/DoctorFemaleWalk.dae</filename> -->
         <scale>1.0</scale>
       </skin>
@@ -21,7 +21,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human1_cmd_vel</vel_topic>
+        <vel_topic>/human1/cmd_vel</vel_topic>
         <path_topic>/human1_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -48,7 +48,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human2_cmd_vel</vel_topic>
+        <vel_topic>/human2/cmd_vel</vel_topic>
         <path_topic>/human2_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -75,7 +75,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human3_cmd_vel</vel_topic>
+        <vel_topic>/human3/cmd_vel</vel_topic>
         <path_topic>/human3_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -102,7 +102,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human4_cmd_vel</vel_topic>
+        <vel_topic>/human4/cmd_vel</vel_topic>
         <path_topic>/human4_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -129,7 +129,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human5_cmd_vel</vel_topic>
+        <vel_topic>/human5/cmd_vel</vel_topic>
         <path_topic>/human5_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -156,7 +156,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human6_cmd_vel</vel_topic>
+        <vel_topic>/human6/cmd_vel</vel_topic>
         <path_topic>/human6_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -183,7 +183,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human7_cmd_vel</vel_topic>
+        <vel_topic>/human7/cmd_vel</vel_topic>
         <path_topic>/human7_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -210,7 +210,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human8_cmd_vel</vel_topic>
+        <vel_topic>/human8/cmd_vel</vel_topic>
         <path_topic>/human8_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -237,7 +237,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human9_cmd_vel</vel_topic>
+        <vel_topic>/human9/cmd_vel</vel_topic>
         <path_topic>/human9_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -264,7 +264,7 @@
       <plugin name="actor_plugin" filename="libgazebo_ros_actor_command.so">
         <!-- <follow_mode>path</follow_mode> -->
         <follow_mode>velocity</follow_mode>
-        <vel_topic>/human10_cmd_vel</vel_topic>
+        <vel_topic>/human10/cmd_vel</vel_topic>
         <path_topic>/human10_cmd_path</path_topic>
         <animation_factor>4.0</animation_factor>
         <linear_tolerance>0.1</linear_tolerance>
@@ -276,7 +276,7 @@
     </actor>
 
     <!-- BH: Human actors -->
-    <!--actor name="actor1">
+    <actor name="actor11">
       <skin>
         <filename>walk.dae</filename>
       </skin>
@@ -288,15 +288,15 @@
         <trajectory id="1" type="walking">
           <waypoint>
             <time>0</time>
-            <pose>-5 -1 0 0 0 0</pose>
+            <pose>-5 1 0 0 0 0</pose>
           </waypoint>
           <waypoint>
             <time>20</time>
-            <pose>5 -1 0 0 0 0</pose>
+            <pose>5 1 0 0 0 0</pose>
           </waypoint>
         </trajectory>
       </script>
-    </actor-->
+    </actor>
 
   </world>
 </sdf>
