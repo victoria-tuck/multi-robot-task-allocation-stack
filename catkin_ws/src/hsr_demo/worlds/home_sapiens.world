@@ -4,7 +4,9 @@
     <include>
       <uri>model://hsr_ground_plane</uri>
     </include>
-
+  <include>
+      <uri>model://hsr_wall_environment</uri>
+    </include>
   <actor name="human1">
       <pose>0 0 1.2138 0 0 0</pose>
       <skin>
