@@ -51,7 +51,7 @@ catkin_package(CATKIN_DEPENDS
 find_package(Eigen3)
 include_directories(${catkin_INCLUDE_DIRS})
 
-catkin_install_python(PROGRAMS nodes/holonomic_humans.py
+catkin_install_python(PROGRAMS nodes/holonomic_humans_pre_path.py
        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -60,6 +60,14 @@ catkin_install_python(PROGRAMS nodes/hsr_velocity_control.py
 )
 
 catkin_install_python(PROGRAMS nodes/hsr_navigate_with_humans.py
+       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+catkin_install_python(PROGRAMS nodes/humans_potential_field.py
+       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+catkin_install_python(PROGRAMS nodes/hsr_humans_straight_line.py
        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

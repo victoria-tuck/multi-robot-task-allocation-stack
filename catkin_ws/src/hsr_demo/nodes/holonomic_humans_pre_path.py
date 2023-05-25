@@ -210,7 +210,7 @@ def talker():
             des_heading = np.arctan2( human_speeds[1,i], human_speeds[0,i] )
             vel.angular.x = 0.0
             vel.angular.y = 0.0 
-            vel.angular.z = 2.0 * wrap_angle( human_poses[2,i] - des_heading )
+            vel.angular.z = - 2.0 * wrap_angle( human_poses[2,i] - des_heading )
             
             human_controller_gazebo.vel_pub[i].publish(vel)
         

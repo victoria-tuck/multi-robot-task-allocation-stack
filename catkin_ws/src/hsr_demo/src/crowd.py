@@ -18,11 +18,11 @@ class crowd:
         self.type = 'SingleIntegrator2D'        
         self.num_people = num_people
         self.X0 = 40*( np.random.rand(2,num_people) - np.array([[0.5],[0.5]]) ) + crowd_center.reshape(-1,1)
-        for i in range(num_people):
-            if self.X0[0,i] < 0:
-                self.X0[0,i] = np.clip( self.X0[0,i], -20, -5 )
-            else:
-                self.X0[0,i] = np.clip( self.X0[0,i], 5, 20 )
+        # for i in range(num_people):
+            # if self.X0[0,i] < 0:
+            #     self.X0[0,i] = np.clip( self.X0[0,i], -20, -5 )
+            # else:
+            #     self.X0[0,i] = np.clip( self.X0[0,i], 5, 20 )
         self.X = np.copy(self.X0)
         self.U = np.zeros((2,num_people))
         self.dt = dt
@@ -33,6 +33,7 @@ class crowd:
         
         # Set goals for each human
         self.goals = -np.copy(self.X0)
+        self.controls = np.zeros((2,num_people))
         
         if paths_file != []:
             with open(paths_file,'rb') as f:
@@ -143,7 +144,7 @@ class crowd:
         return sol.value(X)
     
     def attractive_potential(self, x1, x2):
-        k = 10
+        k = 20
         potential = np.linalg.norm(x1-x2)**2
         force = - 2 * (x1 - x2)
         return k * force
@@ -190,6 +191,21 @@ class crowd:
         self.distance_to_polytope.set_value( self.A, A )
         opt_sol = self.distance_to_polytope.solve()
         return self.repulsive_potential(x1, opt_sol.value(self.y).reshape(-1,1))
+    
+    def potential_field(self, X, num_people, index, goals, speed):
+        force = 0
+        # attractive potential
+        force += self.attractive_potential( X[:,index].reshape(-1,1), goals[:,index].reshape(-1,1) )
+        for i in range( num_people ):
+            if i == index:
+                continue
+            
+            # Collision avoidance with other people
+            force += self.repulsive_potential( X[:,index].reshape(-1,1), X[:,i].reshape(-1,1) )
+        if np.linalg.norm(force)>speed:
+            return force / np.linalg.norm(force) * speed
+        else:
+            return  force
     
     def plan_paths_potential_field(self, obstacles):
         t = 0
