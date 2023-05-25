@@ -161,8 +161,7 @@ def talker():
             alternate = False
                 
         rate.sleep()
-        
-        
+           
     
     
     

@@ -12,20 +12,24 @@ num_people = 10
 
 t = 0
 tf = 40.0
-dt = 0.05
+dt = 0.05##0.05
 U_ref = np.array([2.0, 0.0]).reshape(-1,1)
 control_bound = np.array([200.0, 200.0]).reshape(-1,1) # works if control input bound very large
-d_human = 0.5#0.5
-mpc_horizon = 3
-goal = np.array([-7.5, 7.5]).reshape(-1,1)
+d_human = 0.7#1.0#0.5#0.5
+mpc_horizon = 6
 
-alpha_cbf_nominal1 = 0.1#0.2 #
+
+alpha_cbf_nominal1 = 0.05#0.05#0.2 #
 alpha_cbf_nominal2 = 0.9
 h_offset = 0.07#0.07
 # higher: more conservative in Discrete time
 # lower: less conservative in Discrete time
 
-robot = bicycle(pos = np.array([2.0,-2.0,np.pi/2, 0]), dt = dt, color = 'red', alpha_nominal = alpha_cbf_nominal1*np.ones(num_people), plot_label='more conservative')#2.5,-2.5,0
+# goal = np.array([7.5, 7.5]).reshape(-1,1)
+# robot = bicycle(pos = np.array([0.0,0.0,np.pi/2, 0]), dt = dt, color = 'red', alpha_nominal = alpha_cbf_nominal1*np.ones(num_people), plot_label='more conservative')#2.5,-2.5,0
+
+goal = np.array([0.0, 10.5]).reshape(-1,1)
+robot = bicycle(pos = np.array([0.0,-1.0,np.pi/2, 0]), dt = dt, color = 'red', alpha_nominal = alpha_cbf_nominal1*np.ones(num_people), plot_label='more conservative')#2.5,-2.5,0
 
 ## BUILD MPC here #############################################################################################
 opti_mpc = cd.Opti()
@@ -65,7 +69,7 @@ for k in range(mpc_horizon+1): # +1 For loop over time horizon
         opti_mpc.subject_to( robot_inputs[:,k] >= -control_bound )
         # current state-input contribution to objective ####
         U_error = robot_inputs[:,k] - robot_input_ref 
-        objective += 10 * cd.mtimes( U_error.T, U_error )
+        objective += 100 * cd.mtimes( U_error.T, U_error )
     
     if 1:#(k > 0):
         ################ Collision avoidance with humans
@@ -78,10 +82,10 @@ for k in range(mpc_horizon+1): # +1 For loop over time horizon
         for i in range(num_people):
             dist = robot_states[0:2,k] - human_states_horizon[0:2,i]  # take horizon step into account               
             h = cd.mtimes(dist.T , dist) - d_human**2
-            if (k < mpc_horizon) : #and (k>0): 
-
+            if (k < mpc_horizon) and (k>0): 
+                # opti_mpc.subject_to( h >= 0)
                 # First order CBF condition
-                opti_mpc.subject_to( h >= alpha_human[i]**k * h_human[i] ) # CBF constraint # h_human is based on current state
+                opti_mpc.subject_to( h >= alpha_human[i]**k * h_human[i] + h_offset ) # CBF constraint # h_human is based on current state
                 # if (k>0):
                 #     opti_mpc.subject_to( h1 >= 0 )
         

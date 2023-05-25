@@ -17,13 +17,15 @@ class crowd:
         
         self.type = 'SingleIntegrator2D'        
         self.num_people = num_people
+        np.random.seed(0)
         self.X0 = 40*( np.random.rand(2,num_people) - np.array([[0.5],[0.5]]) ) + crowd_center.reshape(-1,1)
-        # for i in range(num_people):
-            # if self.X0[0,i] < 0:
-            #     self.X0[0,i] = np.clip( self.X0[0,i], -20, -5 )
-            # else:
-            #     self.X0[0,i] = np.clip( self.X0[0,i], 5, 20 )
+        for i in range(num_people):
+            if self.X0[0,i] < 0:
+                self.X0[0,i] = np.clip( self.X0[0,i], -20, -5 )
+            else:
+                self.X0[0,i] = np.clip( self.X0[0,i], 5, 20 )
         self.X = np.copy(self.X0)
+        self.Xheading = np.zeros((1,num_people))
         self.U = np.zeros((2,num_people))
         self.dt = dt
         self.horizon = horizon
@@ -66,6 +68,13 @@ class crowd:
     #     self.body.set_offsets(self.paths[:,self.plot_counter*self.num_people: (self.plot_counter+1)*self.num_people].T)
     #     self.plot_counter = self.plot_counter + 1
         
+    def get_future_states_with_input(self, dt, horizon):
+        states = np.copy(self.X)
+        for t in range(horizon):
+            next_states = states[:,-self.num_people:] + self.controls * dt
+            states = np.append(states, next_states, axis=1)
+        return states
+
     def get_future_states(self,t,dt,mpc_horizon):
         states = np.copy(self.X)
         
@@ -162,8 +171,8 @@ class crowd:
             potential = 0;
             force = 0
         
-        if (dist < min_dist):
-            print(f"Violated, dist:{dist}")
+        # if (dist < min_dist):
+        #     print(f"Violated, dist:{dist}")
             # exit()
         return k * force        
     
@@ -179,8 +188,8 @@ class crowd:
             potential = 0
             force = 0
 
-        if (dist <= 0.01):
-            print(f"Violated, dist:{dist}")
+        # if (dist <= 0.01):
+        #     print(f"Violated, dist:{dist}")
 
         return k * force        
     
