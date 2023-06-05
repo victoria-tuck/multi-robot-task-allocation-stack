@@ -16,3 +16,4 @@ RUN pip3 install notebook
 RUN pip3 install jupyterlab==3.5.3
 RUN pip3 install ipython==8.0.1
 RUN pip3 install casadi==3.6.2 polytope 
+RUN apt-get install -y python3-catkin-tools
