@@ -2,3 +2,5 @@ catkin_ws/build/*
 catkin_ws/devel/*
 catkin_ws/src/hsr_demo/src/__pycache__/*
 catkin_ws/src/hsr_demo/src/__pycache__/*
+catkin_ws/.catkin_tools/
+catkin_ws/logs/
