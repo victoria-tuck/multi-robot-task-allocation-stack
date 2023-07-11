@@ -1,7 +1,4 @@
 FROM hardikparwana/cuda116desktop:ipopt-ros1
-RUN apt install -y python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
-RUN rosdep init
-RUN rosdep update
 RUN sh -c 'echo "deb [arch=amd64] https://hsr-user:jD3k4G2e@packages.hsr.io/ros/ubuntu `lsb_release -cs` main" > /etc/apt/sources.list.d/tmc.list'
 RUN sh -c 'echo "deb [arch=amd64] https://hsr-user:jD3k4G2e@packages.hsr.io/tmc/ubuntu `lsb_release -cs` multiverse main" >> /etc/apt/sources.list.d/tmc.list'
 RUN sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
@@ -17,3 +14,6 @@ RUN pip3 install jupyterlab==3.5.3
 RUN pip3 install ipython==8.0.1
 RUN pip3 install casadi==3.6.2 polytope 
 RUN apt-get install -y python3-catkin-tools
+RUN apt install -y python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
+RUN rosdep init
+RUN rosdep update

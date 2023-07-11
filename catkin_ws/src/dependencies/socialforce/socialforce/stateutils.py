@@ -6,7 +6,7 @@ import numpy as np
 def desired_directions(state):
     """Given the current state and destination, compute desired direction."""
     destination_vectors = state[:, 4:6] - state[:, 0:2]
-    norm_factors = np.linalg.norm(destination_vectors, axis=-1)
+    norm_factors = np.maximum(np.linalg.norm(destination_vectors, axis=-1),0.01*np.ones(destination_vectors.shape[0]))
     return destination_vectors / np.expand_dims(norm_factors, -1)
 
 
