@@ -1,0 +1,27 @@
+# Mapping
+resolution: 0.05
+map_frame: "world"
+fixed_frame: "odom"
+robot_frame: "base_footprint"
+offline_octomap_path: ""
+# offline_octomap_path: "/home/sasm/pepper_nav_ws/src/pepper_pipeline/map/offline_map_2.bt"
+visualize_free_space: True
+mapping_max_range: 8
+odometry_topic: "/pepper/odom_groundtruth"
+
+rviz_timer: 1.0 # 0.0 if no visualization
+
+# pointcloud sensor frame
+point_cloud_topics: ["/pepper/camera/depth/points"]
+point_cloud_frames: ["/CameraDepth_frame"]
+
+# social agents config
+social_agents_topic: "/pedsim_simulator/simulated_agents"
+social_agent_radius: 0.4
+
+# social relevance validity checking parameters
+social_relevance_validity_checking: True
+robot_distance_view_max: 8
+robot_distance_view_min: 3
+robot_angle_view: 1.57
+robot_velocity_threshold: 0.35

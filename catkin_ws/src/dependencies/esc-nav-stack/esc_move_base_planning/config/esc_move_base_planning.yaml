@@ -1,0 +1,28 @@
+# Path planning parameters
+world_frame: world
+planner_name: RRTstar # RRT, RRTstar
+planning_bounds_x: [-50.0, 50.0] # [x_min, x_max]
+planning_bounds_y: [-50.0, 50.0] # [y_min, y_max]
+dynamic_bounds: True # the bounds of the planner will change according to the start and goal configurations
+start_state: [0.0, 0.0, 0.0] # [X, Y, Yaw]
+goal_state: [5.0, -1.0, 0.0] # [X, Y, Yaw]
+timer_period: 1.0
+solving_time: 0.9
+opport_collision_check: True
+reuse_last_best_solution: True
+optimization_objective: ExtendedSocialComfort
+motion_cost_interpolation: False
+xy_goal_tolerance: 0.25
+visualize_tree: False
+
+# Collision checking
+grid_map_service: /esc_move_base_mapping/get_grid_map
+
+robot_base_radius: 0.35
+
+control_active_topic: "/control_active_topic"
+
+odometry_topic: /pepper/odom_groundtruth
+query_goal_topic: /esc_move_base_planner/query_goal
+
+goto_action: /esc_goto_action

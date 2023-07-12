@@ -17,3 +17,4 @@ RUN apt-get install -y python3-catkin-tools
 RUN apt install -y python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
 RUN rosdep init
 RUN rosdep update
+RUN apt install libompl-dev

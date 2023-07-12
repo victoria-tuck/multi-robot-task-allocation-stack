@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <arg name="output" default="screen" />
+
+    <node name="esc_move_base_planner" pkg="esc_move_base_planning" type="esc_move_base_planner" required="true" output="screen">
+        <rosparam command="load" file="$(find esc_move_base_planning)/config/esc_move_base_planning.yaml" />
+    </node>
+
+</launch>

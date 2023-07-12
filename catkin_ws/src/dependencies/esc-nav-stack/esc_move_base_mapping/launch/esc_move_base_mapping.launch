@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <arg name="output" default="screen" />
+
+    <!-- Start octomap node -->
+    <node name="esc_move_base_mapper" pkg="esc_move_base_mapping" type="esc_move_base_mapper" required="true" output="$(arg output)">
+        <rosparam command="load" file="$(find esc_move_base_mapping)/config/esc_move_base_mapping.yaml" />
+    </node>
+
+</launch>

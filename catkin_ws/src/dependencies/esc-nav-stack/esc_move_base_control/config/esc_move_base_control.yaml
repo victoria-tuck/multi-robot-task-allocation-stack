@@ -1,0 +1,8 @@
+# Control parameters
+max_vel: 0.38
+min_vel: 0.05
+max_turn_rate: 0.7
+controller_hz: 100.0
+control_path_topic: /esc_move_base_planner/esc_move_base_solution_path
+control_output_topic: /pepper/cmd_vel
+odometry_topic: /pepper/odom_groundtruth

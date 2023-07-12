@@ -1,0 +1,8 @@
+#goal definition
+geometry_msgs/Pose2D goal
+float32 radius
+---
+#result definition
+bool success
+---
+#feedback

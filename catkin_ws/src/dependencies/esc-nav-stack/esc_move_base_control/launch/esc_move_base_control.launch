@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <arg name="output" default="screen" />
+
+    <!-- Start control node -->
+    <node name="esc_move_base_controller" pkg="esc_move_base_control" type="base_controller.py" required="true" >
+        <rosparam command="load" file="$(find esc_move_base_control)/config/esc_move_base_control.yaml" />
+    </node>
+
+</launch>

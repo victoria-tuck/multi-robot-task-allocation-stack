@@ -1,0 +1,7 @@
+#goal definition
+geometry_msgs/Pose2D goal
+---
+#result definition
+bool success
+---
+#feedback
