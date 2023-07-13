@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+    <include>
+      <uri>model://naman_wall_environment</uri>
+    </include>
+    <include>
+      <uri>model://hsr_ground_plane</uri>
+    </include>
+  </world>
+</sdf>

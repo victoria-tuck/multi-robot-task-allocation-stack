@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<sdf version="1.5">
+  <model name='naman_wall_environment'>
+	<static>true</static>
+	<link name='link'>
+		<inertial>
+			<mass>1</mass>
+			<inertia>
+			  <ixx>0.166667</ixx>
+			  <ixy>0</ixy>
+			  <ixz>0</ixz>
+			  <iyy>0.166667</iyy>
+			  <iyz>0</iyz>
+			  <izz>0.166667</izz>
+			</inertia>
+			<pose>0 0 0 0 -0 0</pose>
+	    </inertial>
+		<self_collide>0</self_collide>
+		<enable_wind>0</enable_wind>
+		<kinematic>0</kinematic>
+		<pose>0 0 0 0 -0 0</pose>
+		<gravity>1</gravity>
+		<visual name='visual'>
+			<geometry>
+				<mesh>
+				<uri>model://naman_wall_environment/meshes/env.stl</uri>
+				</mesh>
+			</geometry>
+			<material>
+				<script>
+				<name>Gazebo/Orange</name>
+				<uri>file://media/materials/scripts/gazebo.material</uri>
+				</script>
+			</material>
+			<pose>0 0 0 0 -0 0</pose>
+			<transparency>0.3</transparency>
+			<cast_shadows>1</cast_shadows>
+		</visual>
+		<collision name='collision'>
+			<geometry>
+				<mesh>
+				<uri>model://naman_wall_environment/meshes/env.dae</uri>
+				</mesh>
+			</geometry>
+			<pose>0 0 0 0 -0 0</pose>
+		</collision>
+	</link>
+  </model>
+</sdf>
