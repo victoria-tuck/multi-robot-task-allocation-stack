@@ -1,0 +1,8 @@
+# Get optimized timed elastic bands for given agents and robot plans
+
+nav_msgs/Path robot_plan
+cohan_msgs/AgentPathArray agent_path_array
+---
+bool success
+string message
+geometry_msgs/Twist cmd_vel

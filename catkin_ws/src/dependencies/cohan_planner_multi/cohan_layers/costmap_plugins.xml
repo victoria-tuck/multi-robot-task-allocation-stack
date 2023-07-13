@@ -1,0 +1,8 @@
+<library path="lib/libcohan_layers">
+  <class type="cohan_layers::StaticAgentLayer" base_class_type="costmap_2d::Layer">
+    <description>Uses agents information to add safety grid to the costmap</description>
+  </class>
+  <class type="cohan_layers::AgentVisibilityLayer" base_class_type="costmap_2d::Layer">
+    <description>Uses agents information to add visibility grid to the costmap</description>
+  </class>
+</library>

@@ -1,0 +1,7 @@
+#Set the goal and get the optimal velocity command
+
+geometry_msgs/PoseStamped robot_goal
+---
+bool success
+string message
+geometry_msgs/Twist cmd_vel

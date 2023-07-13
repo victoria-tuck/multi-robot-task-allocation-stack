@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="invisible_humans_detection" type="invisible_humans_detection_node" name="map_scanner" output="screen"/>
+  <node pkg="invisible_humans_detection" type="locate_invisible_humans_new.py" name="invisible_humans" output="screen"/>
+</launch>

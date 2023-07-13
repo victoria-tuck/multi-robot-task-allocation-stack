@@ -17,4 +17,19 @@ RUN apt-get install -y python3-catkin-tools
 RUN apt install -y python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
 RUN rosdep init
 RUN rosdep update
-RUN apt install libompl-dev
+RUN apt install -y libompl-dev
+RUN apt install -y ros-noetic-ompl ros-noetic-octomap-rviz-plugins ros-noetic-libg2o
+
+# Install g2o library
+WORKDIR /home/
+RUN mkdir dependencies
+WORKDIR /home/dependencies
+RUN git clone https://github.com/RainerKuemmerle/g2o
+WORKDIR /home/dependencies/g2o
+RUN git checkout tags/20170730_git
+RUN mkdir build
+WORKDIR /home/dependencies/g2o/build
+RUN cmake ..
+RUN make
+RUN make install
+

@@ -1,0 +1,3 @@
+https://github.com/RainerKuemmerle/g2o.git
+* (HEAD detached at 20170730_git)
+  master

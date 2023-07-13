@@ -7,8 +7,8 @@ services:
     tty: true
     network_mode: "host"
     volumes:
-      - /home/hardik/Research/hsr/:/home/hsr
-        #- /home/hardik/Desktop/Research/Toyota/hsr/:/home/hsr
+       #- /home/hardik/Research/hsr/:/home/hsr
+        - /home/hardik/Desktop/Research/Toyota/hsr/:/home/hsr
     environment:
       - NVIDIA_DISABLE_REQUIRE=1
       - DISPLAY=$DISPLAY
