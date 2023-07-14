@@ -1,0 +1,5 @@
+uint32 robot_id
+float32[] start 
+float32[] goal
+---
+WayPoint[] motion_plan

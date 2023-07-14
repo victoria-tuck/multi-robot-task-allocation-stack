@@ -66,8 +66,8 @@
     <arg name="sim" value="$(arg sim)" />
   </include>
 
-  <!-- geometry -->
-  <include file="$(find hsrb_common_launch)/launch/include/hsrb_geometry.xml"
+  <!-- geometry --> <!-- this only starts tf2 buffer. done in main file -->
+  <!-- <include file="$(find hsrb_common_launch)/launch/include/hsrb_geometry.xml"
            if="$(arg use_geometry)" >
-  </include>
+  </include> -->
 </launch>

@@ -61,6 +61,11 @@
     <arg name="personal_name" value="$(arg personal_name)" />
   </include>
 
+  <launch>
+    <node pkg="tf2_ros" type="buffer_server" name="tf2_buffer_server" />
+  </launch>
+
+
   <!-- rviz-->
   <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find hsrb_common_launch)/config/hsrb_display_full_$(arg robot_name).rviz" if="$(arg rviz)"/> -->
 

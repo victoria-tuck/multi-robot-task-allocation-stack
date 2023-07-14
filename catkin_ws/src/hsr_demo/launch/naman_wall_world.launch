@@ -12,4 +12,28 @@
     <arg name="debug" value="false"/>
   </include>
 
+  <include file="$(find hsr_demo)/launch/spawn_hsr.launch" pass_all_args="true" >
+    <arg name="personal_name" value = "hsrb1"/>
+    <arg name="x" default="0.0" />
+    <arg name="y" default="0.0" />
+    <arg name="z" default="0.0" />
+    <arg name="Y" default="0.0" />
+  </include>
+
+  <include file="$(find hsr_demo)/launch/spawn_hsr.launch" pass_all_args="true" >
+    <arg name="personal_name" value = "hsrb2"/>
+    <arg name="x" default="1.0" />
+    <arg name="y" default="0.0" />
+    <arg name="z" default="0.0" />
+    <arg name="Y" default="0.0" />
+  </include>
+
+  <include file="$(find hsr_demo)/launch/spawn_hsr.launch" pass_all_args="true" >
+    <arg name="personal_name" value = "hsrb3"/>
+    <arg name="x" default="-1.0" />
+    <arg name="y" default="0.0" />
+    <arg name="z" default="0.0" />
+    <arg name="Y" default="0.0" />
+  </include>
+
 </launch>
