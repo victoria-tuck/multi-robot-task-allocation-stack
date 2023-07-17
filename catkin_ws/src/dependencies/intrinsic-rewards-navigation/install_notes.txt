@@ -1,0 +1,15 @@
+Need to downgrade setuptools:
+
+Errro in installing gym :
+ × python setup.py egg_info did not run successfully.
+  │ exit code: 1
+  ╰─> [1 lines of output]
+      error in gym setup command: 'extras_require' must be a dictionary whose values are strings or lists of strings containing valid project/version requirement specifiers.
+      [end of output]
+
+
+Solution: pip install --upgrade pip setuptools==57.5.0
+pip install Cython cmake
+pip install wheel==0.38.4
+sudo apt install libjpeg-dev zlib1g-dev
+pip install gym==0.18.0
