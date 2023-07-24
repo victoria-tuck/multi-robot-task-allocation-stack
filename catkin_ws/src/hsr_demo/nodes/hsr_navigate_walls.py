@@ -32,6 +32,7 @@ import functools # for making copies of subscriber function
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Twist
 
+
 # gazebo specific
 from gazebo_msgs.msg import ModelState
 from gazebo_msgs.srv import GetModelState, GetModelStateRequest, SetModelState
