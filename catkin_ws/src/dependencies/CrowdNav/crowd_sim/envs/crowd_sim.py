@@ -478,7 +478,7 @@ class CrowdSim(gym.Env):
                 ob = [human.get_observable_state() for human in self.humans]
                 for i in range(len(ob)):
                     human_states = np.append( human_states, np.asarray( [ob[i].px, ob[i].py, ob[i].vx, ob[i].vx] ).reshape(-1,1) , axis=1)
-                print(f"hello: {len(ob)}, human_states: {human_states[:,1:]}")
+                # print(f"hello: {len(ob)}, human_states: {human_states[:,1:]}")
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
         else:
@@ -487,7 +487,13 @@ class CrowdSim(gym.Env):
             elif self.robot.sensor == 'RGB':
                 raise NotImplementedError
 
-        return ob, reward, done, info, human_states[1:]
+        return ob, reward, done, info, human_states[0:2,1:], human_states[2:4,1:]
+    
+    def get_human_states(self):
+        ob = [human.get_observable_state() for human in self.humans]
+        for i in range(len(ob)):
+            human_states = np.append( human_states, np.asarray( [ob[i].px, ob[i].py, ob[i].vx, ob[i].vx] ).reshape(-1,1) , axis=1)
+        return human_states[0:2,1:], human_states[2:4,1:]
 
     def step(self, action, update=True):
         """
