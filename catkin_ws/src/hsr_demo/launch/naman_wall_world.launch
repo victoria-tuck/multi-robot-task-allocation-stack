@@ -3,7 +3,8 @@
 
   <!-- We resume the logic in empty_world.launch, changing only the name of the world to be launched -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-	  <arg name="world_name" value="$(find hsr_demo)/worlds/naman_wall_environment.world"/> <!-- Note: the world_name is with respect to GAZEBO_RESOURCE_PATH environmental variable -->
+	  <!-- <arg name="world_name" value="$(find hsr_demo)/worlds/naman_wall_environment.world"/>  Note: the world_name is with respect to GAZEBO_RESOURCE_PATH environmental variable -->
+    <arg name="world_name" value="$(find hsr_demo)/worlds/hsr_corridor_environment.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
@@ -20,7 +21,7 @@
     <arg name="Y" default="0.0" />
   </include>
 
-  <include file="$(find hsr_demo)/launch/spawn_hsr.launch" pass_all_args="true" >
+  <!-- <include file="$(find hsr_demo)/launch/spawn_hsr.launch" pass_all_args="true" >
     <arg name="personal_name" value = "hsrb2"/>
     <arg name="x" default="1.0" />
     <arg name="y" default="0.0" />
@@ -34,6 +35,6 @@
     <arg name="y" default="0.0" />
     <arg name="z" default="0.0" />
     <arg name="Y" default="0.0" />
-  </include>
+  </include> -->
 
 </launch>

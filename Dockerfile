@@ -7,6 +7,7 @@ RUN wget https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc -O - | a
 RUN wget https://packages.osrfoundation.org/gazebo.key -O - | apt-key add -
 RUN sh -c 'mkdir -p /etc/apt/auth.conf.d'
 RUN sh -c '/bin/echo -e "machine packages.hsr.io\nlogin hsr-user\npassword jD3k4G2e" >/etc/apt/auth.conf.d/auth.conf'
+RUN sh -c '/bin/echo -e "Package: ros-noetic-laser-ortho-projector\nPin: version 0.3.3*\nPin-Priority: 1001\n\nPackage: ros-noetic-laser-scan-matcher\nPin: version 0.3.3*\nPin-Priority: 1001\n\nPackage: ros-noetic-laser-scan-sparsifier\nPin: version 0.3.3*\nPin-Priority: 1001\n\nPackage: ros-noetic-laser-scan-splitter\nPin: version 0.3.3*\nPin-Priority: 1001\n\nPackage: ros-noetic-ncd-parser\nPin: version 0.3.3*\nPin-Priority: 1001\n\nPackage: ros-noetic-polar-scan-matcher\nPin: version 0.3.3*\nPin-Priority: 1001\n\nPackage: ros-noetic-scan-to-cloud-converter\nPin: version 0.3.3*\nPin-Priority: 1001\n\nPackage: ros-noetic-scan-tools\nPin: version 0.3.3*\nPin-Priority: 1001" > /etc/apt/preferences'
 RUN apt-get update
 RUN apt-get install -y ros-noetic-tmc-desktop-full
 RUN pip3 install notebook
@@ -32,6 +33,8 @@ WORKDIR /home/dependencies/g2o/build
 RUN cmake ..
 RUN make
 RUN make install
+
+RUN apt install -y ros-noetic-pcl-ros ros-noetic-moveit ros-noetic-robot-controllers ros-noetic-calibration-msgs
 
 # Python3.9 for CrowdNav
 #RUN add-apt-repository ppa:deadsnakes/ppa
