@@ -34,8 +34,10 @@ RUN cmake ..
 RUN make
 RUN make install
 
-RUN apt install -y ros-noetic-pcl-ros ros-noetic-moveit ros-noetic-robot-controllers ros-noetic-calibration-msgs
+RUN apt install -y ros-noetic-pcl-ros ros-noetic-moveit ros-noetic-robot-controllers ros-noetic-calibration-msgs ros-noetic-simple-grasping
 
+RUN echo "source /home/hsr/catkin_ws/devel/setup.bash" >> ~/.bashrc
+RUN apt-get install ros-noetic-teleop-twist-keyboard
 # Python3.9 for CrowdNav
 #RUN add-apt-repository ppa:deadsnakes/ppa
 #RUN apt-get install -y python3.9 python3.9-dev python3.9-distutils

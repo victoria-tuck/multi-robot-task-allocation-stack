@@ -4,11 +4,11 @@
     <!-- <include>
       <uri>model://hsr_corridor_environment</uri>
     </include> -->
-    <<include>
+    <include>
       <uri>model://hsr_ground_plane</uri>
     </include>
     <!-- BH: Human actors -->
-    <!--<actor name="actor1">
+    <actor name="actor1">
       <skin>
         <filename>walk.dae</filename>
       </skin>
@@ -50,6 +50,6 @@
           </waypoint>
         </trajectory>
       </script>
-    </actor> -->
+    </actor>
   </world>
 </sdf>
