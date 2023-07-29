@@ -5,3 +5,7 @@ catkin_ws/src/hsr_demo/src/__pycache__/*
 catkin_ws/.catkin_tools/
 catkin_ws/logs/
 catkin_ws/log/*
+colcon_ws/build/*
+colcon_ws/install/*
+colcon_ws/log/*
+colcon_ws/ompl-1.6.0/*
