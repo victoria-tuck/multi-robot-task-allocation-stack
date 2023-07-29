@@ -1,6 +1,0 @@
-# Start approach behavior
-
-uint64 agent_id
----
-bool success
-string message

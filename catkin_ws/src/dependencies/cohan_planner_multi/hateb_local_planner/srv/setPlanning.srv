@@ -1,6 +1,0 @@
-# Planning mode
-
-uint8 mode
----
-bool success
-string message

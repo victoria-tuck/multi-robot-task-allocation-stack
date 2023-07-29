@@ -1,5 +1,11 @@
 FROM hardikparwana/cuda118desktop:ros-humble-rmf
-RUN apt-get install -y ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-turtlebot3-gazebo
+RUN apt-get upgrade
+RUN wget https://ompl.kavrakilab.org/install-ompl-ubuntu.sh
+RUN chmod +x install-ompl-ubuntu.sh
+RUN ./install-ompl-ubuntu.sh
+RUN apt install ros-humble-test-msgs ros-humble-hardware-interface ros-humble-ros2-control ros-humble-realtime-tools ros-humble-behaviortree-cpp-v3 graphicsmagick ros-humble-diagnostic-updater libgraphicsmagick++1-dev xtensor-dev ros-humble-gazebo-ros-pkgs
+#ros-humble-control-msgs ros-humble-bondcpp
+#RUN apt-get install -y ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-turtlebot3-gazebo
 
 
 

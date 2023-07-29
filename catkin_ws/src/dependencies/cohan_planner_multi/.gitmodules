@@ -1,6 +1,0 @@
-[submodule "base_nav"]
-	path = base_nav
-	url = https://github.com/sphanit/base_nav.git
-[submodule "invisible_humans_detection/tests/mazegenerator"]
-	path = invisible_humans_detection/tests/mazegenerator
-	url = https://github.com/razimantv/mazegenerator
