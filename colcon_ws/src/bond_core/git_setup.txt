@@ -1,0 +1,3 @@
+https://github.com/ros/bond_core.git
+  kinetic-devel
+* ros2

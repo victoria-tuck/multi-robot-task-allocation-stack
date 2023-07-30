@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <name>pedsim_srvs</name>
+  <version>0.0.1</version>
+  <description>The pedsim_srvs package</description>
+
+  <maintainer email="okal@cs.uni-freiburg.de">batman</maintainer>
+
+  <license>BSD</license>
+
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>pedsim_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <build_depend>rosidl_default_generators</build_depend>
+
+
+ 
+</package>

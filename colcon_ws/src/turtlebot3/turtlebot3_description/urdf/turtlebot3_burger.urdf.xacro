@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!-- TurtleBot3 Burger -->
+<robot name="turtlebot3" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="prefix" default="" />
+  <xacro:arg name="use_sim" default="false" />
+
+  <xacro:arg name="use_fake_hardware" default="false" />
+  <xacro:arg name="fake_sensor_commands" default="false" />
+
+  <!-- Import materials macro -->
+  <xacro:include filename="$(find turtlebot3_description)/gazebo/materials.xacro" />
+
+  <!-- Include TurtleBot3 Waffle Pi urdf macro -->
+  <xacro:include filename="$(find turtlebot3_description)/urdf/burger.urdf.xacro" />
+
+  <!-- Include TurtleBot3 Waffle Pi gazebo macro -->
+  <xacro:include filename="$(find turtlebot3_description)/gazebo/burger.gazebo.xacro" />
+
+  <!-- Include TurtleBot3 ros2 control macro -->
+  <xacro:include filename="$(find turtlebot3_description)/ros2_control/turtlebot3_system.ros2_control.xacro" />
+
+  <xacro:burger prefix="$(arg prefix)" />
+  <xacro:burger_gazebo prefix="$(arg prefix)" />
+
+  <xacro:turtlebot3_system
+    name="TurtleBot3" prefix="$(arg prefix)" use_sim="$(arg use_sim)"
+    use_fake_hardware="$(arg use_fake_hardware)"
+    fake_sensor_commands="$(arg fake_sensor_commands)"/>
+
+  <gazebo>
+    <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+      <parameters>$(find turtlebot3_bringup)/config/burger/gazebo_controller_manager.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+</robot>

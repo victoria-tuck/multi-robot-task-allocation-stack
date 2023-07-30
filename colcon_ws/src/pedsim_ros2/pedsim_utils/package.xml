@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>pedsim_utils</name>
+  <version>0.1.0</version>
+  <description>
+    Common utilities used in the pedestrian simulator collection of packages
+  </description>
+
+  <maintainer email="okal@cs.uni-freiburg.de">Billy Okal</maintainer>
+  <author email="okal@cs.uni-freiburg.de">Billy Okal</author>
+
+  <license>BSD</license>
+
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>cmake_modules</depend>
+  <depend>geometry_msgs</depend>
+  <depend>pedsim_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>eigen</depend>
+
+</package>

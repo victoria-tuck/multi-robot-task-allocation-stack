@@ -1,0 +1,3 @@
+https://github.com/ros-controls/control_msgs.git
+* humble
+  master
