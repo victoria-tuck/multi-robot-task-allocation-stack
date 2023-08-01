@@ -1,3 +1,0 @@
-https://github.com/ros-planning/navigation2.git
-* humble
-  main
