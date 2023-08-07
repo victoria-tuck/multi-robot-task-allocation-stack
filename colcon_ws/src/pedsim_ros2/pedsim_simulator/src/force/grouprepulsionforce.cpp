@@ -32,6 +32,7 @@
 #include <pedsim_simulator/config.h>
 #include <pedsim_simulator/element/agent.h>
 #include <pedsim_simulator/force/grouprepulsionforce.h>
+#include <iostream>
 
 GroupRepulsionForce::GroupRepulsionForce(Agent* agentIn) : Force(agentIn) {
   // initialize values

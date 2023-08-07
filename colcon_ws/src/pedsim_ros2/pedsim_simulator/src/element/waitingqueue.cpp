@@ -34,6 +34,7 @@
 #include <pedsim_simulator/element/waitingqueue.h>
 #include <pedsim_simulator/rng.h>
 #include <pedsim_simulator/scene.h>
+#include <iostream>
 
 WaitingQueue::WaitingQueue(const QString& nameIn, Ped::Tvector positionIn,
                            Ped::Tangle directionIn)

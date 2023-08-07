@@ -33,6 +33,7 @@
 #include <pedsim_simulator/element/areawaypoint.h>
 #include <pedsim_simulator/element/waitingqueue.h>
 #include <pedsim_simulator/waypointplanner/individualwaypointplanner.h>
+#include <iostream>
 
 IndividualWaypointPlanner::IndividualWaypointPlanner() {
   // initialize values

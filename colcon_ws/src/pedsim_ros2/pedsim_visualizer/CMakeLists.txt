@@ -1,41 +1,42 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(pedsim_visualizer)
 add_definitions(-Wall -Wunused -std=c++11 -pipe -Wunused -Wextra)
 
-set(PACKAGE_DEPS
-  geometry_msgs
-  pedsim_msgs
-  pedsim_utils
-  roscpp
-  rospy
-  std_msgs
-  visualization_msgs
-  dynamic_reconfigure
-)
-find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPS})
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+add_compile_options(-Wall -Wunused)
+find_package(ament_cmake REQUIRED)
+
+find_package(ament_cmake)
+find_package(geometry_msgs)
+find_package(pedsim_msgs)
+find_package(pedsim_utils)
+find_package(rclcpp)
+find_package(rclpy)
+find_package(std_msgs)
+find_package(visualization_msgs)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
 ################################################
 
-generate_dynamic_reconfigure_options(
-  config/PedsimVisualizer.cfg
-)
+# generate_dynamic_reconfigure_options(
+#   config/PedsimVisualizer.cfg
+# )
 
 ###################################
 ## catkin specific configuration ##
 ###################################
-catkin_package(
-  CATKIN_DEPENDS ${PACKAGE_DEPS}
-  INCLUDE_DIRS include
-)
+# catkin_package(
+#   CATKIN_DEPENDS ${PACKAGE_DEPS}
+#   INCLUDE_DIRS include
+# )
 
 ###########
 ## Build ##
 ###########
 include_directories(include)
-include_directories(${catkin_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
 
 set(EXECUTABLE_NAME ${PROJECT_NAME}_node)
 add_executable(${EXECUTABLE_NAME}
@@ -43,32 +44,25 @@ add_executable(${EXECUTABLE_NAME}
   src/sim_visualizer.cpp
 )
 
-add_dependencies(${EXECUTABLE_NAME} ${catkin_EXPORTED_TARGETS})
-add_dependencies(${EXECUTABLE_NAME} ${PROJECT_NAME}_gencfg)
+ament_target_dependencies(${EXECUTABLE_NAME} geometry_msgs pedsim_msgs pedsim_utils rclcpp std_msgs visualization_msgs)
 
-target_link_libraries(${EXECUTABLE_NAME}
-  ${catkin_LIBRARIES}
-)
+target_link_libraries(${EXECUTABLE_NAME} pedsim_utils::pedsim_utils)
 
 #############
 ## Install ##
 #############
 
+install(
+  DIRECTORY include/pedsim_visualizer
+  DESTINATION include
+)
+
 ## Mark executables and/or libraries for installation
 install(TARGETS ${EXECUTABLE_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-)
-
-
+ament_package()
 #############
 ## Testing ##
 #############

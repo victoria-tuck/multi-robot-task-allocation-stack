@@ -1,71 +1,55 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(pedsim_sensors)
 add_definitions(-Wall -Wunused -std=c++11 -pipe -Wunused -Wextra)
 
-set(PACKAGE_DEPS
-  geometry_msgs
-  nav_msgs
-  pedsim_msgs
-  roscpp
-  rospy
-  sensor_msgs
-  tf
-  pedsim_utils
-)
-find_package(catkin REQUIRED COMPONENTS ${PACKAGE_DEPS})
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+add_compile_options(-Wall -Wunused)
 
-catkin_package(
-  CATKIN_DEPENDS ${PACKAGE_DEPS}
-  INCLUDE_DIRS include
-)
+# set(PACKAGE_DEPS
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(pedsim_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(pedsim_utils REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+# )
 
 ###########
 ## Build ##
 ###########
 
 include_directories(include)
-include_directories(${catkin_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
 
 # People point cloud sensor.
-set(PEOPLE_PCD_EXEC_NAME pedsim_people_sensor)
-add_executable(${PEOPLE_PCD_EXEC_NAME} src/pedsim_sensors/people_point_cloud.cpp)
-add_dependencies(${PEOPLE_PCD_EXEC_NAME} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PEOPLE_PCD_EXEC_NAME} ${catkin_LIBRARIES})
+# set(PEOPLE_PCD_EXEC_NAME pedsim_people_sensor)
+# add_executable(${PEOPLE_PCD_EXEC_NAME} src/pedsim_sensors/people_point_cloud.cpp)
+# ament_target_dependencies(${PEOPLE_PCD_EXEC_NAME} geometry_msgs nav_msgs pedsim_msgs rclcpp sensor_msgs pedsim_utils tf2 tf2_ros)
 
 # Obstacle point cloud sensor.
 set(OBSTACLE_PCD_EXEC_NAME pedsim_obstacle_sensor)
-add_executable(${OBSTACLE_PCD_EXEC_NAME} src/pedsim_sensors/obstacle_point_cloud.cpp)
-add_dependencies(${OBSTACLE_PCD_EXEC_NAME} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${OBSTACLE_PCD_EXEC_NAME} ${catkin_LIBRARIES})
+# add_executable(${OBSTACLE_PCD_EXEC_NAME} src/pedsim_sensors/obstacle_point_cloud.cpp)
+# ament_target_dependencies(${OBSTACLE_PCD_EXEC_NAME} geometry_msgs nav_msgs pedsim_msgs rclcpp sensor_msgs pedsim_utils tf2 tf2_ros)
+# target_link_libraries( ${OBSTACLE_PCD_EXEC_NAME} pedsim_utils::pedsim_utils  )
 
-# Point cloud sensor.
+# # Point cloud sensor.
 set(OCCLUSION_PCD_EXEC_NAME pedsim_occlusion_sensor)
 add_executable(${OCCLUSION_PCD_EXEC_NAME} src/pedsim_sensors/occlusion_point_cloud.cpp)
-add_dependencies(${OCCLUSION_PCD_EXEC_NAME} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${OCCLUSION_PCD_EXEC_NAME} ${catkin_LIBRARIES})
+ament_target_dependencies(${OCCLUSION_PCD_EXEC_NAME} geometry_msgs nav_msgs pedsim_msgs rclcpp sensor_msgs pedsim_utils tf2 tf2_ros)
 
 #############
 ## Install ##
 #############
-
-install(
-  TARGETS
-    ${PEOPLE_PCD_EXEC_NAME}
-    ${OBSTACLE_PCD_EXEC_NAME}
+install(TARGETS
+    # ${PEOPLE_PCD_EXEC_NAME}
+    # ${OBSTACLE_PCD_EXEC_NAME}
     ${OCCLUSION_PCD_EXEC_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-)
-
+  DESTINATION lib/${PROJECT_NAME})
+  # ament_package()
 #############
 ## Testing ##
 #############

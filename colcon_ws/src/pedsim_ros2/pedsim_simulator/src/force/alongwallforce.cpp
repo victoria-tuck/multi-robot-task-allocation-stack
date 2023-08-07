@@ -34,6 +34,7 @@
 #include <pedsim_simulator/element/obstacle.h>
 #include <pedsim_simulator/force/alongwallforce.h>
 #include <pedsim_simulator/scene.h>
+#include <iostream>
 
 AlongWallForce::AlongWallForce(Agent* agentIn) : Force(agentIn) {
   // initialize values
@@ -90,7 +91,7 @@ Ped::Tvector AlongWallForce::getForce(Ped::Tvector walkingDirection) {
   Ped::Tangle angle = walkingDirection.angleTo(minDiff);
   if (angle > angleThreshold) return Ped::Tvector();
 
-  ROS_DEBUG("Found Agent %d to be stuck!", agent->getId());
+  std::cout << "DEBUG: Found Agent " << agent->getId() << " to be stuck!";
 
   // set force
   // → project to find walking direction

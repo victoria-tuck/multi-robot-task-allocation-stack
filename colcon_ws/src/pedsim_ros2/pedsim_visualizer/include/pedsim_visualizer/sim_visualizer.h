@@ -31,65 +31,66 @@
 #ifndef SIM_VISUALIZER_H
 #define SIM_VISUALIZER_H
 
-#include <ros/console.h>
-#include <ros/ros.h>
+// #include <ros/console.h>
+#include <rclcpp/rclcpp.hpp>
 
-#include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
 #include <functional>
 #include <memory>
 #include <queue>
 
-#include <pedsim_msgs/AgentForce.h>
-#include <pedsim_msgs/AgentGroup.h>
-#include <pedsim_msgs/AgentGroups.h>
-#include <pedsim_msgs/AgentState.h>
-#include <pedsim_msgs/AgentStates.h>
-#include <pedsim_msgs/LineObstacle.h>
-#include <pedsim_msgs/LineObstacles.h>
-#include <pedsim_msgs/Waypoint.h>
-#include <pedsim_msgs/Waypoints.h>
+#include <pedsim_msgs/msg/agent_force.hpp>
+#include <pedsim_msgs/msg/agent_group.hpp>
+#include <pedsim_msgs/msg/agent_groups.hpp>
+#include <pedsim_msgs/msg/agent_state.hpp>
+#include <pedsim_msgs/msg/agent_states.hpp>
+#include <pedsim_msgs/msg/line_obstacle.hpp>
+#include <pedsim_msgs/msg/line_obstacles.hpp>
+#include <pedsim_msgs/msg/waypoint.hpp>
+#include <pedsim_msgs/msg/waypoints.hpp>
 
-#include <pedsim_msgs/SocialActivities.h>
-#include <pedsim_msgs/SocialActivity.h>
-#include <pedsim_msgs/SocialRelation.h>
-#include <pedsim_msgs/SocialRelations.h>
-#include <pedsim_msgs/TrackedGroup.h>
-#include <pedsim_msgs/TrackedGroups.h>
-#include <pedsim_msgs/TrackedPerson.h>
-#include <pedsim_msgs/TrackedPersons.h>
+#include <pedsim_msgs/msg/social_activities.hpp>
+#include <pedsim_msgs/msg/social_activity.hpp>
+#include <pedsim_msgs/msg/social_relation.hpp>
+#include <pedsim_msgs/msg/social_relations.hpp>
+#include <pedsim_msgs/msg/tracked_group.hpp>
+#include <pedsim_msgs/msg/tracked_groups.hpp>
+#include <pedsim_msgs/msg/tracked_person.hpp>
+#include <pedsim_msgs/msg/tracked_persons.hpp>
 
-#include <geometry_msgs/Point.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/PoseWithCovariance.h>
-#include <geometry_msgs/TwistWithCovariance.h>
-#include <nav_msgs/GridCells.h>
-#include <nav_msgs/Odometry.h>
-#include <std_msgs/ColorRGBA.h>
-#include <std_msgs/Header.h>
-#include <std_srvs/Empty.h>
-#include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_with_covariance.hpp>
+#include <geometry_msgs/msg/twist_with_covariance.hpp>
+#include <nav_msgs/msg/grid_cells.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <std_msgs/msg/color_rgba.hpp>
+#include <std_msgs/msg/header.hpp>
+#include <std_srvs/srv/empty.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
-#include <dynamic_reconfigure/server.h>
-#include <pedsim_visualizer/PedsimVisualizerConfig.h>
+// #include <dynamic_reconfigure/server.h>
+// #include <pedsim_visualizer/PedsimVisualizerConfig.h>
 
 namespace pedsim {
 
-class SimVisualizer {
- public:
-  using VizConfig = pedsim_visualizer::PedsimVisualizerConfig;
+class SimVisualizer: public rclcpp::Node {
 
-  explicit SimVisualizer(const ros::NodeHandle& node_in);
+ public:
+  // using VizConfig = pedsim_visualizer::PedsimVisualizerConfig;
+
+  explicit SimVisualizer(std::string node_name);
   ~SimVisualizer();
   SimVisualizer(const SimVisualizer& other) = delete;
 
   void run();
 
   // callbacks.
-  void agentStatesCallBack(const pedsim_msgs::AgentStatesConstPtr& agents);
-  void agentGroupsCallBack(const pedsim_msgs::AgentGroupsConstPtr& groups);
-  void obstaclesCallBack(const pedsim_msgs::LineObstaclesConstPtr& obstacles);
-  void waypointsCallBack(const pedsim_msgs::WaypointsConstPtr& waypoints);
+  void agentStatesCallBack(const pedsim_msgs::msg::AgentStates::SharedPtr agents);
+  void agentGroupsCallBack(const pedsim_msgs::msg::AgentGroups::SharedPtr groups);
+  void obstaclesCallBack(const pedsim_msgs::msg::LineObstacles::SharedPtr obstacles);
+  void waypointsCallBack(const pedsim_msgs::msg::Waypoints::SharedPtr waypoints);
 
  protected:
   /// publishers
@@ -103,27 +104,26 @@ class SimVisualizer {
  private:
   void setupPublishersAndSubscribers();
 
-  ros::NodeHandle nh_;
   double hz_;
 
   /// publishers
-  ros::Publisher pub_obstacles_visuals_;
-  ros::Publisher pub_person_visuals_;
-  ros::Publisher pub_group_visuals_;
-  ros::Publisher pub_forces_;
-  ros::Publisher pub_waypoints_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_obstacles_visuals_;
+  rclcpp::Publisher<pedsim_msgs::msg::TrackedPersons>::SharedPtr pub_person_visuals_;
+  rclcpp::Publisher<pedsim_msgs::msg::TrackedGroups>::SharedPtr pub_group_visuals_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_forces_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_waypoints_;
 
   /// Subscribers.
-  ros::Subscriber sub_states_;
-  ros::Subscriber sub_groups_;
-  ros::Subscriber sub_obstacles_;
-  ros::Subscriber sub_waypoints_;
+  rclcpp::Subscription<pedsim_msgs::msg::AgentStates>::SharedPtr sub_states_;
+  rclcpp::Subscription<pedsim_msgs::msg::AgentGroups>::SharedPtr sub_groups_;
+  rclcpp::Subscription<pedsim_msgs::msg::LineObstacles>::SharedPtr sub_obstacles_;
+  rclcpp::Subscription<pedsim_msgs::msg::Waypoints>::SharedPtr sub_waypoints_;
 
   /// Local data queues.
-  std::queue<pedsim_msgs::AgentStatesConstPtr> q_people_;
-  std::queue<pedsim_msgs::AgentGroupsConstPtr> q_groups_;
-  std::queue<pedsim_msgs::LineObstaclesConstPtr> q_obstacles_;
-  std::queue<pedsim_msgs::WaypointsConstPtr> q_waypoints_;
+  std::queue<pedsim_msgs::msg::AgentStates::SharedPtr> q_people_;
+  std::queue<pedsim_msgs::msg::AgentGroups::SharedPtr> q_groups_;
+  std::queue<pedsim_msgs::msg::LineObstacles::SharedPtr> q_obstacles_;
+  std::queue<pedsim_msgs::msg::Waypoints::SharedPtr> q_waypoints_;
 };
 }  // namespace pedsim
 

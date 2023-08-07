@@ -35,27 +35,25 @@
 
 #include <queue>
 
-#include <pedsim_msgs/AgentStates.h>
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud.h>
+#include <pedsim_msgs/msg/agent_states.hpp>
+#include <sensor_msgs/msg/point_cloud.hpp>
 
 namespace pedsim_ros {
 
 class PeoplePointCloud : public PedsimSensor {
  public:
-  PeoplePointCloud(const ros::NodeHandle& node_handle, const double rate,
-                   const FoVPtr& fov);
+  PeoplePointCloud(const std::string node_name);//: PedsimSensor(node_name){}
   virtual ~PeoplePointCloud() = default;
 
   void broadcast() override;
   void run();
 
-  void agentStatesCallBack(const pedsim_msgs::AgentStatesConstPtr& agents);
+  void agentStatesCallBack(const pedsim_msgs::msg::AgentStates::SharedPtr agents);
 
  private:
-  ros::Subscriber sub_simulated_agents_;
+  rclcpp::Subscription<pedsim_msgs::msg::AgentStates>::SharedPtr sub_simulated_agents_;
 
-  std::queue<pedsim_msgs::AgentStatesConstPtr> q_agents_;
+  std::queue<pedsim_msgs::msg::AgentStates::SharedPtr> q_agents_;
 };
 
 }  // namespace pedsim_ros

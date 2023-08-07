@@ -30,7 +30,8 @@
 # Modified the topics for pedsim compartibility and to avoid installing
 # all turtlebot software for simple keyboard teleop
 
-import rospy
+import rclpy
+from rclpy.Node import Node
 
 from geometry_msgs.msg import Twist
 
@@ -98,10 +99,13 @@ def vels(speed, turn):
 
 
 if __name__ == "__main__":
+    
     settings = termios.tcgetattr(sys.stdin)
 
-    rospy.init_node('pedsim_keyboard_teleop')
-    pub = rospy.Publisher('~cmd_vel', Twist, queue_size=5)
+    rclpy.init(args=args)
+    node = rclpy.create_node('pedsim_keyboard_teleop')
+    pub = node.create_publisher'~cmd_vel', Twist, queue_size=5)
+    rate = node.create_rate(30)
 
     x = 0
     th = 0
@@ -115,7 +119,7 @@ if __name__ == "__main__":
     try:
         print msg
         print vels(speed, turn)
-        while(1):
+        while rclpy.ok():
             key = getKey()
             if key in moveBindings.keys():
                 x = moveBindings[key][0]
@@ -168,6 +172,7 @@ if __name__ == "__main__":
             twist.angular.y = 0
             twist.angular.z = control_turn
             pub.publish(twist)
+            rate.sleep()
 
     except:
         print e

@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>pedsim_ros</name>
   <version>0.2.0</version>
@@ -18,7 +19,6 @@
 
   <url type="website">https://github.com/srl-freiburg/pedsim_ros</url>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>pedsim</exec_depend>
   <exec_depend>pedsim_msgs</exec_depend>
@@ -29,6 +29,6 @@
   <exec_depend>pedsim_visualizer</exec_depend>
 
   <export>
-    <metapackage/>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

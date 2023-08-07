@@ -34,25 +34,27 @@
 #include <pedsim_sensors/pedsim_sensor.h>
 
 #include <queue>
+#include <complex>
+#include <pedsim_msgs/msg/line_obstacles.hpp>
+#include <pedsim_msgs/msg/agent_states.hpp>
+#include <sensor_msgs/msg/point_cloud.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+// #include <sensor_msgs/msg/point_cloud_conversion.h>
 
-#include <pedsim_msgs/LineObstacles.h>
-#include <pedsim_msgs/AgentStates.h>
-#include <sensor_msgs/PointCloud.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/point_cloud_conversion.h>
+using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 namespace pedsim_ros {
 
 class PointCloud : public PedsimSensor {
  public:
-  PointCloud(const ros::NodeHandle& node_handle, const double rate, const int resol, 
-                     const FoVPtr& fov);
+  PointCloud(std::string node_name);//: PedsimSensor(node_name);
   virtual ~PointCloud() = default;
 
   void broadcast() override;
   void run();
-  void obstaclesCallBack(const pedsim_msgs::LineObstaclesConstPtr& obstacles);
-  void agentStatesCallBack(const pedsim_msgs::AgentStatesConstPtr& agents);
+  void obstaclesCallBack(const pedsim_msgs::msg::LineObstacles::SharedPtr obstacles);
+  void agentStatesCallBack(const pedsim_msgs::msg::AgentStates::SharedPtr agents);
 
   // detected obss is a 360 deg scan map
   uint rad_to_index(float rad);
@@ -62,11 +64,11 @@ class PointCloud : public PedsimSensor {
                         std::complex<float> obs, float width);
 
  private:
-  rclcpp::Subscription<pedsim_msgs::LineObstacles>::SharedPtr sub_simulated_obstacles_;
-  rclcpp::Subscription<pedsim_msgs::AgentStates>::SharedPtr sub_simulated_agents_;
+  rclcpp::Subscription<pedsim_msgs::msg::LineObstacles>::SharedPtr sub_simulated_obstacles_;
+  rclcpp::Subscription<pedsim_msgs::msg::AgentStates>::SharedPtr sub_simulated_agents_;
 
-  std::queue<pedsim_msgs::LineObstaclesConstPtr> q_obstacles_;
-  std::queue<pedsim_msgs::AgentStatesConstPtr> q_agents_;
+  std::queue<pedsim_msgs::msg::LineObstacles::SharedPtr> q_obstacles_;
+  std::queue<pedsim_msgs::msg::AgentStates::SharedPtr> q_agents_;
 
  protected:
   int resol_;

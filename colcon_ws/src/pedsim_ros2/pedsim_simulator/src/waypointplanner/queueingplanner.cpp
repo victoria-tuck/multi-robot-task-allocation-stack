@@ -34,6 +34,7 @@
 #include <pedsim_simulator/element/waitingqueue.h>
 #include <pedsim_simulator/utilities.h>
 #include <pedsim_simulator/waypointplanner/queueingplanner.h>
+#include <iostream>
 
 QueueingWaypointPlanner::QueueingWaypointPlanner() {
   // initialize values
@@ -146,8 +147,8 @@ void QueueingWaypointPlanner::setDestination(Waypoint* waypointIn) {
 
   // sanity checks
   if (queue == nullptr) {
-    std::cout << "Waypoint provided to QueueingWaypointPlanner isn't a waiting queue! " << (waypointIn == nullptr) ? "null"
-                                : waypointIn->toString().toStdString().c_str() << "\n";
+    std::cout << "Waypoint provided to QueueingWaypointPlanner isn't a waiting queue! " << ((waypointIn == nullptr) ? "null"
+                                : waypointIn->toString().toStdString().c_str()) << " \n";
     return;
   }
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(pedsim_srvs)
 
 # Default to C++14
@@ -12,6 +12,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(pedsim_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
 # the services
 set( srv_files
@@ -22,6 +23,7 @@ set( srv_files
 )
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${srv_files}
+  DEPENDENCIES pedsim_msgs
 )
 ament_export_dependencies(rosidl_default_runtime)
 ament_package()

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 from __future__ import division
 
-import rospy
-import tf
+import rclpy
+from rclpy.Node import Node
 
 import numpy as np
 
@@ -23,7 +23,9 @@ def create_mock_state(track_id, x, y, angle):
     agent.id = track_id
 
     theta = np.radians(angle) + np.pi / 2.
-    quaternion = tf.transformations.quaternion_from_euler(0., 0., theta)
+    # quaternion to euler for yaw, 0-pitch, 0-roll
+    # quaternion = tf.transformations.quaternion_from_euler(0., 0., theta)
+    quaternion = np.array([np.cos(theta/2),0,0,np.sin(theta/2)])
 
     agent.pose.position.x = x
     agent.pose.position.y = y
@@ -114,15 +116,16 @@ def mock_group(g_id, members):
 
 
 def main():
-    mock_agents_publisher = rospy.Publisher(
-        '/pedsim_simulator/simulated_agents', AgentStates, queue_size=1)
-    mock_groups_publisher = rospy.Publisher(
-        '/pedsim_simulator/simulated_groups', AgentGroups, queue_size=1)
-    rospy.init_node('mock_static_scene')
-    rate = rospy.Rate(10)
+    rclpy.init(args=args)
+    node = rclpy.create_node('mock_static_scene')
+    
+    mock_agents_publisher = node.create_publisher('/pedsim_simulator/simulated_agents', AgentStates, queue_size=1)
+    mock_groups_publisher = node.create_publisher('/pedsim_simulator/simulated_groups', AgentGroups, queue_size=1)
+
+    rate = node.create_rate(10)
     counter = 0
 
-    while not rospy.is_shutdown():
+    while rclpy.ok()
         # Agents
         agent_states = AgentStates()
         agent_states.header = create_header()

@@ -31,11 +31,9 @@
 #include <pedsim_visualizer/sim_visualizer.h>
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "pedsim_visualizer");
-  ros::NodeHandle node("~");
-
-  pedsim::SimVisualizer viz(node);
-  viz.run();
+  rclcpp::init(argc, argv);
+  std::string node_name = "pedsim_visualizer";
+  rclcpp::spin(std::make_shared<pedsim::SimVisualizer>(node_name));
 
   return 0;
 }

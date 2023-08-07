@@ -35,26 +35,25 @@
 
 #include <queue>
 
-#include <pedsim_msgs/LineObstacles.h>
+#include <pedsim_msgs/msg/line_obstacles.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/msg/point_cloud.hpp>
 
 namespace pedsim_ros {
 
 class ObstaclePointCloud : public PedsimSensor {
  public:
-  ObstaclePointCloud(const ros::NodeHandle& node_handle, const double rate,
-                     const FoVPtr& fov);
+  ObstaclePointCloud(std::string node_name);// : PedsimSensor(node_name);
   virtual ~ObstaclePointCloud() = default;
 
   void broadcast() override;
   void run();
-  void obstaclesCallBack(const pedsim_msgs::LineObstaclesConstPtr& obstacles);
+  void obstaclesCallBack(const pedsim_msgs::msg::LineObstacles::SharedPtr obstacles);
 
  private:
-  rclcpp::Subscription<pedsim_msgs::LineObstacles>::SharedPtr sub_simulated_obstacles_;
+  rclcpp::Subscription<pedsim_msgs::msg::LineObstacles>::SharedPtr sub_simulated_obstacles_;
 
-  std::queue<pedsim_msgs::LineObstaclesConstPtr> q_obstacles_;
+  std::queue<pedsim_msgs::msg::LineObstacles::SharedPtr> q_obstacles_;
 };
 
 }  // namespace pedsim_ros

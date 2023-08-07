@@ -33,19 +33,22 @@
 
 #include <random>
 
+using namespace std::chrono_literals;
+using std::placeholders::_1;
+
 namespace pedsim_ros {
 
 ObstaclePointCloud::ObstaclePointCloud(std::string node_name) //, //const double rate, const FoVPtr& fov)
     : PedsimSensor(node_name) {
 
-      pub_signals_local_ = this->create_publisher<sensor_msgs::PointCloud>("point_cloud_local", 1);
-      pub_signals_global_ = this->create_publisher<sensor_msgs::PointCloud>("point_cloud_global", 1);
-      sub_simulated_obstacles_ = this->create_subscription<pedsim_msgs::LineObstacles>("/pedsim_simulator/simulated_walls", 1, &ObstaclePointCloud::obstaclesCallBack, this);
+      pub_signals_local_ = this->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud_local", 1);
+      pub_signals_global_ = this->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud_global", 1);
+      sub_simulated_obstacles_ = this->create_subscription<pedsim_msgs::msg::LineObstacles>("/pedsim_simulator/simulated_walls", 1, std::bind(&ObstaclePointCloud::obstaclesCallBack, this, _1));
 
      
       RCLCPP_INFO_STREAM(this->get_logger(), "Initialized obstacle PCD sensor with center: (" << init_x << ", " << init_y << ") and range: " << fov_range);
 
-      rclcpp::TimerBase::SharedPtr timer_ = this->create_wall_timer( rclcpp::Duration(1/rate_), std::bind(&ObstaclePointCloud::run, this) );
+      rclcpp::TimerBase::SharedPtr timer_ = this->create_wall_timer( std::chrono::duration<double>(1/rate_), std::bind(&ObstaclePointCloud::run, this) );
 }
 
 void ObstaclePointCloud::broadcast() {
@@ -73,7 +76,7 @@ void ObstaclePointCloud::broadcast() {
   std::uniform_real_distribution<float> height_distribution(0, 1);
   std::uniform_real_distribution<float> width_distribution(-0.5, 0.5);
 
-  sensor_msgs::PointCloud pcd_global;
+  sensor_msgs::msg::PointCloud pcd_global;
   pcd_global.header.stamp = this->get_clock()->now();
   pcd_global.header.frame_id = sim_obstacles->header.frame_id;
   pcd_global.points.resize(num_points);
@@ -81,7 +84,7 @@ void ObstaclePointCloud::broadcast() {
   pcd_global.channels[0].name = "intensities";
   pcd_global.channels[0].values.resize(num_points);
 
-  sensor_msgs::PointCloud pcd_local;
+  sensor_msgs::msg::PointCloud pcd_local;
   pcd_local.header.stamp = this->get_clock()->now();
   pcd_local.header.frame_id = robot_odom_.header.frame_id;
   pcd_local.points.resize(num_points);
@@ -108,12 +111,12 @@ void ObstaclePointCloud::broadcast() {
 
     for (size_t j = 0; j < point_density; ++j) {
       if (fov_->inside(cell.first, cell.second)) {
-
-        const geometry_msgs::Vector3 point(cell.first + width_distribution(generator),
-                                cell.second + width_distribution(generator),
-                                0.);
-        geometry_msgs::Vector3 transformed_point;
-        tf2::do_transform( point, transformed_point, robot_transform )
+        geometry_msgs::msg::Vector3 point;
+            point.x = cell.first + width_distribution(generator);
+            point.y = cell.second + width_distribution(generator);
+            point.z = 0.;
+        geometry_msgs::msg::Vector3 transformed_point;
+        // tf2::doTransform( point, transformed_point, robot_transform );
 
         pcd_local.points[index].x = transformed_point.x;
         pcd_local.points[index].y = transformed_point.y;
@@ -133,10 +136,10 @@ void ObstaclePointCloud::broadcast() {
   }
 
   if (pcd_local.channels[0].values.size() > 1) {
-    pub_signals_local_.publish(pcd_local);
+    pub_signals_local_->publish(pcd_local);
   }
   if (pcd_global.channels[0].values.size() > 1) {
-    pub_signals_global_.publish(pcd_global);
+    pub_signals_global_->publish(pcd_global);
   }
 
   q_obstacles_.pop();
@@ -147,7 +150,7 @@ void ObstaclePointCloud::run() {
 }
 
 void ObstaclePointCloud::obstaclesCallBack(
-    const pedsim_msgs::LineObstaclesConstPtr& obstacles) {
+    const pedsim_msgs::msg::LineObstacles::SharedPtr obstacles) {
   q_obstacles_.emplace(obstacles);
 }
 
@@ -158,9 +161,9 @@ void ObstaclePointCloud::obstaclesCallBack(
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);//, "pedsim_obstacle_sensor");
   // ros::NodeHandle node("~");
-  node_name = "pedsim_obstacle_sensor";
+  std::string node_name = "pedsim_obstacle_sensor";
 
-  rclcpp::spin(pedsim_ros::ObstaclePointCloud pcd_sensor(node_name));
+  rclcpp::spin(std::make_shared<pedsim_ros::ObstaclePointCloud>(node_name));
   rclcpp::shutdown();
 
   return 0;

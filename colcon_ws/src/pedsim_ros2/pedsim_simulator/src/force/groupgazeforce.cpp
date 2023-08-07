@@ -32,6 +32,7 @@
 #include <pedsim_simulator/config.h>
 #include <pedsim_simulator/element/agent.h>
 #include <pedsim_simulator/force/groupgazeforce.h>
+#include <iostream>
 
 
 GroupGazeForce::GroupGazeForce(Agent* agentIn) : Force(agentIn) {

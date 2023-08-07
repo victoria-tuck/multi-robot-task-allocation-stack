@@ -35,7 +35,11 @@
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 #include <rclcpp/rclcpp.hpp>
-#include <nav_msgs/Odometry.h>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud.hpp>
+
+using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 namespace pedsim_ros {
 
@@ -70,8 +74,7 @@ struct CircularFov : FoV {
 class PedsimSensor: public rclcpp::Node {
 
  public:
-
-  PedsimSensor(std::string node_name)//, const double rate, const FoVPtr& fov)
+   PedsimSensor(std::string node_name)//, const double rate, const FoVPtr& fov)
       : Node(node_name)//, rate_{rate}
        {
 
@@ -79,21 +82,24 @@ class PedsimSensor: public rclcpp::Node {
     //   ROS_FATAL_STREAM("Sensor FoV cannot be null.");
     // }
 
-    double init_x = 0.0, init_y = 0.0, fov_range = 0.0;
-    this->declare_parameter<double>("pose_initial_x", init_x, 0.0);
-    this->declare_parameter<double>("pose_initial_y", init_y, 0.0);
-    this->declare_parameter<double>("fov_range", fov_range, 15.);
+    this->declare_parameter<double>("pose_initial_x", 0.0);
+    this->declare_parameter<double>("pose_initial_y", 0.0);
+    this->declare_parameter<double>("fov_range", 15.);
+    this->get_parameter("pose_initial_x",init_x);
+    this->get_parameter("pose_initial_y",init_y);
+    this->get_parameter("fov_range",fov_range);
 
     pedsim_ros::FoVPtr circle_fov;
     circle_fov.reset(new pedsim_ros::CircularFov(init_x, init_y, fov_range));
 
     double sensor_rate = 0.0;
-    this->declare_parameter<double>("rate", sensor_rate, 25.0);
+    this->declare_parameter<double>("rate", 25.0);
+    this->get_parameter("rate", sensor_rate);
     rate_ = sensor_rate;
 
     fov_ = circle_fov;
     // Set up robot odometry subscriber.
-    sub_robot_odom_ = this->create_subscription<nav_msgs::Odometry>("/pedsim_simulator/robot_position", 1,
+    sub_robot_odom_ = this->create_subscription<nav_msgs::msg::Odometry>("/pedsim_simulator/robot_position", 1,
                                     std::bind(&PedsimSensor::callbackRobotOdom, this, _1));
 
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -102,7 +108,7 @@ class PedsimSensor: public rclcpp::Node {
   }
   virtual ~PedsimSensor() = default;
   virtual void broadcast() = 0;
-  void callbackRobotOdom(const nav_msgs::Odometry::ConstPtr& msg) {
+  void callbackRobotOdom(const nav_msgs::msg::Odometry::SharedPtr msg) {
     robot_odom_ = *msg;
     // update sensor anchor.
     fov_->updateViewpoint(robot_odom_.pose.pose.position.x,
@@ -111,28 +117,31 @@ class PedsimSensor: public rclcpp::Node {
 
  protected:
   double rate_ = 25.;
+  double init_x = 0.0; 
+  double init_y = 0.0;
+  double fov_range = 0.0;
   FoVPtr fov_ = nullptr;
-  nav_msgs::Odometry robot_odom_;
+  nav_msgs::msg::Odometry robot_odom_;
 
-  rclcpp::Publisher<sensor_msgs::PointCloud>SharedPtr pub_signals_local_;
-  rclcpp::Publisher<sensor_msgs::PointCloud>SharedPtr pub_signals_global_;
-  rclcpp::Subscription<nav_msgs::Odometry>::SharedPtr sub_robot_odom_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr pub_signals_local_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr pub_signals_global_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_robot_odom_;
 
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 };
 
-tf2::Pose transformPoint(const tf::StampedTransform& T_r_o,
-                        const tf::Vector3& point) {
-  tf2::Pose source;
-  source.setOrigin(point);
+// tf2::Pose transformPoint(const tf::StampedTransform& T_r_o,
+//                         const tf::Vector3& point) {
+//   tf2::Pose source;
+//   source.setOrigin(point);
 
-  tf2::Matrix3x3 identity;
-  identity.setIdentity();
-  source.setBasis(identity);
+//   tf2::Matrix3x3 identity;
+//   identity.setIdentity();
+//   source.setBasis(identity);
 
-  return T_r_o * source;
-}
+//   return T_r_o * source;
+// }
 
 }  // namespace pedsim_ros
 

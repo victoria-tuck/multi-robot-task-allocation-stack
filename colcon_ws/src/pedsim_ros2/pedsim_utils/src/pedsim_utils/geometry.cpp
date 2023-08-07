@@ -3,7 +3,7 @@
 
 namespace pedsim {
 
-geometry_msgs::Quaternion angleToQuaternion(const double theta) {
+geometry_msgs::msg::Quaternion angleToQuaternion(const double theta) {
   Eigen::Matrix3f rotation_matrix(Eigen::Matrix3f::Identity());
   rotation_matrix(0, 0) = std::cos(theta);
   rotation_matrix(0, 1) = -std::sin(theta);
@@ -19,7 +19,7 @@ geometry_msgs::Quaternion angleToQuaternion(const double theta) {
   return toQuaternionMsg(quaternion.normalized());
 }
 
-geometry_msgs::Quaternion rpyToQuaternion(const double roll, const double pitch,
+geometry_msgs::msg::Quaternion rpyToQuaternion(const double roll, const double pitch,
                                           const double yaw) {
   Eigen::Quaternionf r_m = Eigen::AngleAxisf(roll, Eigen::Vector3f::UnitX()) *
                            Eigen::AngleAxisf(pitch, Eigen::Vector3f::UnitY()) *
@@ -28,9 +28,9 @@ geometry_msgs::Quaternion rpyToQuaternion(const double roll, const double pitch,
   return toQuaternionMsg(r_m.normalized());
 }
 
-geometry_msgs::Quaternion toQuaternionMsg(
+geometry_msgs::msg::Quaternion toQuaternionMsg(
     const Eigen::Quaternionf& quaternion) {
-  geometry_msgs::Quaternion gq;
+  geometry_msgs::msg::Quaternion gq;
   gq.x = quaternion.x();
   gq.y = quaternion.y();
   gq.z = quaternion.z();
@@ -38,7 +38,7 @@ geometry_msgs::Quaternion toQuaternionMsg(
   return std::move(gq);
 }
 
-geometry_msgs::Quaternion poseFrom2DVelocity(const double vx, const double vy) {
+geometry_msgs::msg::Quaternion poseFrom2DVelocity(const double vx, const double vy) {
   const double theta = std::atan2(vy, vx);
   return angleToQuaternion(theta);
 }

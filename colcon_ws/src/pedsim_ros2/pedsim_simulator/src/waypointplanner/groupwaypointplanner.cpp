@@ -34,6 +34,7 @@
 #include <pedsim_simulator/element/areawaypoint.h>
 #include <pedsim_simulator/element/waitingqueue.h>
 #include <pedsim_simulator/waypointplanner/groupwaypointplanner.h>
+#include <iostream>
 
 GroupWaypointPlanner::GroupWaypointPlanner() {
   // initialize values

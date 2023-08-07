@@ -36,6 +36,7 @@
 #include <pedsim_simulator/force/force.h>
 #include <pedsim_simulator/scene.h>
 #include <pedsim_simulator/waypointplanner/waypointplanner.h>
+#include <iostream>
 
 Agent::Agent() {
   // initialize

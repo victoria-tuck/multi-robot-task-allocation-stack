@@ -32,6 +32,7 @@
 #include <pedsim_simulator/config.h>
 #include <pedsim_simulator/element/agent.h>
 #include <pedsim_simulator/force/groupcoherenceforce.h>
+#include <iostream>
 
 GroupCoherenceForce::GroupCoherenceForce(Agent* agentIn) : Force(agentIn) {
   // initialize values
@@ -96,7 +97,7 @@ Ped::Tvector GroupCoherenceForce::getForce(Ped::Tvector walkingDirection) {
     double softenedFactor = factor * (tanh(distance - maxDistance) + 1) / 2;
     force *= softenedFactor;
 
-    std::cout("softenedFactor = " << softenedFactor << " = " << factor * (tanh(distance - maxDistance)+1) / 2  << "\n";
+    std::cout << "softenedFactor = " << softenedFactor << " = " << factor * (tanh(distance - maxDistance)+1) / 2  << "\n";
 
     return force;
   }

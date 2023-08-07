@@ -33,6 +33,8 @@
 #include <math.h>
 #include <random>
 #define INF 100000000
+using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 template <typename T> int sgn(T val) {
   return (T(0) < val) - (val < T(0));
@@ -43,19 +45,22 @@ namespace pedsim_ros {
 using Cell = std::complex<float>;
 
 PointCloud::PointCloud(std::string node_name)//,const double rate, const int resol, const FoVPtr& fov)
-    : PedsimSensor(node_handle) { //, rate, fov) {
+    : PedsimSensor(node_name) { //, rate, fov) {
   
   int sensor_resol = 360;
-  this->declare_parameter<int>("resol", sensor_resol, 360);
+  this->declare_parameter<int>("resol", 360);
+  this->get_parameter("resol", sensor_resol);
   resol_ = sensor_resol;
 
-  pub_signals_local_ = this->create_publisher<sensor_msgs::PointCloud>("point_cloud_local", 1);
-  pub_signals_global_ = this->create_publisher<sensor_msgs::PointCloud>("point_cloud_global", 1);
+  pub_signals_local_ = this->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud_local", 1);
+  pub_signals_global_ = this->create_publisher<sensor_msgs::msg::PointCloud>("point_cloud_global", 1);
 
-  sub_simulated_obstacles_ = this->create_subscription<pedsim_msgs::LineObstacles>("/pedsim_simulator/simulated_walls", 1, std::bind(&PointCloud::obstaclesCallBack, this, _1));
-  sub_simulated_agents_ = this->get_subscription<pedsim_msgs::AgentStates>("/pedsim_simulator/simulated_agents", 1, std::bind(&PointCloud::agentStatesCallBack, this, _1));
+  sub_simulated_obstacles_ = this->create_subscription<pedsim_msgs::msg::LineObstacles>("/pedsim_simulator/simulated_walls", 1, std::bind(&PointCloud::obstaclesCallBack, this, _1));
+  sub_simulated_agents_ = this->create_subscription<pedsim_msgs::msg::AgentStates>("/pedsim_simulator/simulated_agents", 1, std::bind(&PointCloud::agentStatesCallBack, this, _1));
 
   RCLCPP_INFO_STREAM(this->get_logger(), "Initialized occlusion PCD sensor with center: (" << init_x << ", " << init_y << ") , range: " << fov_range << ", resolution: " << sensor_resol);
+
+  rclcpp::TimerBase::SharedPtr timer_ = this->create_wall_timer( std::chrono::duration<double>(1/rate_), std::bind(&PointCloud::run, this) );
 }
 
 uint PointCloud::rad_to_index(float rad_){
@@ -137,16 +142,16 @@ void PointCloud::broadcast() {
   std::uniform_real_distribution<float> height_distribution(0, 1);
   std::uniform_real_distribution<float> width_distribution(-0.05, 0.05);
 
-  sensor_msgs::PointCloud pcd_global;
-  pcd_global.header.stamp = ros::Time::now();
+  sensor_msgs::msg::PointCloud pcd_global;
+  pcd_global.header.stamp = this->get_clock()->now();
   pcd_global.header.frame_id = sim_obstacles->header.frame_id;
   pcd_global.points.resize(num_points);
   pcd_global.channels.resize(1);
   pcd_global.channels[0].name = "intensities";
   pcd_global.channels[0].values.resize(num_points);
 
-  sensor_msgs::PointCloud pcd_local;
-  pcd_local.header.stamp = ros::Time::now();
+  sensor_msgs::msg::PointCloud pcd_local;
+  pcd_local.header.stamp = this->get_clock()->now();
   pcd_local.header.frame_id = robot_odom_.header.frame_id;
   pcd_local.points.resize(num_points);
   pcd_local.channels.resize(1);
@@ -154,17 +159,16 @@ void PointCloud::broadcast() {
   pcd_local.channels[0].values.resize(num_points);
 
   // prepare the transform to robot odom frame.
-  tf::StampedTransform robot_transform;
+  geometry_msgs::msg::TransformStamped robot_transform;
   try {
-    transform_listener_->lookupTransform(robot_odom_.header.frame_id,
-                                         sim_obstacles->header.frame_id,
-                                         ros::Time(0), robot_transform);
-  } catch (tf::TransformException& e) {
-    ROS_WARN_STREAM_THROTTLE(5.0, "TFP lookup from ["
-                                      << sim_obstacles->header.frame_id
-                                      << "] to [" << robot_odom_.header.frame_id
-                                      << "] failed. Reason: " << e.what());
-    return;
+      robot_transform = tf_buffer_->lookupTransform(
+        robot_odom_.header.frame_id, sim_obstacles->header.frame_id,
+        tf2::TimePointZero);
+    } catch (const tf2::TransformException & ex) {
+      RCLCPP_INFO(
+        this->get_logger(), "Could not transform %s to %s: %s",
+        sim_obstacles->header.frame_id, robot_odom_.header.frame_id, ex.what());
+      return;
   }
 
   size_t index = 0;
@@ -174,13 +178,16 @@ void PointCloud::broadcast() {
 
     for (size_t j = 0; j < point_density; ++j) {
       if (fov_->inside(cell.real(), cell.imag())) {
-        const tf::Vector3 point(cell.real() + width_distribution(generator),
-                                cell.imag() + width_distribution(generator),
-                                0.);
-        const auto transformed_point = transformPoint(robot_transform, point);
+        geometry_msgs::msg::Vector3 point;
+            point.x = cell.real() + width_distribution(generator);
+            point.y = cell.imag() + width_distribution(generator);
+            point.z = 0.;
+        // const auto transformed_point = transformPoint(robot_transform, point);
+        geometry_msgs::msg::Vector3 transformed_point;
+        // tf2::doTransform( point, transformed_point, robot_transform );
 
-        pcd_local.points[index].x = transformed_point.getOrigin().x();
-        pcd_local.points[index].y = transformed_point.getOrigin().y();
+        pcd_local.points[index].x = transformed_point.x;
+        pcd_local.points[index].y = transformed_point.y;
         pcd_local.points[index].z = height_distribution(generator);
         pcd_local.channels[0].values[index] = cell_color;
 
@@ -197,10 +204,10 @@ void PointCloud::broadcast() {
   }
 
   if (pcd_local.channels[0].values.size() > 1) {
-    pub_signals_local_.publish(pcd_local);
+    pub_signals_local_->publish(pcd_local);
   }
   if (pcd_global.channels[0].values.size() > 1) {
-    pub_signals_global_.publish(pcd_global);
+    pub_signals_global_->publish(pcd_global);
   }
 
   q_obstacles_.pop();
@@ -208,23 +215,16 @@ void PointCloud::broadcast() {
 };
 
 void PointCloud::run() {
-  ros::Rate r(rate_);
-
-  while (ros::ok()) {
     broadcast();
-
-    ros::spinOnce();
-    r.sleep();
   }
-}
 
 void PointCloud::obstaclesCallBack(
-    const pedsim_msgs::LineObstaclesConstPtr& obstacles) {
+    const pedsim_msgs::msg::LineObstacles::SharedPtr obstacles) {
   q_obstacles_.emplace(obstacles);
 }
 
 void PointCloud::agentStatesCallBack(
-    const pedsim_msgs::AgentStatesConstPtr& agents) {
+    const pedsim_msgs::msg::AgentStates::SharedPtr agents) {
   q_agents_.emplace(agents);
 }
 
@@ -233,27 +233,9 @@ void PointCloud::agentStatesCallBack(
 // --------------------------------------------------------------
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv);//, "pedsim_occlusion_sensor");
-  node_name = "pedsim_occlusion_sensor";
-  // ros::NodeHandle node("~");
-
-  double init_x = 0.0, init_y = 0.0, fov_range = 0.0;
-  node.param<double>("pose_initial_x", init_x, 0.0);
-  node.param<double>("pose_initial_y", init_y, 0.0);
-  node.param<double>("fov_range", fov_range, 15.);
-
-  pedsim_ros::FoVPtr circle_fov;
-  circle_fov.reset(new pedsim_ros::CircularFov(init_x, init_y, fov_range));
-
-  double sensor_rate = 0.0;
-  int sensor_resol = 360;
-  node.param<double>("rate", sensor_rate, 25.0);
-  node.param<int>("resol", sensor_resol, 360);
-
-  pedsim_ros::PointCloud pcd_sensor(node_name, sensor_rate, sensor_resol, circle_fov);
-  ROS_INFO_STREAM("Initialized occlusion PCD sensor with center: ("
-                  << init_x << ", " << init_y << ") , range: " << fov_range << ", resolution: " << sensor_resol);
-
-  pcd_sensor.run();
+  rclcpp::init(argc, argv); //, "pedsim_occlusion_sensor");
+  std::string node_name = "pedsim_occlusion_sensor";
+  rclcpp::spin(std::make_shared<pedsim_ros::PointCloud>(node_name));
+  
   return 0;
 }

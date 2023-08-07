@@ -33,6 +33,7 @@
 #include <pedsim_simulator/element/agent.h>
 #include <pedsim_simulator/element/agentgroup.h>
 #include <pedsim_simulator/rng.h>
+#include <iostream>
 
 AgentGroup::AgentGroup() {
   static int staticid = 2000;

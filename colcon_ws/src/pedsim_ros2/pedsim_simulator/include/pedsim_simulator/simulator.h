@@ -35,27 +35,28 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include "tf2_ros/buffer.h"
 #include <tf2_ros/transform_listener.h>
 #include <functional>
 #include <memory>
 
-#include <pedsim_msgs/AgentForce.h>
-#include <pedsim_msgs/AgentGroup.h>
-#include <pedsim_msgs/AgentGroups.h>
-#include <pedsim_msgs/AgentState.h>
-#include <pedsim_msgs/AgentStates.h>
-#include <pedsim_msgs/LineObstacle.h>
-#include <pedsim_msgs/LineObstacles.h>
-#include <pedsim_msgs/Waypoint.h>
-#include <pedsim_msgs/Waypoints.h>
+#include <pedsim_msgs/msg/agent_force.hpp>
+#include <pedsim_msgs/msg/agent_group.hpp>
+#include <pedsim_msgs/msg/agent_groups.hpp>
+#include <pedsim_msgs/msg/agent_state.hpp>
+#include <pedsim_msgs/msg/agent_states.hpp>
+#include <pedsim_msgs/msg/line_obstacle.hpp>
+#include <pedsim_msgs/msg/line_obstacles.hpp>
+#include <pedsim_msgs/msg/waypoint.hpp>
+#include <pedsim_msgs/msg/waypoints.hpp>
 
-#include <geometry_msgs/Point.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/PoseWithCovariance.h>
-#include <geometry_msgs/TwistWithCovariance.h>
-#include <nav_msgs/Odometry.h>
-#include <std_msgs/Header.h>
-#include <std_srvs/Empty.h>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_with_covariance.hpp>
+#include <geometry_msgs/msg/twist_with_covariance.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <std_msgs/msg/header.hpp>
+#include <std_srvs/srv/empty.hpp>
 
 #include <pedsim_simulator/agentstatemachine.h>
 #include <pedsim_simulator/config.h>
@@ -68,10 +69,10 @@
 #include <pedsim_simulator/scenarioreader.h>
 #include <pedsim_simulator/scene.h>
 
-#include <dynamic_reconfigure/server.h>
-#include <pedsim_simulator/PedsimSimulatorConfig.h>
+// #include <dynamic_reconfigure/server.h>
+// #include <pedsim_simulator/PedsimSimulatorConfig.h>
 
-using SimConfig = pedsim_simulator::PedsimSimulatorConfig;
+// using SimConfig = pedsim_simulator::PedsimSimulatorConfig;
 
 /// \class Simulator
 /// \brief Simulation wrapper
@@ -79,22 +80,29 @@ using SimConfig = pedsim_simulator::PedsimSimulatorConfig;
 class Simulator : public rclcpp::Node {
  
   public:
-      explicit Simulator(): Node("pedsim_simulator");
+      explicit Simulator(): Node("pedsim_simulator"){};
       virtual ~Simulator();
 
+      bool initializeSimulation();
       void runSimulation();
+      void run();
 
       // callbacks
-      bool onPauseSimulation(std_srvs::Empty::Request& request,
-                            std_srvs::Empty::Response& response);
-      bool onUnpauseSimulation(std_srvs::Empty::Request& request,
-                              std_srvs::Empty::Response& response);
+      bool onPauseSimulation(const std::shared_ptr<std_srvs::srv::Empty::Request> request,
+                            std::shared_ptr<std_srvs::srv::Empty::Response> response);
+      bool onUnpauseSimulation(const std::shared_ptr<std_srvs::srv::Empty::Request> request,
+                              std::shared_ptr<std_srvs::srv::Empty::Response> response);
 
-      void spawnCallback(const ros::TimerEvent& event);
+    //   rclcpp::Service<example_interfaces::srv::AddTwoInts>::SharedPtr service =
+    // node->create_service<example_interfaces::srv::AddTwoInts>("add_two_ints", &add);
+    // void add(const std::shared_ptr<example_interfaces::srv::AddTwoInts::Request> request,
+    //       std::shared_ptr<example_interfaces::srv::AddTwoInts::Response>      response)
 
- protected:
-  void reconfigureCB(SimConfig& config, uint32_t level);
-  dynamic_reconfigure::Server<SimConfig> server_;
+      void spawnCallback();//(const ros::TimerEvent& event);
+
+//  protected:
+//   void reconfigureCB(SimConfig& config, uint32_t level);
+//   dynamic_reconfigure::Server<SimConfig> server_;
 
  private:
   void updateRobotPositionFromTF();
@@ -107,18 +115,22 @@ class Simulator : public rclcpp::Node {
  private:
   
   bool paused_;
-  ros::Timer spawn_timer_;
+  rclcpp::TimerBase::SharedPtr spawn_timer_;
+  rclcpp::TimerBase::SharedPtr rate_timer;
 
   // publishers
-  rclcpp::Publisher<pedsim_msgs::LineObstacles>::SharedPtr pub_obstacles_;
-  rclcpp::Publisher<pedsim_msgs::AgentStates>::SharedPtr pub_agent_states_;
-  rclcpp::Publisher<pedsim_msgs::AgentGroups>::SharedPtr pub_agent_groups_;
-  rclcpp::Publisher<nav_msgs::Odometry>::SharedPtr pub_robot_position_;
-  rclcpp::Publisher<pedsim_msgs::Waypoints>::SharedPtr pub_waypoints_;
+  rclcpp::Publisher<pedsim_msgs::msg::LineObstacles>::SharedPtr pub_obstacles_;
+  rclcpp::Publisher<pedsim_msgs::msg::AgentStates>::SharedPtr pub_agent_states_;
+  rclcpp::Publisher<pedsim_msgs::msg::AgentGroups>::SharedPtr pub_agent_groups_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_robot_position_;
+  rclcpp::Publisher<pedsim_msgs::msg::Waypoints>::SharedPtr pub_waypoints_;
 
   // provided services
-  rclcpp::Service<std_srvs::Empty> srv_pause_simulation_;
-  rcpcpp::Service<std_srvs::Empty> srv_unpause_simulation_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr srv_pause_simulation_;
+  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr srv_unpause_simulation_;
+
+  // rclcpp::Service<example_interfaces::srv::AddTwoInts>::SharedPtr service =
+  //   node->create_service<example_interfaces::srv::AddTwoInts>("add_two_ints", &add);
 
   // frame ids
   std::string frame_id_;
@@ -126,17 +138,17 @@ class Simulator : public rclcpp::Node {
 
   // pointers and additional data
   // std::unique_ptr<tf::TransformListener> transform_listener_;
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-  transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  std::shared_ptr<tf2_ros::TransformListener> transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
   geometry_msgs::msg::TransformStamped last_robot_pose_;
   // tf::StampedTransform last_robot_pose_;
   Agent* robot_;
-  geometry_msgs::Quaternion last_robot_orientation_;
+  geometry_msgs::msg::Quaternion last_robot_orientation_;
 
   inline std::string agentStateToActivity(
       const AgentStateMachine::AgentState& state) const;
 
-  inline std_msgs::Header createMsgHeader() const;
+  inline std_msgs::msg::Header createMsgHeader();
 };
 
 #endif

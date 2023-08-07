@@ -1,38 +1,35 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project(pedsim_simulator)
 add_definitions(-Wall -Wunused -std=c++11 -pipe -Wunused -Wextra)
-set(PEDSIM_SIMULATOR_DEPENDENCIES
-  roscpp
-  rospy
-  std_msgs
-  pedsim
-  pedsim_msgs
-  pedsim_srvs
-  pedsim_utils
-  std_srvs
-  geometry_msgs
-  nav_msgs
-  tf
-  cmake_modules
-  dynamic_reconfigure
-)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+add_compile_options(-Wall -Wunused)
+
+find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(pedsim REQUIRED)
+find_package(pedsim_msgs REQUIRED)
+find_package(pedsim_srvs REQUIRED)
+find_package(pedsim_utils REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+
+# set(CMAKE_AUTOMOC ON)
+# set(CMAKE_AUTORCC ON)
+# set(CMAKE_AUTOUIC ON)
 
 ## Find catkin macros and libraries
-find_package(catkin REQUIRED COMPONENTS ${PEDSIM_SIMULATOR_DEPENDENCIES})
 find_package(Boost REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
 # dynamic reconfigure parameters
-generate_dynamic_reconfigure_options(config/PedsimSimulator.cfg)
-
-catkin_package(
-  CATKIN_DEPENDS ${PEDSIM_SIMULATOR_DEPENDENCIES}
-  INCLUDE_DIRS include
-)
+# generate_dynamic_reconfigure_options(config/PedsimSimulator.cfg)
 
 include_directories(include)
 include_directories(${Eigen_INCLUDE_DIRS})
@@ -111,24 +108,23 @@ qt5_wrap_cpp(MOC_SRCS_UI ${MOC_FILES})
 
 set(EXECUTABLE_NAME ${PROJECT_NAME})
 add_executable(${EXECUTABLE_NAME} ${SOURCES} ${MOC_SRCS_UI})
-add_dependencies(${EXECUTABLE_NAME} ${catkin_EXPORTED_TARGETS})
-add_dependencies(${EXECUTABLE_NAME} ${PROJECT_NAME}_gencfg)
+ament_target_dependencies(${EXECUTABLE_NAME} pedsim rclcpp std_msgs pedsim_msgs pedsim_srvs pedsim_utils std_srvs geometry_msgs nav_msgs tf2 tf2_ros Qt5Widgets Boost )
+# add_dependencies(${EXECUTABLE_NAME} ${PROJECT_NAME}_gencfg)
 target_link_libraries(${EXECUTABLE_NAME}
-  ${Qt5Widgets_LIBRARIES} ${BOOST_LIBRARIES} ${catkin_LIBRARIES}
+  ${Qt5Widgets_LIBRARIES} ${BOOST_LIBRARIES} pedsim::pedsim
 )
 
 add_executable(simulate_diff_drive_robot src/simulate_diff_drive_robot.cpp)
-add_dependencies(simulate_diff_drive_robot ${catkin_EXPORTED_TARGETS})
-target_link_libraries(simulate_diff_drive_robot ${BOOST_LIBRARIES} ${catkin_LIBRARIES})
+ament_target_dependencies(simulate_diff_drive_robot rclcpp std_msgs pedsim_msgs pedsim_srvs pedsim_utils std_srvs geometry_msgs nav_msgs tf2 tf2_ros Qt5Widgets Boost)
+target_link_libraries(simulate_diff_drive_robot ${BOOST_LIBRARIES})
 
 install(
   TARGETS
-    ${EXECUTABLE_NAME}
     simulate_diff_drive_robot
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+	DESTINATION lib/${PROJECT_NAME}
+#   RUNTIME DESTINATION bin#/${PROJECT_NAME} # do not do this if want to be public
+#   INCLUDES DESTINATION include#/${PROJECT_NAME}
 )
-
+ament_package()
 
 ## Unit Tests

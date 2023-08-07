@@ -45,15 +45,15 @@ int main(int argc, char** argv) {
   // use default SIGINT handler so CTRL+C works
   signal(SIGINT, SIG_DFL);
 
-  if (sm.initializeSimulation()) {
-    ROS_INFO("node initialized, now running ");
-    sm.runSimulation();
+  if (sm->initializeSimulation()) {
+    RCLCPP_INFO(sm->get_logger(), "node initialized, now running ");
+    sm->runSimulation();
   } else {
-    ROS_WARN("Could not initialize simulation, aborting");
+    RCLCPP_WARN(sm->get_logger(), "Could not initialize simulation, aborting");
     return EXIT_FAILURE;
   }
-  rclcpp::spin(sm)
-  rclcpp::shutdown()
+  rclcpp::spin(sm);
+  rclcpp::shutdown();
 
   return app.exec();
 }
