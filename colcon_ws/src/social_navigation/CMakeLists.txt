@@ -15,7 +15,7 @@ find_package(rclcpp REQUIRED)
 # find_package(ros2launch REQUIRED)
 
 # this needed to tell colcon to place launch files in the share folder
-install(DIRECTORY launch
+install(DIRECTORY launch worlds
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()
