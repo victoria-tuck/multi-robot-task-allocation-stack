@@ -30,6 +30,7 @@ def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
     launch_dir = os.path.join(bringup_dir, 'launch')
+    social_navigation_launch_dir = os.path.join( get_package_share_directory('social_navigation'), 'launch')
 
     # Create the launch configuration variables
     slam = LaunchConfiguration('slam')
@@ -161,9 +162,20 @@ def generate_launch_description():
                           'use_namespace': 'False',
                           'rviz_config': rviz_config_file}.items())
 
+    # bringup_cmd = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         os.path.join(launch_dir, 'bringup_launch.py')),
+    #     launch_arguments={'namespace': namespace,
+    #                       'use_namespace': use_namespace,
+    #                       'slam': slam,
+    #                       'map': map_yaml_file,
+    #                       'use_sim_time': use_sim_time,
+    #                       'params_file': params_file,
+    #                       'autostart': autostart}.items())
+    
     bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(launch_dir, 'bringup_launch.py')),
+            os.path.join(social_navigation_launch_dir, 'nav2_bringup_launch.py')),
         launch_arguments={'namespace': namespace,
                           'use_namespace': use_namespace,
                           'slam': slam,
@@ -192,8 +204,8 @@ def generate_launch_description():
     ld.add_action(declare_world_cmd)
 
     # Add any conditioned actions
-    # ld.add_action(start_gazebo_server_cmd)
-    # ld.add_action(start_gazebo_client_cmd)
+    ld.add_action(start_gazebo_server_cmd)
+    ld.add_action(start_gazebo_client_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)

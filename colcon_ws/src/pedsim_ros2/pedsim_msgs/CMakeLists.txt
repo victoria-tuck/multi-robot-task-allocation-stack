@@ -39,6 +39,8 @@ set (msg_files
   "msg/SocialActivities.msg"
   "msg/Waypoint.msg"
   "msg/Waypoints.msg"
+  "msg/ObstaclePoint.msg"
+  "msg/ObstaclePointArray.msg"
 )
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}

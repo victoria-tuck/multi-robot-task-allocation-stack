@@ -125,6 +125,16 @@ install(
 #   RUNTIME DESTINATION bin#/${PROJECT_NAME} # do not do this if want to be public
 #   INCLUDES DESTINATION include#/${PROJECT_NAME}
 )
+
+add_executable(map_to_world src/map_to_world_obstacle.cpp)
+ament_target_dependencies(map_to_world rclcpp pedsim_msgs geometry_msgs nav_msgs)
+install(
+  TARGETS
+    map_to_world
+	DESTINATION lib/${PROJECT_NAME}
+#   RUNTIME DESTINATION bin#/${PROJECT_NAME} # do not do this if want to be public
+#   INCLUDES DESTINATION include#/${PROJECT_NAME}
+)
 ament_package()
 
 ## Unit Tests

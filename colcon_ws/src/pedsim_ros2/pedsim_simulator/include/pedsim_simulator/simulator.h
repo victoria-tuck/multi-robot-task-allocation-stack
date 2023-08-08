@@ -71,7 +71,6 @@
 
 // #include <dynamic_reconfigure/server.h>
 // #include <pedsim_simulator/PedsimSimulatorConfig.h>
-
 // using SimConfig = pedsim_simulator::PedsimSimulatorConfig;
 
 /// \class Simulator

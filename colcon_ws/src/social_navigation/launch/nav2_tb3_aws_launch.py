@@ -24,9 +24,11 @@ def generate_launch_description():
             os.path.join(social_navigation_dir, 'launch/tb3_simulation_launch.py')),
         launch_arguments={
                 'headless': 'False',
+                'use_simulator': 'False',
                 # 'namespace': 'test',
                 # 'use_namespace': 'True'
-                'slam': 'True'
+                'slam': 'False',
+                'map': os.path.join(social_navigation_dir, 'worlds', 'map_aws', 'map6.yaml')
                 # 'world': world_file
             }.items()
         )
@@ -37,4 +39,8 @@ def generate_launch_description():
     ld.add_action(turtle_bot3_demo)
     return ld
 
-    
+# FOR SLAM and making a map
+#ros2 launch aws_robomaker_hospital_world view_hospital.launch.py
+#ros2 launch social_navigation nav2_tb3_aws_launch.py
+#ros2 run turtlebot3_teleop teleop_keyboard
+#ros2 run nav2_map_server map_saver_cli -f map6

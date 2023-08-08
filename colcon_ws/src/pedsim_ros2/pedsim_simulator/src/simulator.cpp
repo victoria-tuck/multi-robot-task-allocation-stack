@@ -107,14 +107,64 @@ bool Simulator::initializeSimulation() {
     return false;
   }
 
+  // Using default values from 
   this->declare_parameter<bool>("enable_groups", true);
   this->get_parameter("enable_groups", CONFIG.groups_enabled);
   this->declare_parameter<double>("max_robot_speed", 1.5);
   this->get_parameter("max_robot_speed", CONFIG.max_robot_speed);
-  this->declare_parameter<double>("update_rate", 25.0);
+
+  // ///////// From config file
+  this->declare_parameter<double>("update_rate", 24.0);
   this->get_parameter("update_rate", CONFIG.updateRate);
   this->declare_parameter<double>("simulation_factor", 1.0);
   this->get_parameter("simulation_factor", CONFIG.simulationFactor);
+
+  // parameters which in ROS1 were made part of dynamic reconfigure
+  this->declare_parameter( "force_obstacle", 10.0);
+  this->get_parameter( "force_obstacle" ,CONFIG.forceObstacle );
+  this->declare_parameter( "sigma_obstacle",0.2);
+  this->get_parameter( "sigma_obstacle", CONFIG.sigmaObstacle);
+  this->declare_parameter( "force_social",5.1 );
+  this->get_parameter( "force_social", CONFIG.forceSocial );
+  this->declare_parameter( "force_group_gaze", 3.0 );
+  this->get_parameter("force_group_gaze" , CONFIG.forceGroupGaze );
+  this->declare_parameter( "force_group_coherence", 2.0);
+  this->get_parameter( "force_group_coherence", CONFIG.forceGroupCoherence );
+  this->declare_parameter( "force_group_repulsion", 1.0);
+  this->get_parameter( "force_group_repulsion", CONFIG.forceGroupRepulsion );
+  this->declare_parameter( "force_random", 0.1);
+  this->get_parameter("force_random" , CONFIG.forceRandom );
+  this->declare_parameter( "force_wall", 2.0 );
+  this->get_parameter( "force_wall", CONFIG.forceAlongWall );
+
+  // CONFIG.setObstacleForce(config.force_obstacle);
+  // CONFIG.setObstacleSigma(config.sigma_obstacle);
+  // CONFIG.setSocialForce(config.force_social);
+  // CONFIG.setGroupGazeForce(config.force_group_gaze);
+  // CONFIG.setGroupCoherenceForce(config.force_group_coherence);
+  // CONFIG.setGroupRepulsionForce(config.force_group_repulsion);
+  // CONFIG.setRandomForce(config.force_random);
+  // CONFIG.setAlongWallForce(config.force_wall);
+
+  //gen.add('update_rate', double_t, 0,
+  //      'Simulation frequency (Hz)', 24.0, 1.0, 50.0)
+  //gen.add('simulation_factor', double_t, 0, 'Simulation factor', 1.0, 0.1, 10.0)
+
+  // gen.add('force_obstacle', double_t, 0,
+  //         'Obstacle force weight', 10.0, 0.0, 50.0)
+  //gen.add('sigma_obstacle', double_t, 0,
+   //       'Sigma factor (obstacles)', 0.2, 0.1, 1.0)
+  // gen.add('force_social', double_t, 0, 'Social force weight', 5.1, 0.0, 10.0)
+  //gen.add('force_group_gaze', double_t, 0,
+  //        'Group gaze force weight', 3.0, 0.0, 10.0)
+  //gen.add('force_group_coherence', double_t, 0,
+  //        'Group coherence force weight', 2.0, 0.0, 10.0)
+  //gen.add('force_group_repulsion', double_t, 0,
+  //        'Group repulsion force weight', 1.0, 0.0, 10.0)
+  //gen.add('force_random', double_t, 0, 'Random force weight', 0.1, 0.0, 1.0)
+  //gen.add('force_wall', double_t, 0, 'Wall force weight', 2.0, 0.0, 10.0)
+  // Not used even in ROS1 code
+  // gen.add('paused', bool_t, 0, 'Pause/unpause simulation', False)
 
   int op_mode = 1;
   this->declare_parameter<int>("robot_mode", 1);\
