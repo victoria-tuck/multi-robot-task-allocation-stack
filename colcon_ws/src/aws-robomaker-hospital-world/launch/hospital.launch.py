@@ -11,7 +11,9 @@ def generate_launch_description():
     # world_file_name = "hospital.world"
     # world = os.path.join(get_package_share_directory('aws_robomaker_hospital_world'), 'worlds', world_file_name)
 
-    world_file_name = "waffle_aws_hospital.world"
+    # world_file_name = "waffle_aws_hospital.world"
+    world_file_name = "waffle_aws_hospital_humans.world"
+    # world_file_name = "test_human.world"
     # world_file_name = "hospital.world"
     world = os.path.join(get_package_share_directory('social_navigation'), 'worlds', world_file_name)
 

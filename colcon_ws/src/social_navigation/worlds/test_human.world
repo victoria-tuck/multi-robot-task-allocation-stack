@@ -1,0 +1,61 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+   <world name="default">
+      <!-- A ground plane -->
+      <include>
+         <uri>model://ground_plane</uri>
+      </include>
+      <!-- A global light source -->
+      <include>
+         <uri>model://sun</uri>
+      </include>
+
+      <!-- An actor -->
+      <!-- <actor name="animated_box">
+        <link name="link">
+          <visual name="visual">
+            <geometry>
+              <box>
+                <size>.2 .2 .2</size>
+              </box>
+            </geometry>
+          </visual>
+        </link>
+      </actor> -->
+
+      <actor name="actor">
+      <skin>
+        <filename>walk.dae</filename>
+      </skin>
+        <!-- </actor> -->
+        <animation name="walking">
+            <filename>walk.dae</filename> <!--from /usr/share/gazebo-11/media/models-->
+            <interpolate_x>true</interpolate_x>
+        </animation>
+        <script>
+            <trajectory id="0" type="walking">
+            <waypoint>
+                <time>0</time>
+                <pose>0 1 0.0.0 0 0 -1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>2</time>
+                <pose>0 -1 0.0 0 0 -1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>2.5</time>
+                <pose>0 -1 0.0 0 0 1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>7</time>
+                <pose>0 1 0.0 0 0 1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>7.5</time>
+                <pose>0 1 0.0 0 0 -1.57</pose>
+            </waypoint>
+            </trajectory>
+        </script>
+      </actor>
+   </world>
+</sdf>
