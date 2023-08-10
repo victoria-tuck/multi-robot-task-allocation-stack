@@ -1,0 +1,3 @@
+https://github.com/robotics-upo/gazebo_sfm_plugin.git
+* galactic
+  master

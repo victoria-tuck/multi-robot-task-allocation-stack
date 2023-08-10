@@ -1,0 +1,46 @@
+<?xml version="1.0"  encoding='utf-8'?>
+<sdf  version = "1.6"> 
+  <world  name = "default">
+
+    <!-- Load gazebo_ros_state plugin --> 
+    <plugin  filename = "libgazebo_ros_state.so"  name = "gazebo_ros_state" > 
+      <!-- Set the ROS node name for the plugin --> 
+      <ros > 
+        <namespace> /gazebo </namespace> 
+      </ros > 
+    </plugin >
+
+    <!-- A global light source --> 
+    <include > 
+      <uri>model://sun </uri> 
+    </include>
+
+    <!-- Ground Plane --> 
+    <include > 
+      <uri> model://ground_plane </uri > 
+    </include>
+
+    <!-- Other world entities and settings go here --> 
+    <!-- Your robot, models, light, physics, etc. -->
+
+    <!-- Add a box model --> 
+    <model name = "sample_box"> 
+      <pose> 0 0 0.5 0 0 0 </pose>  <!-- Initial position and orientation --> 
+      <link  name = "link"> 
+        <collision  name = "collision"> 
+          <geometry> 
+            <box> 
+              <size > 1 1 1 </size>  <!-- Size of the box --> 
+            </box> 
+          </geometry> 
+        </collision> 
+        <visual  name = "visual"> 
+          <geometry> 
+            <box> 
+              <size > 1 1 1 </size>  <!-- Size of the box --> 
+            </box> 
+          </geometry> 
+        </visual> 
+      </link> 
+    </model> </world>
+   </sdf>
