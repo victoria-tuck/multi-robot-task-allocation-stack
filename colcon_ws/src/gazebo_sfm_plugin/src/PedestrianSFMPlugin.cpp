@@ -184,6 +184,7 @@ void PedestrianSFMPlugin::HandleObstacles() {
   ignition::math::Vector3d closest_obs2;
   this->sfmActor.obstacles1.clear();
 
+  std::string obj_name = "";
   for (unsigned int i = 0; i < this->world->ModelCount(); ++i) {
     physics::ModelPtr model = this->world->ModelByIndex(i); // GetModel(i);
     // std::cout << "Mode name: " << model->GetName() << std::endl;
@@ -199,6 +200,7 @@ void PedestrianSFMPlugin::HandleObstacles() {
 
       // std::tuple<bool, double, ignition::math::Vector3d> intersect =
       //     model->BoundingBox().Intersect(modelPos, actorPos, 0.05, 8.0);
+      
       std::tuple<bool, double, ignition::math::Vector3d> intersect =
           model->BoundingBox().Intersect(linkPos, actorPos, 0.05, 8.0);
       
@@ -225,6 +227,8 @@ void PedestrianSFMPlugin::HandleObstacles() {
           minDist = modelDist;
           // closest_obs = offset;
           closest_obs = std::get<2>(intersect);
+          obj_name = model->GetName();
+          // std::cout << "Mode name: " << model->GetName() << " my loc: " << actorPos << " obs pos: " << modelPos << "bounding box: " <<  model->BoundingBox() << std::endl;
         }
       }
     }
@@ -237,6 +241,7 @@ void PedestrianSFMPlugin::HandleObstacles() {
   // printf("Model intersec x: %.2f y: %.2f\n\n", closest_obs2.X(),
   //        closest_obs2.Y());
   if (minDist <= 10.0) {
+    // std::cout << "Min dist object: " << obj_name << std::endl;
     utils::Vector2d ob(closest_obs.X(), closest_obs.Y());
     this->sfmActor.obstacles1.push_back(ob);
   }

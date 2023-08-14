@@ -18,11 +18,8 @@
       </ros > 
     </plugin >
 
-
-
-
  <actor name="actor1">
-      <pose>-1 2 1.25 0 0 0</pose>
+      <pose>-4.5 12 0.1 0 0 0.0</pose>
       <skin>
         <filename>walk-red.dae</filename>
         <scale>1.0</scale>
@@ -49,18 +46,19 @@
         <ignore_obstacles>
           <model>ground_plane</model>
           <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
           <model>turtlebot3_waffle</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>-4 6 1.25</waypoint>
-          <waypoint>-4 6 1.25</waypoint>
+          <waypoint>-4.5 12 0.1</waypoint>
+          <waypoint>-4.5 3 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
 
     <actor name="actor2">
-      <pose>-1 -8 1.25 0 0 0</pose>
+      <pose>-5 -8 0.1 0 0 0</pose>
       <skin>
         <filename>walk-blue.dae</filename> 
         <scale>1.0</scale>
@@ -86,20 +84,21 @@
         <ignore_obstacles>
           <model>ground_plane</model>
           <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
           <model>turtlebot3_waffle</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>-5 -8 1.25</waypoint>
-          <waypoint>-5 2 1.25</waypoint>
+          <waypoint>-5 -8 0.1</waypoint>
+          <waypoint>-4.5 1 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
 
 	
 
-    <actor name="actor3">
-      <pose>-1 0 1.25 0 0 0</pose>
+    <!-- <actor name="actor3">
+      <pose>-1 6 1.25 0 0 0</pose>
       <skin>
         <filename>stand.dae</filename>
         <scale>1.0</scale>
@@ -109,27 +108,17 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
-      <!--<plugin name="actor3_plugin" filename="libActorPlugin.so">
-        <target>3 2 1.24</target>
-        <target_weight>1.15</target_weight>
-        <obstacle_weight>1.8</obstacle_weight>
-        <animation_factor>5.1</animation_factor>
-        <ignore_obstacles>
-          <model>cafe</model>
-          <model>ground_plane</model>
-        </ignore_obstacles>
-      </plugin>-->
-    </actor>
-    
-    
-    <!--<actor name="actor4">
-      <pose>3 0 1.25 0 0 0</pose>
+    </actor> -->
+
+
+    <actor name="actor4">
+      <pose>-4 11 0.1 0 0 3.14</pose>
       <skin>
-        <filename>walk-green.dae</filename> 
+        <filename>walk.dae</filename> 
         <scale>1.0</scale>
       </skin>
       <animation name="walking">
-        <filename>walk-green.dae</filename>
+        <filename>walk.dae</filename>
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
@@ -142,81 +131,30 @@
         <goal_weight>2.0</goal_weight>
         <obstacle_weight>80.0</obstacle_weight>
         <social_weight>15.0</social_weight> 
-        <group_gaze_weight>3.0</group_gaze_weight>
-        <group_coh_weight>2.0</group_coh_weight>
-        <group_rep_weight>1.0</group_rep_weight>
-        <ignore_obstacles>
-          <model>cafe</model>
-          <model>ground_plane</model>
-        </ignore_obstacles>
-        <trajectory>
-          <cyclic>true</cyclic>
-          <waypoint>3 0 1.25</waypoint>
-          <waypoint>-3 0 1.25</waypoint>
-        </trajectory>
-      </plugin>
-    </actor>-->
-
-
-    <actor name="actor4">
-      <pose>1 -8 0.1 0 0 3.1416</pose>
-      <skin>
-        <filename>FrankWhiteBlender2/FrankWhiteBlender2.dae</filename> 
-        <scale>1</scale>
-      </skin>
-      <animation name="walkingboy">
-        <filename>walk.dae</filename>
-        <scale>1</scale>
-        <interpolate_x>true</interpolate_x>
-      </animation>
-      <script>
-        <loop>true</loop>
-        <delay_start>8.000000</delay_start>
-        <auto_start>true</auto_start>
-        <trajectory id="0" type="walkingboy">
-          <waypoint>
-            <time>0</time>
-            <pose>-4 0 0.1 0 0 3.1416</pose>
-          </waypoint>
-          <waypoint>
-            <time>8</time>
-            <pose>-4 -8 0.1 0 0 3.1416</pose>
-          </waypoint>
-          <waypoint>
-            <time>16</time>
-            <pose>-4 0 0.1 0 0 0</pose>
-          </waypoint>
-        </trajectory>
-      </script> 
-
-      <plugin name="actor4_plugin" filename="libPedestrianSFMPlugin.so">
-        <velocity>1.0</velocity>
-        <radius>0.4</radius>
-        <animation_factor>5.1</animation_factor>
-        <people_distance>6.0</people_distance>
-        <goal_weight>2.0</goal_weight>
-        <obstacle_weight>80.0</obstacle_weight>
-        <social_weight>15.0</social_weight> 
-        <group_gaze_weight>3.0</group_gaze_weight>
-        <group_coh_weight>2.0</group_coh_weight>
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>1.0</group_coh_weight>
         <group_rep_weight>1.0</group_rep_weight>
         <group>
             <model>actor5</model>
         </group>
         <ignore_obstacles>
-          <model>cafe</model>
           <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>1 -8 0.1</waypoint>
-          <waypoint>2 1 0.1</waypoint>
+          <waypoint>-4 11 0.1</waypoint>
+          <waypoint>4 11 0.1</waypoint>
+          <waypoint>4 2 0.1</waypoint>
+          <waypoint>4 11 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
 
     <actor name="actor5">
-      <pose>3 0.8 1.25 0 0 0</pose>
+      <pose>-4.5 11.5 0.1 0 0 3.14</pose>
       <skin>
         <filename>walk.dae</filename> 
         <scale>1.0</scale>
@@ -228,7 +166,7 @@
       </animation>
 
       <plugin name="actor5_plugin" filename="libPedestrianSFMPlugin.so">
-        <velocity>0.7</velocity>
+        <velocity>1.0</velocity>
         <radius>0.4</radius>
         <animation_factor>5.1</animation_factor>
         <animation_name>walking</animation_name>
@@ -236,7 +174,7 @@
         <goal_weight>2.0</goal_weight>
         <obstacle_weight>80.0</obstacle_weight>
         <social_weight>15.0</social_weight> 
-        <group_gaze_weight>3.0</group_gaze_weight>
+        <group_gaze_weight>1.0</group_gaze_weight>
         <group_coh_weight>2.0</group_coh_weight>
         <group_rep_weight>1.0</group_rep_weight>
         <group>
@@ -246,11 +184,14 @@
           <model>ground_plane</model>
           <model>aws_robomaker_hospital_floor_01_floor_1</model>
           <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>3 0.8 1.25</waypoint>
-          <waypoint>-3 0.8 1.25</waypoint>
+          <waypoint>-3.7 11.5 0.1</waypoint>
+          <waypoint>3.7 11.5 0.1</waypoint>
+          <waypoint>3.7 2.5 0.1</waypoint>
+          <waypoint>3.7 10.7 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
@@ -1722,13 +1663,13 @@
 
     <!-- AWS HOSPITAL WORLD HERE -->
 
-    <!-- <gui fullscreen='0'>
+    <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose frame=''>0.319654 -0.235002 9.29441 0 1.5138 0.009599</pose>
+        <pose frame=''>0.319654 -0.235002 9.29441 0 0.6 3.14</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
-    </gui> -->
+    </gui>
 
     <physics type="ode">
       <real_time_update_rate>1000.0</real_time_update_rate>
