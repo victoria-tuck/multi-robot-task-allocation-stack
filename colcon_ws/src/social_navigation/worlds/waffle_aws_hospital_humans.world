@@ -47,8 +47,8 @@
         <group_coh_weight>2.0</group_coh_weight>
         <group_rep_weight>1.0</group_rep_weight>
         <ignore_obstacles>
-          <model>cafe</model>
           <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
@@ -58,7 +58,7 @@
       </plugin>
     </actor>
 
-    <actor name="actor2">
+    <!-- <actor name="actor2">
       <pose>-1 -8 1.25 0 0 0</pose>
       <skin>
         <filename>walk-blue.dae</filename> 
@@ -92,10 +92,10 @@
           <waypoint>-1 2 1.25</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
 	
-
+<!-- 
     <actor name="actor3">
       <pose>-1 0 1.25 0 0 0</pose>
       <skin>
@@ -106,7 +106,7 @@
         <filename>stand.dae</filename>
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
-      </animation>
+      </animation> -->
       <!--<plugin name="actor3_plugin" filename="libActorPlugin.so">
         <target>3 2 1.24</target>
         <target_weight>1.15</target_weight>
@@ -117,7 +117,7 @@
           <model>ground_plane</model>
         </ignore_obstacles>
       </plugin>-->
-    </actor>
+    <!-- </actor> -->
     
     
     <!--<actor name="actor4">
@@ -211,7 +211,7 @@
     </actor>-->
 
 
-    <actor name="actor4">
+    <!-- <actor name="actor4">
       <pose>3 0 1.25 0 0 0</pose>
       <skin>
         <filename>walk.dae</filename> 
@@ -287,7 +287,7 @@
           <waypoint>-3 0.8 1.25</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
 
 
@@ -489,14 +489,14 @@
         <pose>-0.001425 -0.014447 0 0 -0 0</pose>
       </include>
     </model>
-    <model name="aws_robomaker_hospital_floor_01_walls_1">
+    <!-- <model name="aws_robomaker_hospital_floor_01_walls_1">
       <include>
         <uri>model://aws_robomaker_hospital_floor_01_walls</uri>
         <static>true</static>
         <pose>-0.013823 -0.013783 0 0 -0 0</pose>
       </include>
-    </model>
-    <model name="aws_robomaker_hospital_nursesstation_01_1">
+    </model> -->
+    <!-- <model name="aws_robomaker_hospital_nursesstation_01_1">
       <include>
         <uri>model://aws_robomaker_hospital_nursesstation_01</uri>
         <static>true</static>
@@ -600,7 +600,7 @@
         <static>true</static>
         <pose>11.1777 -18.4129 0 0 0 -3.13719</pose>
       </include>
-    </model>
+    </model> -->
     <model name="StorageRack_1">
       <include>
         <uri>model://StorageRack</uri>
@@ -629,7 +629,7 @@
         <pose>0.626494 -0.743667 -0 0 1e-06 -1.53446</pose>
       </include>
     </model>
-    <model name="Scrubs_1">
+    <!-- <model name="Scrubs_1">
       <include>
         <uri>model://Scrubs</uri>
         <static>true</static>
@@ -698,7 +698,9 @@
         <static>true</static>
         <pose>-7.89464 8.01997 0 0 -0 0</pose>
       </include>
-    </model>
+    </model-->
+
+
     <model name="PotatoChipChair_3">
       <include>
         <uri>model://PotatoChipChair</uri>
@@ -706,7 +708,9 @@
         <pose>-6.39087 6.45458 0 0 0 -3.13096</pose>
       </include>
     </model>
-    <model name="PotatoChipChair_4">
+
+
+    <!--model name="PotatoChipChair_4">
       <include>
         <uri>model://PotatoChipChair</uri>
         <static>true</static>
@@ -1741,7 +1745,7 @@
         <static>true</static>
         <pose>8.35378 9.64852 -3e-06 -6e-06 0 0</pose>
       </include>
-    </model>
+    </model> -->
     <model name="Chair_4">
       <include>
         <uri>model://Chair</uri>

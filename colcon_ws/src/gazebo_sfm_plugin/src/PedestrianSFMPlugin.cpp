@@ -178,6 +178,7 @@ void PedestrianSFMPlugin::Reset() {
 
 /////////////////////////////////////////////////
 void PedestrianSFMPlugin::HandleObstacles() {
+  // std::cout << "Nu  models: " << this->world->ModelCount() << std::endl;
   double minDist = 10000.0;
   ignition::math::Vector3d closest_obs;
   ignition::math::Vector3d closest_obs2;
@@ -185,13 +186,28 @@ void PedestrianSFMPlugin::HandleObstacles() {
 
   for (unsigned int i = 0; i < this->world->ModelCount(); ++i) {
     physics::ModelPtr model = this->world->ModelByIndex(i); // GetModel(i);
+    // std::cout << "Mode name: " << model->GetName() << std::endl;
     if (std::find(this->ignoreModels.begin(), this->ignoreModels.end(),
                   model->GetName()) == this->ignoreModels.end()) {
+                    
       ignition::math::Vector3d actorPos = this->actor->WorldPose().Pos();
       ignition::math::Vector3d modelPos = model->WorldPose().Pos();
-      std::tuple<bool, double, ignition::math::Vector3d> intersect =
-          model->BoundingBox().Intersect(modelPos, actorPos, 0.05, 8.0);
+      std::cout << "Mode name: " << model->GetName() << " my loc: " << actorPos << " obs pos: " << modelPos << "bounding box: " <<  model->BoundingBox() << std::endl;
+      
+      std::vector<physics::LinkPtr> links = model->GetLinks();
+      ignition::math::Vector3d linkPos = links[0]->WorldPose().Pos();
 
+      // std::tuple<bool, double, ignition::math::Vector3d> intersect =
+      //     model->BoundingBox().Intersect(modelPos, actorPos, 0.05, 8.0);
+      std::tuple<bool, double, ignition::math::Vector3d> intersect =
+          model->BoundingBox().Intersect(linkPos, actorPos, 0.05, 8.0);
+
+      
+      
+      for( unsigned int links_i=0; links_i<links.size(); links_i++ ){
+        std::cout << links[links_i]->GetName() << " pos: " <<  links[links_i]->WorldPose().Pos() <<  "\n";
+      }
+      // std::cout << "Link: " << model->GetLinks;
       if (std::get<0>(intersect) == true) {
 
         // ignition::math::Vector3d = model->BoundingBox().Center();
@@ -238,6 +254,7 @@ void PedestrianSFMPlugin::HandlePedestrians() {
         ((int)model->GetType() == (int)this->actor->GetType())) {
       // printf("Actor %i has detected actor %i!\n", this->actor->GetId(),
       //        model->GetId());
+
 
       ignition::math::Pose3d modelPose = model->WorldPose();
       ignition::math::Vector3d pos =

@@ -61,11 +61,7 @@ def generate_launch_description():
         'cafe3.world'
     ])
     
-    # world_path = world_file #PathJoinSubstitution([
-    #     FindPackageShare('social_navigation'),
-    #     'worlds',
-    #     'cafe3.world'
-    # ])
+    # world_path = world_file
 
     gzserver_cmd = [
         'gzserver ',
@@ -79,9 +75,6 @@ def generate_launch_description():
         'gzclient',
         _boolean_command('verbose'), ' ',
     ]
-
-    
-
 
     return LaunchDescription([
         
