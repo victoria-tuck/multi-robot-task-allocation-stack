@@ -22,6 +22,8 @@ import rclpy
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 # from robot_navigator import BasicNavigator, NavigationResult
 
+# example taken from https://github.com/SteveMacenski/nav2_rosdevday_2021/tree/main
+
 '''
 Basic navigation demo to go to pose.
 '''

@@ -13,9 +13,10 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(gazebo_msgs REQUIRED)
+find_package(social_navigation_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-# find_package( REQUIRED)
-# find_package(ros2launch REQUIRED)
+find_package(geometry_msgs REQUIRED)
+
 
 include_directories(include)
 
@@ -28,6 +29,13 @@ add_executable(set_gazebo_state_node nodes/gazebo_set_state.cpp)
 ament_target_dependencies(set_gazebo_state_node rclcpp gazebo_msgs std_msgs)
 install( TARGETS
   set_gazebo_state_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+add_executable(get_human_states nodes/get_human_states.cpp)
+ament_target_dependencies(get_human_states rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs)
+install( TARGETS
+  get_human_states
   DESTINATION lib/${PROJECT_NAME}
 )
 
