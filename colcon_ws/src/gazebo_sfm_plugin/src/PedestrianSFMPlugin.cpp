@@ -192,7 +192,7 @@ void PedestrianSFMPlugin::HandleObstacles() {
                     
       ignition::math::Vector3d actorPos = this->actor->WorldPose().Pos();
       ignition::math::Vector3d modelPos = model->WorldPose().Pos();
-      std::cout << "Mode name: " << model->GetName() << " my loc: " << actorPos << " obs pos: " << modelPos << "bounding box: " <<  model->BoundingBox() << std::endl;
+      // std::cout << "Mode name: " << model->GetName() << " my loc: " << actorPos << " obs pos: " << modelPos << "bounding box: " <<  model->BoundingBox() << std::endl;
       
       std::vector<physics::LinkPtr> links = model->GetLinks();
       ignition::math::Vector3d linkPos = links[0]->WorldPose().Pos();
@@ -201,12 +201,11 @@ void PedestrianSFMPlugin::HandleObstacles() {
       //     model->BoundingBox().Intersect(modelPos, actorPos, 0.05, 8.0);
       std::tuple<bool, double, ignition::math::Vector3d> intersect =
           model->BoundingBox().Intersect(linkPos, actorPos, 0.05, 8.0);
-
       
       
-      for( unsigned int links_i=0; links_i<links.size(); links_i++ ){
-        std::cout << links[links_i]->GetName() << " pos: " <<  links[links_i]->WorldPose().Pos() <<  "\n";
-      }
+      // for( unsigned int links_i=0; links_i<links.size(); links_i++ ){
+      //   std::cout << links[links_i]->GetName() << " pos: " <<  links[links_i]->WorldPose().Pos() <<  "\n";
+      // }
       // std::cout << "Link: " << model->GetLinks;
       if (std::get<0>(intersect) == true) {
 

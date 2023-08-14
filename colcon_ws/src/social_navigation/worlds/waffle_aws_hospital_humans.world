@@ -49,16 +49,17 @@
         <ignore_obstacles>
           <model>ground_plane</model>
           <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>-1 2 1.25</waypoint>
-          <waypoint>-1 -8 1.25</waypoint>
+          <waypoint>-4 6 1.25</waypoint>
+          <waypoint>-4 6 1.25</waypoint>
         </trajectory>
       </plugin>
     </actor>
 
-    <!-- <actor name="actor2">
+    <actor name="actor2">
       <pose>-1 -8 1.25 0 0 0</pose>
       <skin>
         <filename>walk-blue.dae</filename> 
@@ -83,19 +84,20 @@
         <group_coh_weight>2.0</group_coh_weight>
         <group_rep_weight>1.0</group_rep_weight>
         <ignore_obstacles>
-          <model>cafe</model>
           <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>-1 -8 1.25</waypoint>
-          <waypoint>-1 2 1.25</waypoint>
+          <waypoint>-5 -8 1.25</waypoint>
+          <waypoint>-5 2 1.25</waypoint>
         </trajectory>
       </plugin>
-    </actor> -->
+    </actor>
 
 	
-<!-- 
+
     <actor name="actor3">
       <pose>-1 0 1.25 0 0 0</pose>
       <skin>
@@ -106,7 +108,7 @@
         <filename>stand.dae</filename>
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
-      </animation> -->
+      </animation>
       <!--<plugin name="actor3_plugin" filename="libActorPlugin.so">
         <target>3 2 1.24</target>
         <target_weight>1.15</target_weight>
@@ -117,7 +119,7 @@
           <model>ground_plane</model>
         </ignore_obstacles>
       </plugin>-->
-    <!-- </actor> -->
+    </actor>
     
     
     <!--<actor name="actor4">
@@ -156,7 +158,7 @@
     </actor>-->
 
 
-    <!-- <actor name="actor4">
+    <actor name="actor4">
       <pose>1 -8 0.1 0 0 3.1416</pose>
       <skin>
         <filename>FrankWhiteBlender2/FrankWhiteBlender2.dae</filename> 
@@ -174,15 +176,15 @@
         <trajectory id="0" type="walkingboy">
           <waypoint>
             <time>0</time>
-            <pose>1 -8 0.1 0 0 3.1416</pose>
+            <pose>-4 0 0.1 0 0 3.1416</pose>
           </waypoint>
           <waypoint>
             <time>8</time>
-            <pose>2 1 0.1 0 0 3.1416</pose>
+            <pose>-4 -8 0.1 0 0 3.1416</pose>
           </waypoint>
           <waypoint>
             <time>16</time>
-            <pose>1 -8 0.1 0 0 0</pose>
+            <pose>-4 0 0.1 0 0 0</pose>
           </waypoint>
         </trajectory>
       </script> 
@@ -191,43 +193,6 @@
         <velocity>1.0</velocity>
         <radius>0.4</radius>
         <animation_factor>5.1</animation_factor>
-        <people_distance>6.0</people_distance>
-        <goal_weight>2.0</goal_weight>
-        <obstacle_weight>80.0</obstacle_weight>
-        <social_weight>15.0</social_weight> 
-        <group_gaze_weight>3.0</group_gaze_weight>
-        <group_coh_weight>2.0</group_coh_weight>
-        <group_rep_weight>1.0</group_rep_weight>
-        <ignore_obstacles>
-          <model>cafe</model>
-          <model>ground_plane</model>
-        </ignore_obstacles>
-        <trajectory>
-          <cyclic>true</cyclic>
-          <waypoint>1 -8 0.1</waypoint>
-          <waypoint>2 1 0.1</waypoint>
-        </trajectory>
-      </plugin>
-    </actor>-->
-
-
-    <!-- <actor name="actor4">
-      <pose>3 0 1.25 0 0 0</pose>
-      <skin>
-        <filename>walk.dae</filename> 
-        <scale>1.0</scale>
-      </skin>
-      <animation name="walking">
-        <filename>walk.dae</filename>
-        <scale>1.000000</scale>
-        <interpolate_x>true</interpolate_x>
-      </animation>
-
-      <plugin name="actor4_plugin" filename="libPedestrianSFMPlugin.so">
-        <velocity>1.0</velocity>
-        <radius>0.4</radius>
-        <animation_factor>5.1</animation_factor>
-        <animation_name>walking</animation_name>
         <people_distance>6.0</people_distance>
         <goal_weight>2.0</goal_weight>
         <obstacle_weight>80.0</obstacle_weight>
@@ -244,8 +209,8 @@
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>3 0 1.25</waypoint>
-          <waypoint>-3 0 1.25</waypoint>
+          <waypoint>1 -8 0.1</waypoint>
+          <waypoint>2 1 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
@@ -278,8 +243,9 @@
             <model>actor4</model>
         </group>
         <ignore_obstacles> 
-          <model>cafe</model>
           <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
@@ -287,7 +253,7 @@
           <waypoint>-3 0.8 1.25</waypoint>
         </trajectory>
       </plugin>
-    </actor> -->
+    </actor>
 
 
 
@@ -489,14 +455,14 @@
         <pose>-0.001425 -0.014447 0 0 -0 0</pose>
       </include>
     </model>
-    <!-- <model name="aws_robomaker_hospital_floor_01_walls_1">
+    <model name="aws_robomaker_hospital_floor_01_walls_1">
       <include>
         <uri>model://aws_robomaker_hospital_floor_01_walls</uri>
         <static>true</static>
         <pose>-0.013823 -0.013783 0 0 -0 0</pose>
       </include>
-    </model> -->
-    <!-- <model name="aws_robomaker_hospital_nursesstation_01_1">
+    </model>
+    <model name="aws_robomaker_hospital_nursesstation_01_1">
       <include>
         <uri>model://aws_robomaker_hospital_nursesstation_01</uri>
         <static>true</static>
@@ -600,7 +566,7 @@
         <static>true</static>
         <pose>11.1777 -18.4129 0 0 0 -3.13719</pose>
       </include>
-    </model> -->
+    </model>
     <model name="StorageRack_1">
       <include>
         <uri>model://StorageRack</uri>
@@ -629,7 +595,7 @@
         <pose>0.626494 -0.743667 -0 0 1e-06 -1.53446</pose>
       </include>
     </model>
-    <!-- <model name="Scrubs_1">
+    <model name="Scrubs_1">
       <include>
         <uri>model://Scrubs</uri>
         <static>true</static>
@@ -698,9 +664,7 @@
         <static>true</static>
         <pose>-7.89464 8.01997 0 0 -0 0</pose>
       </include>
-    </model-->
-
-
+    </model>
     <model name="PotatoChipChair_3">
       <include>
         <uri>model://PotatoChipChair</uri>
@@ -708,9 +672,7 @@
         <pose>-6.39087 6.45458 0 0 0 -3.13096</pose>
       </include>
     </model>
-
-
-    <!--model name="PotatoChipChair_4">
+    <model name="PotatoChipChair_4">
       <include>
         <uri>model://PotatoChipChair</uri>
         <static>true</static>
@@ -1745,7 +1707,7 @@
         <static>true</static>
         <pose>8.35378 9.64852 -3e-06 -6e-06 0 0</pose>
       </include>
-    </model> -->
+    </model>
     <model name="Chair_4">
       <include>
         <uri>model://Chair</uri>
