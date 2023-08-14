@@ -18,7 +18,7 @@ def generate_launch_description():
     # turtlebot_dir = get_package_share_directory('nav2_bringup')
     social_navigation_dir = get_package_share_directory('social_navigation')
 
-    world_file = os.path.join(social_navigation_dir, 'worlds', 'waffle_aws_hospital.world'),
+    # world_file = os.path.join(social_navigation_dir, 'worlds', 'waffle_aws_hospital.world'),
     turtle_bot3_demo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(social_navigation_dir, 'launch/tb3_simulation_launch.py')),

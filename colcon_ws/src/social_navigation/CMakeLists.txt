@@ -22,6 +22,7 @@ include_directories(include)
 # this needed to tell colcon to place launch files in the share folder
 install(DIRECTORY launch worlds
   DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
 
 add_executable(set_gazebo_state_node nodes/gazebo_set_state.cpp)
 ament_target_dependencies(set_gazebo_state_node rclcpp gazebo_msgs std_msgs)
