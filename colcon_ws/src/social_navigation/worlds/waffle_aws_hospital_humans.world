@@ -136,6 +136,7 @@
         <group_rep_weight>1.0</group_rep_weight>
         <group>
             <model>actor5</model>
+            <model>actor6</model>
         </group>
         <ignore_obstacles>
           <model>ground_plane</model>
