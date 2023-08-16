@@ -15,6 +15,7 @@ find_package(rclcpp REQUIRED)
 find_package(gazebo_msgs REQUIRED)
 find_package(social_navigation_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
@@ -37,18 +38,18 @@ install( TARGETS
 )
 
 add_executable(get_human_states nodes/get_human_states.cpp)
-ament_target_dependencies(get_human_states rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs)
+ament_target_dependencies(get_human_states rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)
 install( TARGETS
   get_human_states
   DESTINATION lib/${PROJECT_NAME}
 )
 
-add_executable(get_human_closest_obstacle nodes/human_nearest_obstacle_from_map.cpp)
-ament_target_dependencies(get_human_closest_obstacle rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)
-install( TARGETS
-  get_human_closest_obstacle
-  DESTINATION lib/${PROJECT_NAME}
-)
+# add_executable(get_human_closest_obstacle nodes/human_nearest_obstacle_from_map.cpp)
+# ament_target_dependencies(get_human_closest_obstacle rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)
+# install( TARGETS
+#   get_human_closest_obstacle
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 add_executable(humans_sfm_node nodes/humans_sfm_node.cpp)
 ament_target_dependencies(humans_sfm_node rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)

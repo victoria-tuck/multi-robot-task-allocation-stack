@@ -63,9 +63,9 @@ class HumanNearestObstacle: public rclcpp::Node {
             for (int i=0; i<num_humans; i++){
                 social_navigation_msgs::msg::HumanClosestObstacle obstacle_points;
                 obstacle_points.num_obstacles = 0;
-                geometry_msgs::msg::Point state = human_states[i];
+                geometry_msgs::msg::Pose state = human_states[i];
                 unsigned int mx, my;
-                worldToMap( state.x, state.y, mx, my );
+                worldToMap( state.position.x, state.position.y, mx, my );
 
                 // search: 
                     // put a limit on distance: maybe 3 meters?
@@ -128,7 +128,7 @@ class HumanNearestObstacle: public rclcpp::Node {
 
     private:
         nav_msgs::msg::OccupancyGrid map_;
-        std::vector<geometry_msgs::msg::Point> human_states;
+        std::vector<geometry_msgs::msg::Pose> human_states;
 
         rclcpp::Subscription<social_navigation_msgs::msg::HumanStates>::SharedPtr human_sub_;
         rclcpp::TimerBase::SharedPtr timer_;
