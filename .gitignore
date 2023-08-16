@@ -13,3 +13,4 @@ catkin_ws/*
 colcon_ws/src/lightsfm/build/
 colcon_ws/src/lightsfm/install/
 colcon_ws/src/lightsfm/log/
+.vscode/*
