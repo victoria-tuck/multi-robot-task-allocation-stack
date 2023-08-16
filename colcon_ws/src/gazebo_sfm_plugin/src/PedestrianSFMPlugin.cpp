@@ -298,6 +298,11 @@ void PedestrianSFMPlugin::HandlePedestrians() {
 /////////////////////////////////////////////////
 void PedestrianSFMPlugin::OnUpdate(const common::UpdateInfo &_info) {
   // Time delta
+
+  ignition::math::Vector3d rpy_temp = this->actor->WorldPose().Rot().Euler();
+  // utils::Angle add_temp = utils::Angle::fromRadian(1.5707);
+  // std::cout << "Actor yaw: " << (rpy_temp.Z()-1.57079)*180/3.14 << std::endl;; // yaw
+
   double dt = (_info.simTime - this->lastUpdate).Double();
 
   ignition::math::Pose3d actorPose = this->actor->WorldPose();

@@ -3,7 +3,7 @@
 #include  "gazebo_msgs/srv/get_entity_state.hpp"
 #include "social_navigation_msgs/msg/human_states.hpp"
 // #include "social_navigation_msgs/msg/human_state.hpp"
-#include "geometry_msgs/msg/vector3.hpp"
+#include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include <chrono>
 #include <functional>
@@ -18,8 +18,6 @@ using namespace std::chrono_literals;
 #include <chrono>
 #include <cstdlib>
 #include <memory>
-
-using namespace std::chrono_literals;
 
 class HumanStatePublihser : public rclcpp::Node{
     public:
@@ -84,7 +82,7 @@ class HumanStatePublihser : public rclcpp::Node{
                     // }
 
 
-                    if (rclcpp::wait_until_future_complete(this->get_node_base_interface(), result) == rclcpp::FutureReturnCode::SUCCESS)
+                    if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result) == rclcpp::FutureReturnCode::SUCCESS)
                     {
                         std::cout << "Sent: " << result.get()->success << "\n";
                         // RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Sent " << result.get()->success);
@@ -97,7 +95,7 @@ class HumanStatePublihser : public rclcpp::Node{
 
                     std::cout << "hello8" << std::endl;
                     geometry_msgs::msg::Pose pose = result.get()->state.pose;
-                    geometry_msgs::msg::Vector3 pos;
+                    geometry_msgs::msg::Point pos;
                     std::cout << pose.position.x << std::endl;
                     pos.x = pose.position.x; pos.y = pose.position.y; pos.z = pose.position.z;
                     std::cout << "hello9" << std::endl;

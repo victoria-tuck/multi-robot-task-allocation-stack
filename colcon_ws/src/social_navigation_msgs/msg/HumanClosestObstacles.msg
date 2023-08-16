@@ -1,0 +1,1 @@
+social_navigation_msgs/HumanClosestObstacle[] obstacle_info

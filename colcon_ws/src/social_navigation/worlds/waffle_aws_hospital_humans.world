@@ -29,6 +29,14 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
+      
+      <plugin name="actor1_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human1</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
 
       <plugin name="actor1_plugin" filename="libPedestrianSFMPlugin.so">
         <velocity>0.9</velocity>
@@ -69,6 +77,14 @@
         <interpolate_x>true</interpolate_x>
       </animation>
 
+      <plugin name="actor2_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human2</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+
       <plugin name="actor2_plugin" filename="libPedestrianSFMPlugin.so">
         <velocity>1.2</velocity>
         <radius>0.4</radius>
@@ -97,7 +113,7 @@
 
 	
 
-    <!-- <actor name="actor3">
+    <actor name="actor3">
       <pose>-1 6 1.25 0 0 0</pose>
       <skin>
         <filename>stand.dae</filename>
@@ -108,7 +124,17 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
-    </actor> -->
+
+      <plugin name="actor3_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human3</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+
+
+    </actor>
 
 
     <actor name="actor4">
@@ -122,6 +148,14 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
+
+      <plugin name="actor4_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human4</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
 
       <plugin name="actor4_plugin" filename="libPedestrianSFMPlugin.so">
         <velocity>1.0</velocity>
@@ -165,6 +199,14 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
+
+      <plugin name="actor5_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human5</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
 
       <plugin name="actor5_plugin" filename="libPedestrianSFMPlugin.so">
         <velocity>1.0</velocity>

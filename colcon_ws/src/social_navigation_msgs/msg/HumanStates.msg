@@ -1,1 +1,2 @@
-geometry_msgs/Vector3[] states
+geometry_msgs/Point[] states
+geometry_msgs/Twist[] velocities

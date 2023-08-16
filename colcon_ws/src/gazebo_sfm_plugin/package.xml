@@ -11,13 +11,26 @@
 
   <url type="repository">https://github.com/robotics-upo/gazebo_sfm_plugin</url>
 
-  <author>Noé Pérez</author>
+  <author>Hardik Parwana</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   
   <depend>roscpp</depend>
   <depend>lightsfm</depend>
   <depend>gazebo_ros</depend>
+
+  <depend>nav_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+
+  <build_depend>gazebo_dev</build_depend>
+  <build_depend>gazebo_msgs</build_depend>
+  <!-- <build_depend>gazebo_ros</build_depend> -->
+
+  <exec_depend>gazebo_dev</exec_depend>
+  <exec_depend>gazebo_msgs</exec_depend>
+  <!-- <exec_depend>gazebo_ros</exec_depend> -->
 
   <export>
     <build_type>ament_cmake</build_type>

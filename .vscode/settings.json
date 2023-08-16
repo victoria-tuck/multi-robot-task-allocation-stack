@@ -1,5 +1,7 @@
 {
     "files.associations": {
+        "chrono": "cpp",
+        "cmath": "cpp",
         "array": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
@@ -7,10 +9,8 @@
         "bitset": "cpp",
         "cctype": "cpp",
         "cfenv": "cpp",
-        "chrono": "cpp",
         "cinttypes": "cpp",
         "clocale": "cpp",
-        "cmath": "cpp",
         "codecvt": "cpp",
         "compare": "cpp",
         "complex": "cpp",
@@ -52,6 +52,7 @@
         "type_traits": "cpp",
         "utility": "cpp",
         "fstream": "cpp",
+        "future": "cpp",
         "initializer_list": "cpp",
         "iomanip": "cpp",
         "iosfwd": "cpp",
