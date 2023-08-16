@@ -71,6 +71,28 @@ install(TARGETS ActorStatePublisherPlugin
   RUNTIME DESTINATION bin
 )
 
+
+add_library(ModelStatePublisherPlugin SHARED
+  src/ModelStatePublisherPlugin.cpp
+)
+target_include_directories(ModelStatePublisherPlugin PUBLIC include)
+ament_target_dependencies(ModelStatePublisherPlugin
+  "gazebo_ros"
+  "gazebo_dev"
+  "geometry_msgs"
+  "nav_msgs"
+  "rclcpp"
+  "tf2"
+  "tf2_geometry_msgs"
+  "tf2_ros"
+)
+ament_export_libraries(ModelStatePublisherPlugin)
+install(TARGETS ModelStatePublisherPlugin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
 install(DIRECTORY include/
         DESTINATION include
 )

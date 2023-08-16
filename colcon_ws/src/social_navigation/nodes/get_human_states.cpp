@@ -1,8 +1,6 @@
 #include <iostream>
 #include "rclcpp/rclcpp.hpp"
-#include  "gazebo_msgs/srv/get_entity_state.hpp"
 #include "social_navigation_msgs/msg/human_states.hpp"
-// #include "social_navigation_msgs/msg/human_state.hpp"
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -13,8 +11,6 @@
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
-using std::placeholders::_2;
-using std::placeholders::_3;
 
 // #include "rclcpp/rclcpp.hpp"
 // #include "example_interfaces/srv/add_two_ints.hpp"
@@ -32,7 +28,6 @@ class HumanStatePublihser : public rclcpp::Node{
             this->declare_parameter<float>("update_frequency",10);
             this->get_parameter("update_frequency", update_frequency);
 
-            // client = this->create_client<gazebo_msgs::srv::GetEntityState>("/gazebo/get_entity_state");
             for (int i=0; i<num_humans; i++){
 
                 geometry_msgs::msg::Pose pose;
@@ -96,65 +91,3 @@ int main(int argc, char **argv)
   rclcpp::shutdown();
   return 0;
 }
-
-
-// void HumanStatePublihserCallback(){
-//             social_navigation_msgs::msg::HumanStates human_states;
-
-//             auto request = std::make_shared<gazebo_msgs::srv::GetEntityState::Request>();
-
-//             int num_humans = 4;
-//             std::cout << "hello2" << std::endl;
-//             for (int i=0; i<num_humans; i++){
-//                 std::cout << "hello2_1" << std::endl;
-//                     request->name="actor"+std::to_string(i+1);
-//                     request->reference_frame = "world";
-//                     while (!client->wait_for_service(1s)) {
-//                                 if (!rclcpp::ok()) {
-//                                 RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
-//                                 // return 0;
-//                                 }
-//                                 RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "service not available, waiting again...");
-//                             }
-//                     auto result = client->async_send_request(request);
-//                     std::cout << "hello3" << std::endl;
-//                     // std::wait
-//                     // try{
-//                     //     std::cout << "hello4" << std::endl;
-//                     //     int succ = 0;
-//                     //     if (result.get()->success){
-//                     //         std::cout << "hello5" << std::endl;
-//                     //         succ = 1;
-//                     //         RCLCPP_INFO(this->get_logger(), "Gazebo data received");
-//                     //     }
-//                     //     std::cout << "hello6" << std::endl;
-//                     //     // std::cout <<  "Gazebo data received: " << succ << "\n";
-//                     // }
-//                     // catch (const std::exception &e) {
-//                     //     std::cout << "hello7" << std::endl;
-//                     //     RCLCPP_ERROR(this->get_logger(), "Failed to call service /gazebo/get_entity_state");
-//                     // }
-
-
-//                     if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result) == rclcpp::FutureReturnCode::SUCCESS)
-//                     {
-//                         std::cout << "Sent: " << result.get()->success << "\n";
-//                         // RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Sent " << result.get()->success);
-//                     } 
-//                     else {
-//                         RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to call service add_two_ints");
-//                     }
-
-
-
-//                     std::cout << "hello8" << std::endl;
-//                     geometry_msgs::msg::Pose pose = result.get()->state.pose;
-//                     geometry_msgs::msg::Point pos;
-//                     std::cout << pose.position.x << std::endl;
-//                     pos.x = pose.position.x; pos.y = pose.position.y; pos.z = pose.position.z;
-//                     std::cout << "hello9" << std::endl;
-//                     // pos.state.push_back(pose.position.x); pos.state.push_back(pose.position.y); pos.state.push_back(pose.position);
-//                     human_states.states.push_back( pos );
-//             }
-//             pub_humans->publish(human_states);
-//         }

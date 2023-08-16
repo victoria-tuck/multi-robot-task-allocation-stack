@@ -185,6 +185,7 @@
     <model name="turtlebot3_waffle"> 
       <pose>0.0 9.0 0.01 0.0 0.0 0.0</pose>
 
+      
       <link name="base_footprint"/>
 
       <link name="base_link">
@@ -222,6 +223,7 @@
         </visual>
       </link>
 
+    
       <link name="imu_link">
         <sensor name="tb3_imu" type="imu">
           <always_on>true</always_on>
@@ -688,6 +690,27 @@
         <joint_name>wheel_left_joint</joint_name>
         <joint_name>wheel_right_joint</joint_name>
       </plugin>
+
+      <plugin name="tb3_publisher" filename="libModelStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=tb3</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+
+      <!-- <plugin name="gazebo_ros_p3d" filename="libgazebo_ros_p3d.so">
+        <ros>
+          <namespace>/gazbeo</namespace>
+          <remapping>odom:=tb3</remapping>
+        </ros>
+        <body_name>base_link</body_name>
+        <frame_name>turtlebot3_waffle</frame_name>
+        <update_rate>10</update_rate>
+        <xyz_offset>10 10 10</xyz_offset>
+        <rpy_offset>0.1 0.1 0.1</rpy_offset>
+        <gaussian_noise>0.01</gaussian_noise>
+      </plugin> -->
 
     </model>
 
