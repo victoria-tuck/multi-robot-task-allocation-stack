@@ -156,7 +156,7 @@ def generate_launch_description():
 
     rviz_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(launch_dir, 'rviz_launch.py')),
+            os.path.join(social_navigation_launch_dir, 'nav2_rviz_launch.py')),
         condition=IfCondition(use_rviz),
         launch_arguments={'namespace': '',
                           'use_namespace': 'False',

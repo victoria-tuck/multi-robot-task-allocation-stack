@@ -112,7 +112,7 @@
     </actor>
 
 	
-
+<!-- 
     <actor name="actor3">
       <pose>-1 6 1.25 0 0 0</pose>
       <skin>
@@ -134,11 +134,61 @@
       </plugin>
 
 
+    <!-- </actor> -->
+
+
+    <actor name="actor3">
+      <pose>-4 11 0.1 0 0 3.14</pose>
+      <skin>
+        <filename>walk.dae</filename> 
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+
+      <plugin name="actor3_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human3</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+
+      <plugin name="actor3_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.0</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>1.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <group>
+            <model>actor4</model>
+        </group>
+        <ignore_obstacles>
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>-4 11 0.1</waypoint>
+          <waypoint>4 11 0.1</waypoint>
+          <waypoint>4 2 0.1</waypoint>
+          <waypoint>4 11 0.1</waypoint>
+        </trajectory>
+      </plugin>
     </actor>
 
-
     <actor name="actor4">
-      <pose>-4 11 0.1 0 0 3.14</pose>
+      <pose>-4.5 11.5 0.1 0 0 3.14</pose>
       <skin>
         <filename>walk.dae</filename> 
         <scale>1.0</scale>
@@ -161,57 +211,6 @@
         <velocity>1.0</velocity>
         <radius>0.4</radius>
         <animation_factor>5.1</animation_factor>
-        <people_distance>6.0</people_distance>
-        <goal_weight>2.0</goal_weight>
-        <obstacle_weight>80.0</obstacle_weight>
-        <social_weight>15.0</social_weight> 
-        <group_gaze_weight>1.0</group_gaze_weight>
-        <group_coh_weight>1.0</group_coh_weight>
-        <group_rep_weight>1.0</group_rep_weight>
-        <group>
-            <model>actor5</model>
-            <model>actor6</model>
-        </group>
-        <ignore_obstacles>
-          <model>ground_plane</model>
-          <model>aws_robomaker_hospital_floor_01_floor_1</model>
-          <model>turtlebot3_waffle</model>
-          <model>aws_robomaker_hospital_floor_01_walls_1</model>
-        </ignore_obstacles>
-        <trajectory>
-          <cyclic>true</cyclic>
-          <waypoint>-4 11 0.1</waypoint>
-          <waypoint>4 11 0.1</waypoint>
-          <waypoint>4 2 0.1</waypoint>
-          <waypoint>4 11 0.1</waypoint>
-        </trajectory>
-      </plugin>
-    </actor>
-
-    <actor name="actor5">
-      <pose>-4.5 11.5 0.1 0 0 3.14</pose>
-      <skin>
-        <filename>walk.dae</filename> 
-        <scale>1.0</scale>
-      </skin>
-      <animation name="walking">
-        <filename>walk.dae</filename>
-        <scale>1.000000</scale>
-        <interpolate_x>true</interpolate_x>
-      </animation>
-
-      <plugin name="actor5_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros>
-          <namespace>/gazebo</namespace>
-          <remapping>odom:=human5</remapping>
-        </ros>
-        <update_rate>20</update_rate>
-      </plugin>
-
-      <plugin name="actor5_plugin" filename="libPedestrianSFMPlugin.so">
-        <velocity>1.0</velocity>
-        <radius>0.4</radius>
-        <animation_factor>5.1</animation_factor>
         <animation_name>walking</animation_name>
         <people_distance>6.0</people_distance>
         <goal_weight>2.0</goal_weight>
@@ -221,7 +220,7 @@
         <group_coh_weight>2.0</group_coh_weight>
         <group_rep_weight>1.0</group_rep_weight>
         <group>
-            <model>actor4</model>
+            <model>actor3</model>
         </group>
         <ignore_obstacles> 
           <model>ground_plane</model>

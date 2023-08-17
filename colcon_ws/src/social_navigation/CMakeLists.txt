@@ -44,6 +44,13 @@ install( TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+add_executable(test_goal nodes/test_goal.cpp)
+ament_target_dependencies(test_goal rclcpp geometry_msgs )
+install( TARGETS
+  test_goal
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # add_executable(get_human_closest_obstacle nodes/human_nearest_obstacle_from_map.cpp)
 # ament_target_dependencies(get_human_closest_obstacle rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)
 # install( TARGETS
@@ -51,11 +58,11 @@ install( TARGETS
 #   DESTINATION lib/${PROJECT_NAME}
 # )
 
-add_executable(humans_sfm_node nodes/humans_sfm_node.cpp)
-ament_target_dependencies(humans_sfm_node rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)
-install( TARGETS
-humans_sfm_node
-  DESTINATION lib/${PROJECT_NAME}
-)
+# add_executable(humans_sfm_node nodes/humans_sfm_node.cpp)
+# ament_target_dependencies(humans_sfm_node rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)
+# install( TARGETS
+# humans_sfm_node
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 ament_package()
