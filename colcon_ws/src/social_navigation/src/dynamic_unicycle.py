@@ -111,10 +111,10 @@ class dynamic_unicycle:
     def g_casadi(self, X):
         return np.array([ [0, 0],[0, 0], [0, 1], [1, 0] ])
         
-    def step(self,U): #Just holonomic X,T acceleration
+    def step(self,U, dt): #Just holonomic X,T acceleration
 
         self.U = U.reshape(-1,1)
-        self.X = self.X + ( self.f() + self.g() @ self.U )*self.dt
+        self.X = self.X + ( self.f() + self.g() @ self.U )*dt
         self.X[2,0] = wrap_angle(self.X[2,0])
         self.render_plot()
         self.Xs = np.append(self.Xs,self.X,axis=1)
@@ -168,16 +168,17 @@ class dynamic_unicycle:
         
         return A, b_f, b_g*self.dt
 
-    def nominal_controller(self, targetX, k_omega = 3.0, k_v = 1.0, k_x = 1.0):
+    def nominal_controller(self, targetX, k_omega = 1.0, k_v = 1.0, k_x = 1.0):
         # k_omega = 3.0#2.0 
         # k_v = 1.0#3.0#0.3#0.15##5.0#0.15
         # k_x = k_v
-        distance = max( np.linalg.norm( self.X[0:2]-targetX[0:2] ), 0.1 )
+        distance = np.linalg.norm( self.X[0:2]-targetX[0:2] )
         desired_heading = np.arctan2( targetX[1,0]-self.X[1,0], targetX[0,0]-self.X[0,0] )
         error_heading = wrap_angle( desired_heading - self.X[2,0] )
 
-        omega = k_omega * error_heading * np.tanh( distance )
-        speed = k_x * distance * np.cos(error_heading)
+        omega = k_omega * error_heading #* np.tanh( distance )
+        speed = min(k_x * distance * np.cos(error_heading), 0.4)
+        # print(f"CBF nominal speed: {speed}, omega:{omega}")
         u_r = 1.0 * k_v * ( speed - self.X[3,0] )
         return np.array([u_r, omega]).reshape(-1,1)
     

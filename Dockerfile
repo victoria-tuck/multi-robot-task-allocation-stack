@@ -5,4 +5,5 @@ RUN apt-get install -y ros-galactic-nav2-simple-commander
 RUN echo "source /opt/ros/galactic/setup.bash" >> ~/.bashrc
 RUN echo "source /usr/share/gazebo/setup.sh" >> ~/.bashrc
 RUN echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc
+RUN pip3 install cvxpy jax jaxlib testresources polytope cvxpylayers
 WORKDIR /home/

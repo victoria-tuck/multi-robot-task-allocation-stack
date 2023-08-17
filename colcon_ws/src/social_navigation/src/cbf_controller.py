@@ -16,8 +16,8 @@ class cbf_controller:
     alpha1 = 1.0
     alpha2 = 4.0
     robot = 0
-    k_x = 1.0#0.5#30.0
-    k_v = 1.5
+    k_x = 0.5#30.0
+    k_v = 3.0#1.5
     dt = 0.01
     controller2_base_layer = 0
     
@@ -32,8 +32,8 @@ class cbf_controller:
         cbf_controller.alpha2_human = 6*np.ones(cbf_controller.num_people)
         self.control_bound = 2.0
         self.goal = np.array([-3.0,1.0]).reshape(-1,1)
-        cbf_controller.k_x = 1.0#0.5#30.0
-        cbf_controller.k_v = 1.5
+        cbf_controller.k_x = 0.5#30.0
+        cbf_controller.k_v = 2.0#1.5
         self.d_min_human = 0.2#0.5
 
         ######### holonomic controller
@@ -55,6 +55,7 @@ class cbf_controller:
         ##################
 
         plt.ion()
+        self.volume2 = []
         self.fig1, self.ax1 = plt.subplots( 1, 3, figsize=(18, 6), gridspec_kw={'width_ratios': [5, 5, 2]})# )#, gridspec_kw={'height_ratios': [1, 1]} )
         self.ax1[0].set_xlim([-3,5])
         self.ax1[0].set_ylim([-3,5])
@@ -81,35 +82,39 @@ class cbf_controller:
                 return A[1:], b[1:]
     
     def policy(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, dt):
+        
         self.robot.set_state(robot_state)
         
-        A, b = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), self.alpha1_human, self.alpha2_human, robot_radius )
-        self.A2_base.value = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
-        self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
+        # A, b = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), self.alpha1_human, self.alpha2_human, robot_radius )
+        # self.A2_base.value = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
+        # self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
         self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
-        self.controller2_base.solve()
-        print(f"human alpha1: {self.alpha1_human}, alpha2: {self.alpha2_human}")
-
-        # Plot polytope       
-        self.ax1[1].clear()
-        self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
-        self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
-        hull = pt.Polytope( -self.A2_base.value, -self.b2_base.value )
-        hull_plot = hull.plot(self.ax1[1], color = 'g')
-        plot_polytope_lines( self.ax1[1], hull, self.control_bound )
-
-        self.volume2.append(np.array(mc_polytope_volume( jnp.array(hull.A), jnp.array(hull.b.reshape(-1,1)), bounds = self.control_bound)))
-        self.ax1[2].plot( self.volume2, 'r' )
-        self.ax1[2].set_title('Polytope Volume')
-
-        self.robot.step( self.u2_base.value )
+        # self.controller2_base.solve()
         
-        self.ax1[1].scatter( self.u2_base.value[0,0], self.u2_base.value[1,0], c = 'r', label = 'CBF-QP chosen control' )
-        self.robot.render_plot()
+        # Plot polytope       
+        # self.ax1[1].clear()
+        # self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
+        # self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
+        # hull = pt.Polytope( -self.A2_base.value, -self.b2_base.value )
+        # hull_plot = hull.plot(self.ax1[1], color = 'g')
+        # plot_polytope_lines( self.ax1[1], hull, self.control_bound )
 
-        self.ax1[1].set_xlabel('Linear Acceleration'); self.ax1[1].set_ylabel('Angular Velocity')
-        self.ax1[1].legend()
-        self.ax1[1].set_title('Feasible Space for Control')
+        # self.volume2.append(np.array(mc_polytope_volume( jnp.array(hull.A), jnp.array(hull.b.reshape(-1,1)), bounds = self.control_bound)))
+        # self.ax1[2].plot( self.volume2, 'r' )
+        # self.ax1[2].set_title('Polytope Volume')
+
+        # self.robot.step( self.u2_base.value )
+        self.robot.step( self.u2_ref_base.value, dt )
+        
+        # self.ax1[1].scatter( self.u2_base.value[0,0], self.u2_base.value[1,0], c = 'r', label = 'CBF-QP chosen control' )
+        # self.robot.render_plot()
+
+        # self.ax1[1].set_xlabel('Linear Acceleration'); self.ax1[1].set_ylabel('Angular Velocity')
+        # self.ax1[1].legend()
+        # self.ax1[1].set_title('Feasible Space for Control')
 
         self.fig1.canvas.draw()
         self.fig1.canvas.flush_events()
+
+        # return self.robot.X[3,0], self.u2_base.value[1,0]
+        return self.robot.X[3,0], self.u2_ref_base.value[1,0]

@@ -7,7 +7,7 @@ from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 
-# from cbf_controller import cbf_controller
+from cbf_controller import cbf_controller
 import numpy as np
 # import jax.numpy as jnp
 
@@ -20,13 +20,15 @@ class RobotController(Node):
 
         # Variables
         self.num_humans = 4
-        self.robot_state = np.array([0,0,0, 0.1]).reshape(-1,1)
+        self.num_obstacles = 0
+        self.robot_state = np.array([10,10,0, 0.1]).reshape(-1,1)
         self.human_states = np.zeros((2,4))
         self.human_states_dot = np.zeros((2,4)) 
+        self.robot_radius = 0.3
 
         self.timer_period = 0.05 # seconds
         self.time_step = self.timer_period
-        self.goal = np.array([0,0])
+        self.goal = np.array([0,0]).reshape(-1,1)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
@@ -47,7 +49,11 @@ class RobotController(Node):
         self.path_waypoint_index = 0
 
         #Controller
-        # self.controller = cbf_controller( self.robot_state, self.human_states, self.human_states_dot, self.time_step)
+        self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
+        # Call once to initiate JAX JIT
+        self.controller.policy(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
+
+        self.get_logger().info("User Controller is ONLINE")
         self.timer = self.create_timer(self.timer_period, self.controller_callback)
 
 
@@ -71,20 +77,20 @@ class RobotController(Node):
 
     def controller_callback(self):
         if self.path_active:
-            goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y])
-            while (np.linalg.norm(goal - self.robot_state[0:2,0])<0.5):
+            goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
+            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):
                 if len(self.path.poses)>1:
-                    self.get_logger().info('hello "%d"' % len(self.path.poses))
-                    # print(f"hello: {len(self.path.poses)}")
+                    # self.get_logger().info('hello "%d"' % len(self.path.poses))
                     self.path.poses = self.path.poses[1:]
-                    goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y])
+                    goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
                 else:
                     break
             self.nav2_path_publisher.publish(self.path)
             
             ########### Nominal Controller ##################
             # print(f"loc: {self.robot_state}, goal:{self.goal}")
-            error = self.goal - self.robot_state[0:2,0]
+            print(f"robot state: {self.robot_state.T}, goal: {self.goal.T}")
+            error = self.goal[:,0] - self.robot_state[0:2,0]
             theta_desired = np.arctan2( error[1], error[0] )
             e_theta = self.wrap_angle(theta_desired - self.robot_state[2,0])
             omega = 1.0 * e_theta
@@ -92,7 +98,14 @@ class RobotController(Node):
                 speed = min(0.5 * np.linalg.norm(error) * np.cos(e_theta), 0.4)
             else:
                 speed = 0.0
-                self.path_active = False
+                # self.path_active = False
+            print(f"speed: {speed}, omega: {omega}")
+            ############## CBF Controller #########################
+            # print(f"goal: {self.goal}")
+            speed, omega = self.controller.policy( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step )
+            print(f"CBF speed: {speed}, omega: {omega}")
+
+            ############## Publish Control Input ###################
             control = Twist()
             control.linear.x = speed
             control.angular.z = omega
@@ -101,7 +114,7 @@ class RobotController(Node):
     def robot_goal_callback(self, msg):
         print(f"Received new goal")
         self.goal_pose = msg
-        self.goal = np.array([ msg.pose.position.x, msg.pose.position.y ])
+        self.goal = np.array([ msg.pose.position.x, msg.pose.position.y ]).reshape(-1,1)
         initial_pose = PoseStamped()
         initial_pose.header.frame_id = 'map'
         initial_pose.header.stamp = self.navigator.get_clock().now().to_msg()
@@ -109,7 +122,9 @@ class RobotController(Node):
         initial_pose.pose.position.y = self.robot_state[1,0]
         initial_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
         initial_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
-        self.path = self.navigator.getPath(initial_pose, self.goal_pose)
+
+        self.path = self.navigator.getPath(initial_pose, self.goal_pose) # replace with naman's planner
+
         self.nav2_path_publisher.publish(self.path)
         self.path_waypoint_index = 0
         self.path_active = True
