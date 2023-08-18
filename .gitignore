@@ -15,3 +15,4 @@ colcon_ws/src/lightsfm/install/
 colcon_ws/src/lightsfm/log/
 .vscode/*
 colcon_ws/src/social_navigation/src/__pycache__/
+colcon_ws/src/social_navigation/src/__pycache__/*
