@@ -7,20 +7,21 @@ docker compose build
 docker compose up -d
 docker exec -it hsr-ros-1 bash
 ```
-
-Now, you have to first build the colcon (ROS2) workspace. Navigate to
-```
-cd /home/colcon_ws
-colcon build --symlink-install
-```
-Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. Next, you need to make and install the social force model library
+Next, you need to make and install the social force model library
 ```
 cd /home/colcon_ws/src/lightsfm
 make
 make install
 ```
 
-After this, from each terminal, you need to source the following two lines
+Now, you have to first build the colcon (ROS2) workspace. Navigate to
+```
+cd /home/colcon_ws
+colcon build --symlink-install
+```
+Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. 
+
+After this, from each terminal, usually you need to source the following two lines but they were added to `bashrc` in the Dockerfile so you don't have to run the following commands
 ```
 source /opt/ros/galactic/setup.bash
 source /home/colcon_ws/install/local_setup.bash
