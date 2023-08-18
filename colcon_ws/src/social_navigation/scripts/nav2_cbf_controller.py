@@ -89,7 +89,7 @@ class RobotController(Node):
             
             ########### Nominal Controller ##################
             # print(f"loc: {self.robot_state}, goal:{self.goal}")
-            print(f"robot state: {self.robot_state.T}, goal: {self.goal.T}")
+            # print(f"robot state: {self.robot_state.T}, goal: {self.goal.T}")
             error = self.goal[:,0] - self.robot_state[0:2,0]
             theta_desired = np.arctan2( error[1], error[0] )
             e_theta = self.wrap_angle(theta_desired - self.robot_state[2,0])
@@ -99,11 +99,11 @@ class RobotController(Node):
             else:
                 speed = 0.0
                 # self.path_active = False
-            print(f"speed: {speed}, omega: {omega}")
+            # print(f"speed: {speed}, omega: {omega}")
             ############## CBF Controller #########################
             # print(f"goal: {self.goal}")
-            speed, omega = self.controller.policy( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step )
-            print(f"CBF speed: {speed}, omega: {omega}")
+            # speed, omega = self.controller.policy( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step )
+            # print(f"CBF speed: {speed}, omega: {omega}")
 
             ############## Publish Control Input ###################
             control = Twist()
