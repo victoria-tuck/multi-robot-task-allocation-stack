@@ -1,5 +1,5 @@
 This documentation is for `ros2` branch of `cbfkit-internal` repository and of this repository. The video accompanying this documentation can be found at 
-https://myteams.toyota.com/:v:/s/TRINA-FRD-CPS-HARDIK/EZ5ej32o_klDppt9FSFJDUYBn3FaR1NsMa5L5w3jIXO-jw?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZyIsInJlZmVycmFsQXBwUGxhdGZvcm0iOiJXZWIiLCJyZWZlcnJhbE1vZGUiOiJ2aWV3In19&e=PM978o
+https://drive.google.com/file/d/144wxIIqVRloF_41ngfn34iR-X_7aCdBs/view?usp=drive_link
 
 To prepare the environment, first, mount the correct folder in docker-compose.yaml. The colcon_ws (ROS2) workspace should be in mounted at /home/colcon_ws. Then to build the environment, run
 ```
