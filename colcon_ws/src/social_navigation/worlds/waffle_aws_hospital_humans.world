@@ -19,7 +19,8 @@
     </plugin >
 
  <actor name="actor1">
-      <pose>-4.5 12 0.1 0 0 0.0</pose>
+      <!-- <pose>-4.5 12 0.1 0 0 0.0</pose> -->
+      <pose>-3 9 0.1 0 0 0.0</pose>
       <skin>
         <filename>walk-red.dae</filename>
         <scale>1.0</scale>
@@ -59,13 +60,15 @@
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <waypoint>-4.5 12 0.1</waypoint>
-          <waypoint>-4.5 3 0.1</waypoint>
+          <!-- <waypoint>-4.5 12 0.1</waypoint>
+          <waypoint>-4.5 3 0.1</waypoint> -->
+          <waypoint>-4 9 0.1</waypoint>
+          <waypoint>4 9 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
 
-    <actor name="actor2">
+    <!-- <actor name="actor2">
       <pose>-5 -8 0.1 0 0 0</pose>
       <skin>
         <filename>walk-blue.dae</filename> 
@@ -109,11 +112,10 @@
           <waypoint>-4.5 1 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
-	
-<!-- 
-    <actor name="actor3">
+ 
+    <!-- <actor name="actor3">
       <pose>-1 6 1.25 0 0 0</pose>
       <skin>
         <filename>stand.dae</filename>
@@ -132,12 +134,10 @@
         </ros>
         <update_rate>20</update_rate>
       </plugin>
+    </actor> -->
 
 
-    <!-- </actor> -->
-
-
-    <actor name="actor3">
+    <!-- <actor name="actor3">
       <pose>-4 11 0.1 0 0 3.14</pose>
       <skin>
         <filename>walk.dae</filename> 
@@ -185,9 +185,9 @@
           <waypoint>4 11 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
-    <actor name="actor4">
+    <!-- <actor name="actor4">
       <pose>-4.5 11.5 0.1 0 0 3.14</pose>
       <skin>
         <filename>walk.dae</filename> 
@@ -236,7 +236,7 @@
           <waypoint>3.7 10.7 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
 
 
@@ -2223,8 +2223,11 @@
         <wheel_diameter>0.066</wheel_diameter>
 
         <!-- limits -->
-        <max_wheel_torque>20</max_wheel_torque>
-        <max_wheel_acceleration>1.0</max_wheel_acceleration>
+        <!-- <max_wheel_torque>20</max_wheel_torque>
+        <max_wheel_acceleration>1.0</max_wheel_acceleration> -->
+
+        <max_wheel_torque>40</max_wheel_torque>
+        <max_wheel_acceleration>10.0</max_wheel_acceleration>
 
         <command_topic>cmd_vel</command_topic>
 

@@ -23,7 +23,7 @@ class HumanStatePublihser : public rclcpp::Node{
     public:
         HumanStatePublihser(): Node("get_human_state_node"){
 
-            this->declare_parameter<int>("num_humans",4);
+            this->declare_parameter<int>("num_humans",1);
             this->get_parameter("num_humans", num_humans);
             this->declare_parameter<float>("update_frequency",10);
             this->get_parameter("update_frequency", update_frequency);
@@ -76,7 +76,7 @@ class HumanStatePublihser : public rclcpp::Node{
         rclcpp::Publisher<social_navigation_msgs::msg::HumanStates>::SharedPtr pub_humans;
         std::vector<rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr> sub_humans;
         // rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_human;
-        int num_humans = 4;
+        int num_humans = 1;
         float update_frequency = 10;
         rclcpp::TimerBase::SharedPtr timer_;
         social_navigation_msgs::msg::HumanStates human_states_;

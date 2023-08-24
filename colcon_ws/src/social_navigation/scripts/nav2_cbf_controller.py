@@ -19,16 +19,24 @@ class RobotController(Node):
         super().__init__('robot_controller')
 
         # Variables
-        self.num_humans = 4
+        self.num_humans = 1
         self.num_obstacles = 0
-        self.robot_state = np.array([10,10,0, 0.1]).reshape(-1,1)
-        self.human_states = np.zeros((2,4))
-        self.human_states_dot = np.zeros((2,4)) 
-        self.robot_radius = 0.3
+        self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
+        self.human_states = np.zeros((2,self.num_humans))
+        self.human_states_prev = np.zeros((2,self.num_humans))
+        self.t_human = self.get_clock().now().nanoseconds
+        self.human_states_dot = np.zeros((2,self.num_humans)) 
+        self.robot_radius = 0.5
 
         self.timer_period = 0.05 # seconds
         self.time_step = self.timer_period
         self.goal = np.array([0,0]).reshape(-1,1)
+        
+        #Controller
+        self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
+        # Call once to initiate JAX JIT
+        self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
+
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
@@ -48,24 +56,29 @@ class RobotController(Node):
         self.path = Path() 
         self.path_waypoint_index = 0
 
-        #Controller
-        self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
-        # Call once to initiate JAX JIT
-        self.controller.policy(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
-
+        
         self.get_logger().info("User Controller is ONLINE")
         self.timer = self.create_timer(self.timer_period, self.controller_callback)
+        
+        self.time_prev = self.get_clock().now().nanoseconds
+        
+        print(f"time: {self.time_prev}")
+        # exit()
 
 
         # Goal
         self.robot_goal = np.array([1,1]).reshape(-1,1)
 
     def human_state_callback(self, msg):
+        self.human_states_prev = np.copy(self.human_states)
         for i in range(self.num_humans):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
-            self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
+            # self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
+        t_new = self.get_clock().now().nanoseconds
+        self.human_states_dot = (self.human_states - self.human_states_prev)/ ((t_new - self.t_human)/10**9)
+        self.t_human = t_new
         self.human_states_valid = True
-        # print(f"human_states: {self.human_states}")
+        # print(f"callback human_states: {self.human_states_dot}")
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
@@ -76,6 +89,7 @@ class RobotController(Node):
         return np.arctan2( np.sin(theta), np.cos(theta) )
 
     def controller_callback(self):
+        # if self.robot_state_valid and self.human_states_valid:
         if self.path_active:
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
             while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):
@@ -90,20 +104,32 @@ class RobotController(Node):
             ########### Nominal Controller ##################
             # print(f"loc: {self.robot_state}, goal:{self.goal}")
             # print(f"robot state: {self.robot_state.T}, goal: {self.goal.T}")
-            error = self.goal[:,0] - self.robot_state[0:2,0]
-            theta_desired = np.arctan2( error[1], error[0] )
-            e_theta = self.wrap_angle(theta_desired - self.robot_state[2,0])
-            omega = 1.0 * e_theta
-            if np.linalg.norm(error)>0.05:
-                speed = min(0.5 * np.linalg.norm(error) * np.cos(e_theta), 0.4)
-            else:
-                speed = 0.0
+            # self.goal = np.array([0,8.7]).reshape(-1,1)
+            
+            
+            # error = self.goal[:,0] - self.robot_state[0:2,0]
+            # theta_desired = np.arctan2( error[1], error[0] )
+            # e_theta = self.wrap_angle(theta_desired - self.robot_state[2,0])
+            # omega = 1.0 * e_theta
+            # if np.linalg.norm(error)>0.05:
+            #     speed = min(0.5 * np.linalg.norm(error) * np.cos(e_theta), 0.4)
+            # else:
+            #     speed = 0.0
                 # self.path_active = False
             # print(f"speed: {speed}, omega: {omega}")
             ############## CBF Controller #########################
             # print(f"goal: {self.goal}")
-            # speed, omega = self.controller.policy( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step )
-            # print(f"CBF speed: {speed}, omega: {omega}")
+            t_new = self.get_clock().now().nanoseconds
+            dt = (t_new - self.time_prev)/10**9
+            try:
+                # speed, omega = self.controller.policy_nominal( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
+                speed, omega = self.controller.policy_cbf( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
+            except Exception as e:
+                speed = 0.0
+                omega = 0.0
+                print(f"ERROR *******************************************")
+            self.time_prev = t_new
+            # print(f"CBF speed: {speed}, omega: {omega}, dt:{dt}")
 
             ############## Publish Control Input ###################
             control = Twist()

@@ -26,7 +26,7 @@ include_directories(SYSTEM
   /usr/local/include #for lightsfm
 )
 # this needed to tell colcon to place launch files in the share folder
-install(DIRECTORY launch worlds
+install(DIRECTORY launch worlds configs
   DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
 
