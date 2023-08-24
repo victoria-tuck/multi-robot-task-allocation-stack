@@ -1,5 +1,5 @@
-This documentation is for `ros2` branch of `cbfkit-internal` repository. The video accompanying this documentation can be found at 
-https://myteams.toyota.com/:v:/s/TRINA-FRD-CPS-HARDIK/EZ5ej32o_klDppt9FSFJDUYBn3FaR1NsMa5L5w3jIXO-jw?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZyIsInJlZmVycmFsQXBwUGxhdGZvcm0iOiJXZWIiLCJyZWZlcnJhbE1vZGUiOiJ2aWV3In19&e=PM978o
+This documentation is for `ros2` branch of `cbfkit-internal` repository and of this repository. The video accompanying this documentation can be found at 
+https://drive.google.com/file/d/144wxIIqVRloF_41ngfn34iR-X_7aCdBs/view?usp=drive_link
 
 To prepare the environment, first, mount the correct folder in docker-compose.yaml. The colcon_ws (ROS2) workspace should be in mounted at /home/colcon_ws. Then to build the environment, run
 ```
@@ -7,20 +7,21 @@ docker compose build
 docker compose up -d
 docker exec -it hsr-ros-1 bash
 ```
-
-Now, you have to first build the colcon (ROS2) workspace. Navigate to
-```
-cd /home/colcon_ws
-colcon build --symlink-install
-```
-Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. Next, you need to make and install the social force model library
+Next, you need to make and install the social force model library
 ```
 cd /home/colcon_ws/src/lightsfm
 make
 make install
 ```
 
-After this, from each terminal, you need to source the following two lines
+Now, you have to first build the colcon (ROS2) workspace. Navigate to
+```
+cd /home/colcon_ws
+colcon build --symlink-install
+```
+Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. 
+
+After this, from each terminal, usually you need to source the following two lines but they were added to `bashrc` in the Dockerfile so you don't have to run the following commands
 ```
 source /opt/ros/galactic/setup.bash
 source /home/colcon_ws/install/local_setup.bash
