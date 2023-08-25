@@ -1,6 +1,6 @@
 import numpy as np
 import jax
-from jax import jit, grad
+from jax import jit, grad, value_and_grad
 import jax.numpy as jnp
 from cvxpylayers.jax import CvxpyLayer
 import polytope as pt
@@ -63,7 +63,7 @@ ellipse_cvxpylayer = CvxpyLayer(ellipse_prob, parameters=[ellipse_A, ellipse_b],
 
 # Formulate and solve the Circle problem
 circle_n = 2
-circle_num_planes = 4 + 5
+circle_num_planes = 4 + 11
 circle_r = cp.Variable()
 circle_c = cp.Variable((2,1))
 circle_A = cp.Parameter((circle_num_planes,circle_n))

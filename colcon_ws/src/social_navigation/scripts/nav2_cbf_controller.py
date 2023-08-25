@@ -33,7 +33,7 @@ class RobotController(Node):
         self.goal = np.array([0,0]).reshape(-1,1)
         
         #Controller
-        self.control_prev  = np.array([0,0])
+        self.control_prev  = np.array([0.0,0.0])
         self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
         # Call once to initiate JAX JIT
         self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
