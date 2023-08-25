@@ -23,9 +23,9 @@ class HumanStatePublihser : public rclcpp::Node{
     public:
         HumanStatePublihser(): Node("get_human_state_node"){
 
-            this->declare_parameter<int>("num_humans",1);
+            this->declare_parameter<int>("num_humans",11);
             this->get_parameter("num_humans", num_humans);
-            this->declare_parameter<float>("update_frequency",10);
+            this->declare_parameter<float>("update_frequency",20);
             this->get_parameter("update_frequency", update_frequency);
 
             for (int i=0; i<num_humans; i++){

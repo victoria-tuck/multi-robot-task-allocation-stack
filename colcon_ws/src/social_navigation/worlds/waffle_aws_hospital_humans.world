@@ -19,8 +19,8 @@
     </plugin >
 
  <actor name="actor1">
-      <!-- <pose>-4.5 12 0.1 0 0 0.0</pose> -->
-      <pose>-3 9 0.1 0 0 0.0</pose>
+      <pose>-4.5 12 0.1 0 0 0.0</pose>
+      <!-- <pose>-3 9 0.1 0 0 0.0</pose> -->
       <skin>
         <filename>walk-red.dae</filename>
         <scale>1.0</scale>
@@ -60,15 +60,15 @@
         </ignore_obstacles>
         <trajectory>
           <cyclic>true</cyclic>
-          <!-- <waypoint>-4.5 12 0.1</waypoint>
-          <waypoint>-4.5 3 0.1</waypoint> -->
-          <waypoint>-4 9 0.1</waypoint>
-          <waypoint>4 9 0.1</waypoint>
+          <waypoint>-4.5 12 0.1</waypoint>
+          <waypoint>-4.5 3 0.1</waypoint>
+          <!-- <waypoint>-4 9 0.1</waypoint>
+          <waypoint>4 9 0.1</waypoint> -->
         </trajectory>
       </plugin>
     </actor>
 
-    <!-- <actor name="actor2">
+    <actor name="actor2">
       <pose>-5 -8 0.1 0 0 0</pose>
       <skin>
         <filename>walk-blue.dae</filename> 
@@ -112,32 +112,10 @@
           <waypoint>-4.5 1 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor> -->
-
- 
-    <!-- <actor name="actor3">
-      <pose>-1 6 1.25 0 0 0</pose>
-      <skin>
-        <filename>stand.dae</filename>
-        <scale>1.0</scale>
-      </skin>
-      <animation name="stand">
-        <filename>stand.dae</filename>
-        <scale>1.000000</scale>
-        <interpolate_x>true</interpolate_x>
-      </animation>
-
-      <plugin name="actor3_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros>
-          <namespace>/gazebo</namespace>
-          <remapping>odom:=human3</remapping>
-        </ros>
-        <update_rate>20</update_rate>
-      </plugin>
-    </actor> -->
+    </actor>
 
 
-    <!-- <actor name="actor3">
+    <actor name="actor3">
       <pose>-4 11 0.1 0 0 3.14</pose>
       <skin>
         <filename>walk.dae</filename> 
@@ -185,9 +163,9 @@
           <waypoint>4 11 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor> -->
+    </actor>
 
-    <!-- <actor name="actor4">
+    <actor name="actor4">
       <pose>-4.5 11.5 0.1 0 0 3.14</pose>
       <skin>
         <filename>walk.dae</filename> 
@@ -236,10 +214,327 @@
           <waypoint>3.7 10.7 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor> -->
+    </actor>
 
 
+    <actor name="actor5">
+      <pose>5.0 -8.0 0.1 0 0 0</pose>
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
 
+     <plugin name="actor5_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human5</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+
+       <plugin name="actor5_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.0</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <animation_name>walking</animation_name>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>2.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <ignore_obstacles> 
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>5 -8 0.1</waypoint>
+          <waypoint>4.5 1 0.1</waypoint>
+        </trajectory>
+      </plugin>
+    </actor>
+
+    <actor name="actor6">
+      <pose>5.5 -8.0 0.1 0 0 0</pose>
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+     <plugin name="actor6_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human6</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+       <plugin name="actor6_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.0</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <animation_name>walking</animation_name>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>2.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <ignore_obstacles> 
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>5.5 -8 0.1</waypoint>
+          <waypoint>5.5 1 0.1</waypoint>
+        </trajectory>
+      </plugin>
+    </actor>
+
+    <actor name="actor7">
+      <pose>5.0 -9.0 0.1 0 0 0</pose>
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+     <plugin name="actor7_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human7</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+       <plugin name="actor7_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.0</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <animation_name>walking</animation_name>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>2.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <ignore_obstacles> 
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>5.0 1 0.1</waypoint>
+          <waypoint>5.0 -9 0.1</waypoint>
+        </trajectory>
+      </plugin>
+    </actor>
+
+    <actor name="actor8">
+      <pose>5.0 -24.0 0.1 0 0 0</pose>
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+     <plugin name="actor8_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human8</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+       <plugin name="actor8_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.0</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <animation_name>walking</animation_name>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>2.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <ignore_obstacles> 
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>5.0 -24 0.1</waypoint>
+          <waypoint>5.0 -9 0.1</waypoint>
+          <waypoint>-5.0 -9 0.1</waypoint>
+          <waypoint>-5.0 -24 0.1</waypoint>
+        </trajectory>
+      </plugin>
+    </actor>
+
+    <actor name="actor9">
+      <pose>5.0 -24.5 0.1 0 0 0</pose>
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+     <plugin name="actor9_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human9</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+       <plugin name="actor9_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.0</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <animation_name>walking</animation_name>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>2.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <ignore_obstacles> 
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>5.0 -24.5 0.1</waypoint>
+          <waypoint>-5.0 -24.5 0.1</waypoint>
+          <waypoint>-5.0 -9.5 0.1</waypoint>
+          <waypoint>5.0 -9.5 0.1</waypoint>        
+        </trajectory>
+      </plugin>
+    </actor>
+
+    <actor name="actor10">
+      <pose>5.0 13.0 0.1 0 0 0</pose>
+      <skin>
+        <filename>walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+     <plugin name="actor10_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human10</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+       <plugin name="actor10_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.0</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <animation_name>walking</animation_name>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>1.0</group_gaze_weight>
+        <group_coh_weight>2.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <ignore_obstacles> 
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>turtlebot3_waffle</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>5.0 13 0.1</waypoint>
+          <waypoint>-5.0 13 0.1</waypoint>
+        </trajectory>
+      </plugin>
+    </actor>
+
+    <actor name="actor11">
+      <pose>-5.5 -8 0.1 0 0 0</pose>
+      <skin>
+        <filename>walk-blue.dae</filename> 
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk-blue.dae</filename> 
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+
+      <plugin name="actor11_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human11</remapping>
+        </ros>
+        <update_rate>20</update_rate>
+      </plugin>
+
+      <plugin name="actor11_plugin" filename="libPedestrianSFMPlugin.so">
+        <velocity>1.2</velocity>
+        <radius>0.4</radius>
+        <animation_factor>5.1</animation_factor>
+        <animation_name>walking</animation_name>
+        <people_distance>6.0</people_distance>
+        <goal_weight>2.0</goal_weight>
+        <obstacle_weight>80.0</obstacle_weight>
+        <social_weight>15.0</social_weight> 
+        <group_gaze_weight>3.0</group_gaze_weight>
+        <group_coh_weight>2.0</group_coh_weight>
+        <group_rep_weight>1.0</group_rep_weight>
+        <group>
+          <model>actor2</model>
+        </group>
+        <ignore_obstacles>
+          <model>ground_plane</model>
+          <model>aws_robomaker_hospital_floor_01_floor_1</model>
+          <model>aws_robomaker_hospital_floor_01_walls_1</model>
+          <model>turtlebot3_waffle</model>
+        </ignore_obstacles>
+        <trajectory>
+          <cyclic>true</cyclic>
+          <waypoint>-5.5 -8 0.1</waypoint>
+          <waypoint>-5.5 0 0.1</waypoint>
+        </trajectory>
+      </plugin>
+    </actor>
 
 
 
@@ -282,25 +577,25 @@
     </actor> -->
 
      <!-- Add a box model --> 
-    <model name = "sample_box"> 
-      <pose> 7 7 0.5 0 0 0 </pose>  <!-- Initial position and orientation --> 
+    <!-- <model name = "sample_box"> 
+      <pose> 7 7 0.5 0 0 0 </pose> 
       <link  name = "link"> 
         <collision  name = "collision"> 
           <geometry> 
             <box> 
-              <size > 1 1 1 </size>  <!-- Size of the box --> 
+              <size > 1 1 1 </size> 
             </box> 
           </geometry> 
         </collision> 
         <visual  name = "visual"> 
           <geometry> 
             <box> 
-              <size > 1 1 1 </size>  <!-- Size of the box --> 
+              <size > 1 1 1 </size> 
             </box> 
           </geometry> 
         </visual> 
       </link> 
-    </model>
+    </model> -->
 
     <!-- <actor name="animated_box">
         <pose> 3 7 0 0 0 0 </pose>
@@ -1779,6 +2074,12 @@
               <scale>0.001 0.001 0.001</scale>
             </mesh>
           </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Orange</name>
+            </script>
+          </material>
         </visual>
       </link>
 
@@ -1874,7 +2175,7 @@
 
         <sensor name="hls_lfcd_lds" type="ray">
           <always_on>true</always_on>
-          <visualize>true</visualize>
+          <visualize>false</visualize>
           <pose>-0.064 0 0.121 0 0 0</pose>
           <update_rate>5</update_rate>
           <ray>

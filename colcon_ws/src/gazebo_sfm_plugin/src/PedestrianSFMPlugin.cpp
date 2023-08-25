@@ -259,10 +259,13 @@ void PedestrianSFMPlugin::HandlePedestrians() {
       // printf("Actor %i has detected actor %i!\n", this->actor->GetId(),
       //        model->GetId());
 
+      std::vector<physics::LinkPtr> links = model->GetLinks();
+      ignition::math::Vector3d linkPos = links[0]->WorldPose().Pos();
+       ignition::math::Vector3d linkVel = links[0]->WorldLinearVel();
 
       ignition::math::Pose3d modelPose = model->WorldPose();
-      ignition::math::Vector3d pos =
-          modelPose.Pos() - this->actor->WorldPose().Pos();
+      ignition::math::Vector3d pos = modelPose.Pos() - this->actor->WorldPose().Pos();
+      // std::cout << "Actor pos: " << this->actor->WorldPose().Pos() << " model pos " << modelPose.Pos() << " Model Link pos " << linkPos << " Vel " << linkVel << std::endl;
       if (pos.Length() < this->peopleDistance) {
         sfm::Agent ped;
         ped.id = model->GetId();
@@ -274,6 +277,7 @@ void PedestrianSFMPlugin::HandlePedestrians() {
         ignition::math::Vector3d linvel = model->WorldLinearVel();
         ped.velocity.set(linvel.X(), linvel.Y());
         ped.linearVelocity = linvel.Length();
+        // std::cout << model->GetName() <<  " ped velocity: " << ped.linearVelocity << " X: " << linvel.X() << "Y: " << linvel.Y() <<  std::endl;
         ignition::math::Vector3d angvel = model->WorldAngularVel();
         ped.angularVelocity = angvel.Z(); // Length()
 

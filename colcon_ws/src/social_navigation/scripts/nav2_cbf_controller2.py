@@ -24,9 +24,9 @@ class RobotController(Node):
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
         self.human_states = np.zeros((2,self.num_humans))
         self.human_states_prev = np.zeros((2,self.num_humans))
-        # self.t_human = self.get_clock().now().nanoseconds
+        self.t_human = self.get_clock().now().nanoseconds
         self.human_states_dot = np.zeros((2,self.num_humans)) 
-        self.robot_radius = 0.8
+        self.robot_radius = 0.6
 
         self.timer_period = 0.05 # seconds
         self.time_step = self.timer_period
@@ -74,7 +74,10 @@ class RobotController(Node):
         self.human_states_prev = np.copy(self.human_states)
         for i in range(self.num_humans):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
-            self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
+            # self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
+        t_new = self.get_clock().now().nanoseconds
+        self.human_states_dot = (self.human_states - self.human_states_prev)/ ((t_new - self.t_human)/10**9)
+        self.t_human = t_new
         self.human_states_valid = True
         # print(f"callback human_states: {self.human_states_dot}")
 
@@ -86,21 +89,22 @@ class RobotController(Node):
     def wrap_angle(self,theta):
         return np.arctan2( np.sin(theta), np.cos(theta) )
 
-    def controller_callback(self):          
-            
-        # if self.robot_state_valid and self.human_states_valid:
-        if (self.path_active and (self.robot_state_valid and self.human_states_valid)):
+    def controller_callback(self):
+        if self.robot_state_valid and self.human_states_valid:
+
             
             # Select closest waypoint from received path
-            goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
-            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):
-                if len(self.path.poses)>1:
-                    # self.get_logger().info('hello "%d"' % len(self.path.poses))
-                    self.path.poses = self.path.poses[1:]
-                    goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
-                else:
-                    break
-            self.nav2_path_publisher.publish(self.path)
+            # goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
+            # while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):
+            #     if len(self.path.poses)>1:
+            #         # self.get_logger().info('hello "%d"' % len(self.path.poses))
+            #         self.path.poses = self.path.poses[1:]
+            #         goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
+            #     else:
+            #         break
+            # self.nav2_path_publisher.publish(self.path)
+            
+            self.goal = np.array([0,12.7]).reshape(-1,1)
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
@@ -171,13 +175,3 @@ if __name__ == '__main__':
             # print(f"speed: {speed}, omega: {omega}")
             ############## CBF Controller #########################
             # print(f"goal: {self.goal}")
-            
-                    # t_new = self.get_clock().now().nanoseconds
-        # self.human_states_dot = (self.human_states - self.human_states_prev)/ ((t_new - self.t_human)/10**9)
-        # self.t_human = t_new
-        
-        # control = Twist()
-        # control.linear.x = 0.0
-        # control.angular.z = 0.0
-        # self.robot_command_pub.publish(control)
-        # return 

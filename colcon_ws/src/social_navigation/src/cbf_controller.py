@@ -16,7 +16,7 @@ class cbf_controller:
     alpha1 = 0.5
     alpha2 = 2.0
     robot = 0
-    k_x = 0.5#30.0
+    k_x = 1.5#30.0
     k_v = 3.0#1.5
     dt = 0.01
     controller2_base_layer = 0
@@ -56,9 +56,9 @@ class cbf_controller:
 
         plt.ion()
         self.volume2 = []
-        self.fig1, self.ax1 = plt.subplots( 1, 3, figsize=(18, 6), gridspec_kw={'width_ratios': [5, 5, 2]})# )#, gridspec_kw={'height_ratios': [1, 1]} )
-        self.ax1[0].set_xlim([-3,5])
-        self.ax1[0].set_ylim([-3,5])
+        self.fig1, self.ax1 = plt.subplots( 1, 2, figsize=(9, 3), gridspec_kw={'width_ratios': [5, 5]})# )#, gridspec_kw={'height_ratios': [1, 1]} )
+        self.ax1[0].set_xlim([-10,10])
+        self.ax1[0].set_ylim([-10,10])
         self.offset = 3.0
         self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
         self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
@@ -71,7 +71,7 @@ class cbf_controller:
         # exit()
 
     @staticmethod
-    # @jit
+    @jit
     def construct_barrier_from_states(robot_state, humans_states, human_states_dot, alpha1_human, alpha2_human, robot_radius ):         
                 # barrier function
                 A = jnp.zeros((1,2)); b = jnp.zeros((1,1))
@@ -93,7 +93,7 @@ class cbf_controller:
         self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
         self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
         # print(f"solve: {self.controller2_base.solve()}")
-        self.controller2_base.solve()
+        self.controller2_base.solve(solver=cp.GUROBI)
     
         
         # Plot polytope       
@@ -103,12 +103,12 @@ class cbf_controller:
         hull = pt.Polytope( -self.A2_base.value, -self.b2_base.value )
         hull_plot = hull.plot(self.ax1[1], color = 'g')
         plot_polytope_lines( self.ax1[1], hull, self.control_bound )
-
-        # self.volume2.append(np.array(mc_polytope_volume( jnp.array(hull.A), jnp.array(hull.b.reshape(-1,1)), bounds = self.control_bound)))
-        # self.ax1[2].plot( self.volume2, 'r' )
-        # self.ax1[2].set_title('Polytope Volume')
-        # print(f"CBF nominal acc: {self.u2_ref_base.value[0,0]}, omega:{self.u2_ref_base.value[1,0]}, final acc: {self.u2_base.value[0,0]}, omega: {self.u2_base.value[1,0]}")
+        
         self.robot.step( self.u2_base.value, dt )
+        self.ax1[0].clear()
+        self.ax1[0].scatter(human_states[0,:], human_states[1,:], c = 'g')
+        self.ax1[0].scatter(robot_state[0,0], robot_state[1,0], c = 'r')
+        
         
         # self.ax1[1].scatter( self.u2_base.value[0,0], self.u2_base.value[1,0], c = 'r', label = 'CBF-QP chosen control' )
         # self.robot.render_plot()

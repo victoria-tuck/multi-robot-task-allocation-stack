@@ -60,6 +60,8 @@ public:
   // Actor point
   gazebo::physics::ActorPtr actor;
   gazebo::physics::WorldPtr world;
+  ignition::math::Vector3d actorPos_prev;
+  bool pos_init = false;
 
   /// Odometry publisher
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_{nullptr};
@@ -144,6 +146,7 @@ ignition::math::Vector3d actorPos = actor->WorldPose().Pos();
   IGN_PROFILE("GazeboRosP3DPrivate::OnUpdate");
 #endif
   gazebo::common::Time current_time = info.simTime;
+
   if (current_time < last_time_) {
     RCLCPP_WARN(ros_node_->get_logger(), "Negative update time difference detected.");
     last_time_ = current_time;
@@ -184,7 +187,12 @@ ignition::math::Vector3d actorPos = actor->WorldPose().Pos();
 
   // Fill out messages
   pose_msg.pose.pose.position = gazebo_ros::Convert<geometry_msgs::msg::Point>(pose.Pos());
-  ignition::math::Vector3d actorPos2 = pose.Pos();
+   // Differentiate position
+  if (pos_init){
+    vpos = (pose.Pos() - actorPos_prev)/tmp_dt;
+  }
+  // std::cout << "Pose " << pose.Pos() << " Vel: " << vpos << std::endl;
+  // ignition::math::Vector3d actorPos2 = pose.Pos();
 //   std::cout << " PLUGIN ********************************** my loc: " << actorPos << std::endl;
   ignition::math::Vector3d rpy = this->actor->WorldPose().Rot().Euler();
   double yaw = rpy.Z()-1.57079;
@@ -228,7 +236,11 @@ ignition::math::Vector3d actorPos = actor->WorldPose().Pos();
 #endif
   // Save last time stamp
   last_time_ = current_time;
+  actorPos_prev = pose.Pos();
+  pos_init = true;
 }
+
+
 
 GZ_REGISTER_MODEL_PLUGIN(ActorStatePublisherPlugin) //GazeboRosP3DTest
 
