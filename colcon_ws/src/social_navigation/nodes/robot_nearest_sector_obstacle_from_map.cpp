@@ -5,98 +5,101 @@
 // #include "nav_msgs/srv/get_map.hpp"
 #include "nav_msgs/srv/get_map.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
-#include "social_navigation_msgs/msg/human_state.hpp"
-#include "social_navigation_msgs/msg/human_states.hpp"
-#include "social_navigation_msgs/msg/human_closest_obstacles.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+// #include "social_navigation_msgs/msg/robot_closest_obstacles.hpp"
+#include "social_navigation_msgs/msg/robot_closest_obstacle.hpp"
 #include "sensor_msgs/msg/point_cloud.hpp"
+
+#define M_PI 3.14157
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-class HumanNearestObstacle: public rclcpp::Node {
+class RobotNearestObstacle: public rclcpp::Node {
     public:
-        HumanNearestObstacle(nav_msgs::msg::OccupancyGrid map): Node("HumanNearestObstacle"){
+        RobotNearestObstacle(nav_msgs::msg::OccupancyGrid map): Node("RobotNearestObstacleSectors"){
             
             map_ = map;
-            resolution_ = map_.info.width;
+            
+            resolution_ = map_.info.resolution;
             width_ = map_.info.width;
             height_ = map_.info.height;
             origin_ = map_.info.origin;
             num_cells = width_ * height_;
-            std::cout << "hello" << std::endl;
+            std::cout << "width: " << width_  << " height:  " << height_ << "Origin: x: " << origin_.position.x << " y: " << origin_.position.y << std::endl;
+
             //Publishers
-            human_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::HumanClosestObstacles>("/human_closest_obstacles", 10);
-            obstacle_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud>("/closest_obstacles_cloud", 10);
+            robot_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::RobotClosestObstacle>("/robot_closest_obstacles", 10);
+            obstacle_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud>("/robot_closest_obstacles_cloud", 10);
 
             //Subscribers
-            human_sub_ = this->create_subscription<social_navigation_msgs::msg::HumanStates>( "/human_states", 2, std::bind(&HumanNearestObstacle::human_callback, this, _1) );
-            std::cout << "hello1" << std::endl;
+            robot_sub_ = this->create_subscription<nav_msgs::msg::Odometry>( "/odom", 2, std::bind(&RobotNearestObstacle::robot_callback, this, _1) );
+
             // Timer callbacks
-            timer_ = this->create_wall_timer(100ms, std::bind(&HumanNearestObstacle::run, this));
+            timer_ = this->create_wall_timer(100ms, std::bind(&RobotNearestObstacle::run, this));
 
         }
 
-        void human_callback(const social_navigation_msgs::msg::HumanStates::SharedPtr msg){
-            human_states = msg->states;
-            human_states_init = true;
+        void robot_callback(const nav_msgs::msg::Odometry::SharedPtr msg){
+            robot_state = msg->pose.pose;
+            robot_state_init = true;
         }
 
         void run(){
-            if (human_states_init==false)
+            if (robot_state_init==false)
                 return;
 
-            std::cout << "hello2" << std::endl;
-            social_navigation_msgs::msg::HumanClosestObstacles human_obstacle_distances;
+            // std::cout << "hello2" << std::endl;
+            // social_navigation_msgs::msg::RobotClosestObstacles robot_obstacle_distances;
             sensor_msgs::msg::PointCloud obstacle_cloud;
 
-            social_navigation_msgs::msg::HumanClosestObstacle obstacle_points;
+            social_navigation_msgs::msg::RobotClosestObstacle obstacle_points;
             obstacle_points.num_obstacles = 0;
 
-            for (int i=0; i<num_humans; i++){
+            // for (int i=0; i<num_humans; i++){
                 
-                geometry_msgs::msg::Pose state = human_states[i];
-                unsigned int mx, my;
-                worldToMap( state.position.x, state.position.y, mx, my );
+            geometry_msgs::msg::Pose state = robot_state;
+            unsigned int mx, my;
+            worldToMap( robot_state.position.x, robot_state.position.y, mx, my );
 
-                // search: 
-                    // put a limit on distance: maybe 3 meters?
-                    int max_depth = 3.0 / resolution_;
+            // std::cout << " robot position " << robot_state.position.x << "\t" << robot_state.position.y << " map pos: " << mx << "\t"  << my << std::endl;
 
-                    for (int d=0; d<max_depth; d++){
-                        // fopr depth d, size of square is 2*d+1
-                        for (int j=-d; j<d; j++){
-                            for (int k=-d; k<d; k++){
-                                int index_x = mx - j;
-                                int index_y = my - k;
-                                if ((index_x<mx) & (index_y<my) & (index_x>=0) & (index_y>=0)){
-                                    if (map_.data.at( index_y*width_+index_x )>0.5){  // found nearest obstacle
-                                        obstacle_points.num_obstacles += 1 ;
-                                        geometry_msgs::msg::Point point = mapToWorld( index_x, index_y );  // convert to world
-                                        geometry_msgs::msg::Point32 point32;
-                                        point32.x = point.x; point32.y = point.y; point32.z = point.z;
-                                        obstacle_points.obstacle_locations.push_back(point);
-                                        obstacle_cloud.points.push_back(point32);
- 
-                                        goto search_end;
-                                    }
-                                }
-                            }
+            // search: 
+            int max_depth = 10.0;
+
+            float angle_increment = M_PI/6;
+            float depth_increment = resolution_+0.01;
+            for (float angle=0; angle<2*M_PI; angle=angle+angle_increment){
+                for (float d=0; d<max_depth; d=d+depth_increment){
+                    geometry_msgs::msg::Point loc;
+                    loc.x = robot_state.position.x + cosf(angle) * d;
+                    loc.y = robot_state.position.y + sinf(angle) * d;
+                    loc.z = robot_state.position.z;
+                    unsigned int loc_mx, loc_my;
+                    if (worldToMap( loc.x, loc.y, loc_mx, loc_my )){                        
+                        if (map_.data.at( loc_my*width_+loc_mx )>0.5){
+                            obstacle_points.num_obstacles += 1 ;
+                            geometry_msgs::msg::Point32 loc32;
+                            loc32.x = loc.x; loc32.y = loc.y; loc32.z = loc.z;
+                            obstacle_points.obstacle_locations.push_back(loc);
+                            obstacle_cloud.points.push_back(loc32);
+                            sensor_msgs::msg::ChannelFloat32 channel;
+                            channel.name = "distance";
+                            channel.values.push_back( d );
+                            obstacle_cloud.channels.push_back(channel);
+                            break; // if found an obstacle at this angle, then no need to search more. move on to next angle
                         }
-
-                        // if reach here, then ignore collision avoidance with this human
                     }
-
-                    search_end:
-                        human_obstacle_distances.obstacle_info.push_back(obstacle_points);
-                        // do nothing
-
+                    else{ // out of map bounds
+                        continue;
+                    } 
+                }
             }
-            std::cout << "hello3" << std::endl;
-            // publish results
-            obstacle_cloud.header.frame_id = "world";
+
+            obstacle_cloud.header.frame_id = "map";
             obstacle_cloud.header.stamp = this->get_clock()->now();
             obstacle_cloud_pub_->publish(obstacle_cloud);
-            human_obstacle_pub_->publish(human_obstacle_distances);
+            robot_obstacle_pub_->publish(obstacle_points);
         }          
 
         geometry_msgs::msg::Point mapToWorld(unsigned int mx, unsigned int my) const{
@@ -115,6 +118,8 @@ class HumanNearestObstacle: public rclcpp::Node {
             mx = static_cast<unsigned int>((wx - origin_.position.x) / resolution_);
             my = static_cast<unsigned int>((wy - origin_.position.y) / resolution_);
 
+            // std::cout << "mx: " << mx << " my: " << my << " width: " <<  width_ << std::endl;
+
             if (mx < width_ && my < height_) {
                 return true;
             }
@@ -125,14 +130,15 @@ class HumanNearestObstacle: public rclcpp::Node {
 
     private:
         nav_msgs::msg::OccupancyGrid map_;
-        std::vector<geometry_msgs::msg::Pose> human_states;
-        bool human_states_init = false;
+        geometry_msgs::msg::Pose robot_state;
+        bool robot_state_init = false;
 
-        rclcpp::Subscription<social_navigation_msgs::msg::HumanStates>::SharedPtr human_sub_;
-        rclcpp::Publisher<social_navigation_msgs::msg::HumanClosestObstacles>::SharedPtr human_obstacle_pub_;
+        rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr robot_sub_;
+        rclcpp::Publisher<social_navigation_msgs::msg::RobotClosestObstacle>::SharedPtr robot_obstacle_pub_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr obstacle_cloud_pub_;
         rclcpp::TimerBase::SharedPtr timer_;
         int num_humans = 4;
+        int max_obstacle_points = 10;
 
         float resolution_;
         int width_;
@@ -150,7 +156,9 @@ int main(int argc, char** argv){
     rclcpp::Client<nav_msgs::srv::GetMap>::SharedPtr client = node->create_client<nav_msgs::srv::GetMap>("/map_server/map");
     auto request = std::make_shared<nav_msgs::srv::GetMap::Request>();
 
-    while (!client->wait_for_service(1s)) {
+
+
+    while (!client->wait_for_service(10s)) {
         if (!rclcpp::ok()) {
         RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Interrupted while waiting for the service. Exiting.");
         // return 0;
@@ -167,7 +175,7 @@ int main(int argc, char** argv){
         }
     nav_msgs::msg::OccupancyGrid map_ = result.get()->map;
 
-    rclcpp::spin( std::make_shared<HumanNearestObstacle>(map_) );
+    rclcpp::spin( std::make_shared<RobotNearestObstacle>(map_) );
     rclcpp::shutdown();
     return 0;
 }

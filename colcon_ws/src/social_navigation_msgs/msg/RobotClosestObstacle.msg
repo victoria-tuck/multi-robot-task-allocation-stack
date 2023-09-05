@@ -1,0 +1,2 @@
+geometry_msgs/Point[] obstacle_locations
+uint32 num_obstacles

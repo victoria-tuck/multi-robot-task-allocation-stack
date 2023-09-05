@@ -5,6 +5,7 @@ from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchD
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch.actions import SetEnvironmentVariable
+from launch.substitutions import LaunchConfiguration, PythonExpression
 
 def generate_launch_description():
     
@@ -32,6 +33,9 @@ def generate_launch_description():
                 # 'world': world_file
             }.items()
         )
+    
+    
+    
     ld = LaunchDescription()
     ld.add_action(env_cmd1)
     ld.add_action(env_cmd2)

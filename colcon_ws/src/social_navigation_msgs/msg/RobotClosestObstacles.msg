@@ -1,0 +1,1 @@
+social_navigation_msgs/RobotClosestObstacle[] obstacle_info

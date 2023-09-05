@@ -60,34 +60,44 @@ void PedestrianSFMPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
     this->sfmActor.desiredVelocity = 0.8;
 
   // Read in the target weight
+
+  // set all parameters here
+
   if (_sdf->HasElement("goal_weight"))
     this->sfmActor.params.forceFactorDesired = _sdf->Get<double>("goal_weight");
+  else
+    this->sfmActor.params.forceFactorDesired = 2.0;
   // Read in the obstacle weight
   if (_sdf->HasElement("obstacle_weight"))
-    this->sfmActor.params.forceFactorObstacle =
-        _sdf->Get<double>("obstacle_weight");
+    this->sfmActor.params.forceFactorObstacle = _sdf->Get<double>("obstacle_weight");
+  else
+    this->sfmActor.params.forceFactorObstacle = 80.0;
   // Read in the social weight
   if (_sdf->HasElement("social_weight"))
-    this->sfmActor.params.forceFactorSocial =
-        _sdf->Get<double>("social_weight");
+    this->sfmActor.params.forceFactorSocial = _sdf->Get<double>("social_weight");
+  else
+    this->sfmActor.params.forceFactorSocial = 15.0;
   // Read in the group gaze weight
   if (_sdf->HasElement("group_gaze_weight"))
-    this->sfmActor.params.forceFactorGroupGaze =
-        _sdf->Get<double>("group_gaze_weight");
+    this->sfmActor.params.forceFactorGroupGaze = _sdf->Get<double>("group_gaze_weight");
+  else
+    this->sfmActor.params.forceFactorGroupGaze = 3.0;
   // Read in the group coherence weight
   if (_sdf->HasElement("group_coh_weight"))
-    this->sfmActor.params.forceFactorGroupCoherence =
-        _sdf->Get<double>("group_coh_weight");
+    this->sfmActor.params.forceFactorGroupCoherence = _sdf->Get<double>("group_coh_weight");
+  else
+    this->sfmActor.params.forceFactorGroupCoherence = 2.0;
   // Read in the group repulsion weight
   if (_sdf->HasElement("group_rep_weight"))
-    this->sfmActor.params.forceFactorGroupRepulsion =
-        _sdf->Get<double>("group_rep_weight");
+    this->sfmActor.params.forceFactorGroupRepulsion = _sdf->Get<double>("group_rep_weight");
+  else
+    this->sfmActor.params.forceFactorGroupRepulsion = 1.0;
 
   // Read in the animation factor (applied in the OnUpdate function).
   if (_sdf->HasElement("animation_factor"))
     this->animationFactor = _sdf->Get<double>("animation_factor");
   else
-    this->animationFactor = 4.5;
+    this->animationFactor = 5.1;//4.5;
 
   if (_sdf->HasElement("animation_name")) {
     this->animationName = _sdf->Get<std::string>("animation_name");
@@ -97,7 +107,7 @@ void PedestrianSFMPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   if (_sdf->HasElement("people_distance"))
     this->peopleDistance = _sdf->Get<double>("people_distance");
   else
-    this->peopleDistance = 5.0;
+    this->peopleDistance = 6.0;//5.0;
 
   // Read in the pedestrians in your walking group
   if (_sdf->HasElement("group")) {

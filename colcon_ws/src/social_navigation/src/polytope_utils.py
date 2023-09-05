@@ -63,7 +63,7 @@ ellipse_cvxpylayer = CvxpyLayer(ellipse_prob, parameters=[ellipse_A, ellipse_b],
 
 # Formulate and solve the Circle problem
 circle_n = 2
-circle_num_planes = 4 + 11
+circle_num_planes = 4 + 11 + 12  # adjust obstacles here
 circle_r = cp.Variable()
 circle_c = cp.Variable((2,1))
 circle_A = cp.Parameter((circle_num_planes,circle_n))

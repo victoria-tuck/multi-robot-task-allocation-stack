@@ -24,6 +24,8 @@ set (msg_files
   "msg/HumanStates.msg"
   "msg/HumanClosestObstacle.msg"
   "msg/HumanClosestObstacles.msg"
+  "msg/RobotClosestObstacle.msg"
+  "msg/RobotClosestObstacles.msg"
 )
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}

@@ -192,20 +192,34 @@ class dynamic_unicycle:
         # print(f"CBF nominal acc: {u_r}, omega:{omega}")
         return np.array([u_r, omega]).reshape(-1,1)
     
-    # @jit
-    def nominal_controller_jax(self, X, targetX, k_omega = 3.0, k_v = 1.0, k_x = 1.0):
-        # k_omega = 3.0#2.0 
-        # k_v = 1.0#3.0#0.3#0.15##5.0#0.15
-        # k_x = k_v
-        distance = jnp.max( jnp.array([jnp.linalg.norm( X[0:2]-targetX[0:2] ), 0.1]) )
-        desired_heading = jnp.arctan2( targetX[1,0]-X[1,0], targetX[0,0]-X[0,0] )
-        error_heading = desired_heading - X[2,0]
-        error_heading = jnp.arctan2( jnp.sin(error_heading), jnp.cos(error_heading) )
+    def nominal_controller_jax(self, targetX, k_omega = 1.0, k_v = 1.0, k_x = 1.0):
+        distance = jnp.linalg.norm( self.X[0:2]-targetX[0:2] )
+        if (distance>0.1):
+            desired_heading = jnp.arctan2( targetX[1,0]-self.X[1,0], targetX[0,0]-self.X[0,0] )
+            error_heading = wrap_angle( desired_heading - self.X[2,0] )
+            speed = min(k_x * distance * jnp.cos(error_heading), 1.3)
+        else:
+            error_heading = 0
+            speed = 0
 
-        omega = k_omega * error_heading * jnp.tanh( distance )
-        speed = k_x * distance * jnp.cos(error_heading)
-        u_r = 1.0 * k_v * ( speed - X[3,0] )
+        omega = k_omega * error_heading #* np.tanh( distance )
+        u_r = k_v * ( speed - self.X[3,0] )
         return jnp.array([u_r, omega]).reshape(-1,1)
+    
+    # @jit
+    # def nominal_controller_jax(self, X, targetX, k_omega = 3.0, k_v = 1.0, k_x = 1.0):
+    #     # k_omega = 3.0#2.0 
+    #     # k_v = 1.0#3.0#0.3#0.15##5.0#0.15
+    #     # k_x = k_v
+    #     distance = jnp.max( jnp.array([jnp.linalg.norm( X[0:2]-targetX[0:2] ), 0.1]) )
+    #     desired_heading = jnp.arctan2( targetX[1,0]-X[1,0], targetX[0,0]-X[0,0] )
+    #     error_heading = desired_heading - X[2,0]
+    #     error_heading = jnp.arctan2( jnp.sin(error_heading), jnp.cos(error_heading) )
+
+    #     omega = k_omega * error_heading * jnp.tanh( distance )
+    #     speed = k_x * distance * jnp.cos(error_heading)
+    #     u_r = 1.0 * k_v * ( speed - X[3,0] )
+    #     return jnp.array([u_r, omega]).reshape(-1,1)
     
     def barrier(self, target, d_min = 0.5, alpha1 = 1.0):
  

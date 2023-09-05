@@ -1,13 +1,14 @@
 import rclpy
 from rclpy.node import Node
 
-from social_navigation_msgs.msg import HumanStates
+from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 
-from cbf_controller import cbf_controller
+# from cbf_controller import cbf_controller
+from cbf_obstacle_controller import cbf_controller
 import numpy as np
 # import jax.numpy as jnp
 
@@ -20,8 +21,9 @@ class RobotController(Node):
 
         # Variables
         self.num_humans = 11
-        self.num_obstacles = 0
+        self.num_obstacles = 12
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
+        self.obstacle_states = np.zeros((2,self.num_obstacles))
         self.human_states = np.zeros((2,self.num_humans))
         self.human_states_prev = np.zeros((2,self.num_humans))
         # self.t_human = self.get_clock().now().nanoseconds
@@ -36,16 +38,19 @@ class RobotController(Node):
         self.control_prev  = np.array([0.0,0.0])
         self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
         # Call once to initiate JAX JIT
-        self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
+        self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+        # self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
 
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
         self.robot_state_callback = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 10 )        
         self.goal_pose_subscriber = self.create_subscription( PoseStamped, 'goal_pose_custom', self.robot_goal_callback, 10 )
+        self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, '/robot_closest_obstacles', self.obstacle_callback, 10 )
         self.human_states_valid = False
         self.robot_state_valid = False
         self.path_active = False
+        self.obstacles_valid = False
         # self.robot_nearest_obstacle_sub = self.create_sunscription(  )
 
         # Publishers
@@ -83,14 +88,20 @@ class RobotController(Node):
         self.robot_state_valid = True
         # print(f"robot state: {self.robot_state}")
         
+    def obstacle_callback(self, msg):
+        # self.num_obstacles = msg.num_obstacles
+        self.obstacle_states_temp = 100*np.ones((2,self.num_obstacles))
+        for i in range(min(msg.num_obstacles, self.num_obstacles)):
+            self.obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ])            
+        self.obstacle_states = np.copy(self.obstacle_states_temp)
+        self.obstacles_valid = True
+        
     def wrap_angle(self,theta):
         return np.arctan2( np.sin(theta), np.cos(theta) )
 
     def controller_callback(self):          
-            
         # if self.robot_state_valid and self.human_states_valid:
-        if (self.path_active and (self.robot_state_valid and self.human_states_valid)):
-            
+        if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
             while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):
@@ -106,7 +117,8 @@ class RobotController(Node):
             dt = (t_new - self.time_prev)/10**9
             try:
                 # speed, omega = self.controller.policy_nominal( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
-                speed, omega = self.controller.policy_cbf( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
+                # speed, omega = self.controller.policy_cbf_volume( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
+                speed, omega = self.controller.policy_cbf_volume( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
                 self.control_prev = np.array([speed, omega])
             except Exception as e:
                 speed = self.control_prev[0]  #0.0
