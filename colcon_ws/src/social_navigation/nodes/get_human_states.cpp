@@ -68,7 +68,8 @@ class HumanStatePublihser : public rclcpp::Node{
 
             for (int i=0; i<num_humans; i++){
                 if (human_states_.valid[i] == false)
-                    return;
+                    continue;
+                    // return;
                 visualization_msgs::msg::Marker marker;
 
                 marker.header.frame_id="map";

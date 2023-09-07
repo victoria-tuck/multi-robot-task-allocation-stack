@@ -65,6 +65,8 @@ public:
 
   /// Odometry publisher
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_{nullptr};
+  // rclcpp::Subscriber<std_msgs::msg::Bool>::SharedPtr sub_{nullptr};
+  // bool run_sim = false;
 
   /// Odom topic name
   std::string topic_name_{"odom"};
@@ -125,6 +127,7 @@ void ActorStatePublisherPlugin::Load(gazebo::physics::ModelPtr model, sdf::Eleme
   impl_->pub_ = impl_->ros_node_->create_publisher<nav_msgs::msg::Odometry>(
     impl_->topic_name_, qos.get_publisher_qos(
       impl_->topic_name_, rclcpp::SensorDataQoS().reliable()));
+  // impl_->sub_ = impl_->create_subscriber<std_msgs::msg::bool>
   impl_->topic_name_ = impl_->pub_->get_topic_name();
   RCLCPP_DEBUG(
     impl_->ros_node_->get_logger(), "Publishing on topic [%s]", impl_->topic_name_.c_str());

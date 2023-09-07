@@ -9,6 +9,7 @@
 // #include "social_navigation_msgs/msg/robot_closest_obstacles.hpp"
 #include "social_navigation_msgs/msg/robot_closest_obstacle.hpp"
 #include "sensor_msgs/msg/point_cloud.hpp"
+#include "geometry_msgs/msg/pose_with_covariance_stamped.hpp"
 
 #define M_PI 3.14157
 
@@ -31,6 +32,7 @@ class RobotNearestObstacle: public rclcpp::Node {
             //Publishers
             robot_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::RobotClosestObstacle>("/robot_closest_obstacles", 10);
             obstacle_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud>("/robot_closest_obstacles_cloud", 10);
+            human_pose_init_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("initialpose", 10);
 
             //Subscribers
             robot_sub_ = this->create_subscription<nav_msgs::msg::Odometry>( "/odom", 2, std::bind(&RobotNearestObstacle::robot_callback, this, _1) );
@@ -43,6 +45,19 @@ class RobotNearestObstacle: public rclcpp::Node {
         void robot_callback(const nav_msgs::msg::Odometry::SharedPtr msg){
             robot_state = msg->pose.pose;
             robot_state_init = true;
+
+
+            if (!pose_init) {
+                geometry_msgs::msg::PoseWithCovarianceStamped initial_pose;
+                initial_pose.header.frame_id = "map";
+                initial_pose.header.stamp = this->get_clock()->now();
+                initial_pose.pose.pose.position.x = robot_state.position.x;
+                initial_pose.pose.pose.position.y = robot_state.position.y;
+                initial_pose.pose.pose.orientation.z = robot_state.orientation.x;
+                initial_pose.pose.pose.orientation.w = robot_state.orientation.w;
+                human_pose_init_pub_->publish(initial_pose);
+                pose_init = true;
+            }            
         }
 
         void run(){
@@ -136,9 +151,12 @@ class RobotNearestObstacle: public rclcpp::Node {
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr robot_sub_;
         rclcpp::Publisher<social_navigation_msgs::msg::RobotClosestObstacle>::SharedPtr robot_obstacle_pub_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr obstacle_cloud_pub_;
+        rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr human_pose_init_pub_;
+
         rclcpp::TimerBase::SharedPtr timer_;
         int num_humans = 4;
         int max_obstacle_points = 10;
+        bool pose_init = false;
 
         float resolution_;
         int width_;

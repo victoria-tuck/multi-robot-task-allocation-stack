@@ -17,8 +17,8 @@ class cbf_controller:
     alpha2 = 2.0
     alpha_polytope = 1.0
     robot = 0
-    k_x = 1.5#30.0
-    k_v = 3.0#1.5
+    k_x = 2.0#30.0
+    k_v = 3.5#1.5
     dt = 0.01
     controller2_base_layer = 0
     controller2_vol_layer = 0
@@ -36,11 +36,11 @@ class cbf_controller:
         cbf_controller.alpha2_human = 6*np.ones(cbf_controller.num_people)
         cbf_controller.alpha1_obstacle = 2*np.ones(cbf_controller.num_obstacles+1)
         cbf_controller.alpha2_obstacle = 6*np.ones(cbf_controller.num_obstacles+1)
-        cbf_controller.alpha_polytope = 1.0
-        self.control_bound = 10.0
+        cbf_controller.alpha_polytope = 2.0
+        self.control_bound = 3.0
         self.goal = np.array([-3.0,1.0]).reshape(-1,1)
-        cbf_controller.k_x = 0.5#30.0
-        cbf_controller.k_v = 2.5#1.5
+        cbf_controller.k_x = 1.5#0.5#30.0
+        cbf_controller.k_v = 3.0#1.5
         self.d_min_human = 0.2#0.5
 
         ######### holonomic controller
@@ -98,7 +98,7 @@ class cbf_controller:
                 # barrier function
                 A = jnp.zeros((1,2)); b = jnp.zeros((1,1))
                 for i in range(cbf_controller.num_people):
-                    dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius)
+                    dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.3)
                     A = jnp.append( A, dh_dot_dx1 @ cbf_controller.robot.g_jax(robot_state), axis = 0 )
                     b = jnp.append( b, - dh_dot_dx1 @ cbf_controller.robot.f_jax(robot_state) - dh_dot_dx2 @ human_states_dot[:,i].reshape(-1,1) - alpha1_human[i] * h_dot - alpha2_human[i] * (h_dot + alpha1_human[i]*h), axis = 0 )
                 for i in range(cbf_controller.num_obstacles):
@@ -154,7 +154,7 @@ class cbf_controller:
     def policy_cbf(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
         
         self.robot.set_state(robot_state)
-        A, b = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, alpha1_obstacle, alpha2_obstacle, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
+        A, b = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
         self.A2_base.value = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
         self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
         self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
@@ -172,6 +172,10 @@ class cbf_controller:
         self.ax1[0].scatter(human_states[0,:], human_states[1,:], c = 'g')
         self.ax1[0].scatter(robot_state[0,0], robot_state[1,0], c = 'r')    
         self.ax1[0].scatter(obstacle_states[0,:], obstacle_states[1,:], c = 'k')
+        self.ax1[0].set_xlim([robot_state[0,0]-5, robot_state[0,0]+5])
+        self.ax1[0].set_ylim([robot_state[1,0]-5, robot_state[1,0]+5])
+        self.ax1[1].scatter(self.u2_ref_base.value[0,0], self.u2_ref_base.value[1,0],s = 70, edgecolors='r', facecolors='none' )
+        self.ax1[1].scatter(self.u2_base.value[0,0], self.u2_base.value[1,0],s = 50, edgecolors='r', facecolors='r' )
         
         self.fig1.canvas.draw()
         self.fig1.canvas.flush_events
@@ -202,6 +206,8 @@ class cbf_controller:
         self.ax1[0].scatter(human_states[0,:], human_states[1,:], c = 'g')
         self.ax1[0].scatter(robot_state[0,0], robot_state[1,0], c = 'r')  
         self.ax1[0].scatter(obstacle_states[0,:], obstacle_states[1,:], c = 'k')  
+        self.ax1[0].set_xlim([robot_state[0,0]-5, robot_state[0,0]+5])
+        self.ax1[0].set_ylim([robot_state[1,0]-5, robot_state[1,0]+5])
         
         self.A2_vol.value = np.append( A, A_polytope, axis=0 )
         self.b2_vol.value = np.append( b, b_polytope, axis=0 )
@@ -212,6 +218,8 @@ class cbf_controller:
             angles   = np.linspace( 0, 2 * np.pi, 100 )
             circle_inner = circle_c2 + circle_r2 * np.append(np.cos(angles).reshape(1,-1) , np.sin(angles).reshape(1,-1), axis=0 )
             self.ax1[1].plot( circle_inner[0,:], circle_inner[1,:], 'c--', label='Inner Circle' )
+            self.ax1[1].scatter(self.u2_ref_vol.value[0,0], self.u2_ref_vol.value[1,0],s = 70, edgecolors='r', facecolors='none' )
+            self.ax1[1].scatter(self.u2_vol.value[0,0], self.u2_vol.value[1,0],s = 50, edgecolors='r', facecolors='r' )
         
         self.fig1.canvas.draw()
         self.fig1.canvas.flush_events

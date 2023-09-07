@@ -131,6 +131,7 @@ class HumanNearestObstacle: public rclcpp::Node {
         rclcpp::Subscription<social_navigation_msgs::msg::HumanStates>::SharedPtr human_sub_;
         rclcpp::Publisher<social_navigation_msgs::msg::HumanClosestObstacles>::SharedPtr human_obstacle_pub_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr obstacle_cloud_pub_;
+
         rclcpp::TimerBase::SharedPtr timer_;
         int num_humans = 4;
 

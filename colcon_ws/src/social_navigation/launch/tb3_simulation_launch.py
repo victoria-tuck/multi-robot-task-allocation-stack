@@ -31,6 +31,7 @@ def generate_launch_description():
     bringup_dir = get_package_share_directory('nav2_bringup')
     launch_dir = os.path.join(bringup_dir, 'launch')
     social_navigation_launch_dir = os.path.join( get_package_share_directory('social_navigation'), 'launch')
+    social_navigation_config_dir = os.path.join( get_package_share_directory('social_navigation'), 'configs')
 
     # Create the launch configuration variables
     slam = LaunchConfiguration('slam')
@@ -96,10 +97,10 @@ def generate_launch_description():
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config_file',
-        # default_value=os.path.join(
-        #     social_navigation_launch_dir, 'configs', 'rviz.rviz'),
         default_value=os.path.join(
-            bringup_dir, 'rviz', 'nav2_default_view.rviz'),
+            social_navigation_config_dir, 'rviz_config.rviz'),
+        # default_value=os.path.join(
+        #     bringup_dir, 'rviz', 'nav2_default_view.rviz'),
         description='Full path to the RVIZ config file to use')
 
     declare_use_simulator_cmd = DeclareLaunchArgument(
