@@ -32,19 +32,19 @@ class cbf_controller:
         cbf_controller.dt = 0.03
         cbf_controller.num_people = num_people
         cbf_controller.num_obstacles = num_obstacles
-        cbf_controller.alpha1_human = 1*np.ones(cbf_controller.num_people) #1 # v5:1, v6: 1
-        cbf_controller.alpha2_human = 2*np.ones(cbf_controller.num_people) #3 # v5:2, v6: 2
+        cbf_controller.alpha1_human = 2*np.ones(cbf_controller.num_people) #1 # v5:1, v6: 1
+        cbf_controller.alpha2_human = 4*np.ones(cbf_controller.num_people) #3 # v5:2, v6: 2
         cbf_controller.alpha1_obstacle = 2*np.ones(cbf_controller.num_obstacles+1) #2 # v5:2, v6: 2
-        cbf_controller.alpha2_obstacle = 6*np.ones(cbf_controller.num_obstacles+1) # 6 # v5:6, v6: 4
+        cbf_controller.alpha2_obstacle = 4*np.ones(cbf_controller.num_obstacles+1) # 6 # v5:6, v6: 4
         cbf_controller.alpha_polytope = 2.0
         self.control_bound = 3.0
         self.goal = np.array([-3.0,1.0]).reshape(-1,1)
-        cbf_controller.k_x = 1.5#  1.5#0.5#30.0
-        cbf_controller.k_v = 3.0#  3.0#1.5
+        cbf_controller.k_x = 1.5   # 1.5#0.5#30.0
+        cbf_controller.k_v = 3.0   # 3.0#1.5
         self.d_min_human = 0.2#0.5
         
         # v7: bad
-        # v8: 2,6, 2,6
+
         ######### holonomic controller
         n = 4 + cbf_controller.num_people + 1 # number of constraints
 
@@ -146,7 +146,7 @@ class cbf_controller:
     def get_next_step_circle_volume( robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius, control_A, control_B, robot_goal, dt ):
         return cbf_controller.get_next_step_circle( robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius, control_A, control_B, robot_goal, dt )[2]
         
-    def policy_nominal(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, dt):
+    def policy_nominal(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
         
         self.robot.set_state(robot_state)
         self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
@@ -171,14 +171,14 @@ class cbf_controller:
         hull = pt.Polytope( -self.A2_base.value, -self.b2_base.value )
         hull_plot = hull.plot(self.ax1[1], color = 'g')
         plot_polytope_lines( self.ax1[1], hull, self.control_bound )
-        self.ax1[0].clear()
-        self.ax1[0].scatter(human_states[0,:], human_states[1,:], c = 'g')
-        self.ax1[0].scatter(robot_state[0,0], robot_state[1,0], c = 'r')    
-        self.ax1[0].scatter(obstacle_states[0,:], obstacle_states[1,:], c = 'k')
-        self.ax1[0].set_xlim([robot_state[0,0]-5, robot_state[0,0]+5])
-        self.ax1[0].set_ylim([robot_state[1,0]-5, robot_state[1,0]+5])
-        self.ax1[1].scatter(self.u2_ref_base.value[0,0], self.u2_ref_base.value[1,0],s = 70, edgecolors='r', facecolors='none' )
-        self.ax1[1].scatter(self.u2_base.value[0,0], self.u2_base.value[1,0],s = 50, edgecolors='r', facecolors='r' )
+        # self.ax1[0].clear()
+        # self.ax1[0].scatter(human_states[0,:], human_states[1,:], c = 'g')
+        # self.ax1[0].scatter(robot_state[0,0], robot_state[1,0], c = 'r')    
+        # self.ax1[0].scatter(obstacle_states[0,:], obstacle_states[1,:], c = 'k')
+        # self.ax1[0].set_xlim([robot_state[0,0]-5, robot_state[0,0]+5])
+        # self.ax1[0].set_ylim([robot_state[1,0]-5, robot_state[1,0]+5])
+        # self.ax1[1].scatter(self.u2_ref_base.value[0,0], self.u2_ref_base.value[1,0],s = 70, edgecolors='r', facecolors='none' )
+        # self.ax1[1].scatter(self.u2_base.value[0,0], self.u2_base.value[1,0],s = 50, edgecolors='r', facecolors='r' )
         
         self.fig1.canvas.draw()
         self.fig1.canvas.flush_events
@@ -190,15 +190,14 @@ class cbf_controller:
         A = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
         b = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
         self.u2_ref_vol.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
-        circle_r2, circle_c2, volume_new = cbf_controller.compute_circle_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, jnp.asarray(self.control_bound_polytope.A), jnp.asarray(self.control_bound_polytope.b.reshape(-1,1)) )
-        volume_grad_robot, volume_grad_humansX, volume_grad_humansU = cbf_controller.polytope_circle_volume_from_states_grad(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, jnp.asarray(self.control_bound_polytope.A), jnp.asarray(self.control_bound_polytope.b.reshape(-1,1)))
-        # print(f" polytope_volume_from_states_grad: {volume_grad_robot} ")
-        h_polytope = volume_new - self.min_polytope_volume_circle
-        dh_polytope_dx = volume_grad_robot.T
-        A_polytope = np.asarray(dh_polytope_dx @ self.robot.g())
-        b_polytope = np.asarray(- dh_polytope_dx @ self.robot.f() - self.alpha_polytope * h_polytope - np.sum(volume_grad_humansX * human_states_dot ))
+        # circle_r2, circle_c2, volume_new = cbf_controller.compute_circle_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, jnp.asarray(self.control_bound_polytope.A), jnp.asarray(self.control_bound_polytope.b.reshape(-1,1)) )
+        # volume_grad_robot, volume_grad_humansX, volume_grad_humansU = cbf_controller.polytope_circle_volume_from_states_grad(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, jnp.asarray(self.control_bound_polytope.A), jnp.asarray(self.control_bound_polytope.b.reshape(-1,1)))
+        # h_polytope = volume_new - self.min_polytope_volume_circle
+        # dh_polytope_dx = volume_grad_robot.T
+        # A_polytope = np.asarray(dh_polytope_dx @ self.robot.g())
+        # b_polytope = np.asarray(- dh_polytope_dx @ self.robot.f() - self.alpha_polytope * h_polytope - np.sum(volume_grad_humansX * human_states_dot ))
         
-        # Plot polytope       
+        # # Plot polytope       
         # self.ax1[1].clear()
         # self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
         # self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
@@ -212,23 +211,30 @@ class cbf_controller:
         # self.ax1[0].set_xlim([robot_state[0,0]-5, robot_state[0,0]+5])
         # self.ax1[0].set_ylim([robot_state[1,0]-5, robot_state[1,0]+5])
         
-        self.A2_vol.value = np.append( A, A_polytope, axis=0 )
-        self.b2_vol.value = np.append( b, b_polytope, axis=0 )
+        # self.A2_vol.value = np.append( A, A_polytope, axis=0 )
+        # self.b2_vol.value = np.append( b, b_polytope, axis=0 )
         
-        self.controller2_vol.solve(solver=cp.GUROBI)
+        # self.controller2_vol.solve(solver=cp.GUROBI)
+        
         self.robot.step( self.u2_vol.value, dt )   
-        # if 1:#plot_circle:
-        #     angles   = np.linspace( 0, 2 * np.pi, 100 )
-        #     circle_inner = circle_c2 + circle_r2 * np.append(np.cos(angles).reshape(1,-1) , np.sin(angles).reshape(1,-1), axis=0 )
-        #     self.ax1[1].plot( circle_inner[0,:], circle_inner[1,:], 'c--', label='Inner Circle' )
-        #     self.ax1[1].scatter(self.u2_ref_vol.value[0,0], self.u2_ref_vol.value[1,0],s = 70, edgecolors='r', facecolors='none' )
-        #     self.ax1[1].scatter(self.u2_vol.value[0,0], self.u2_vol.value[1,0],s = 50, edgecolors='r', facecolors='r' )
+        # self.robot.step( self.u2_ref_vol.value, dt )   
+        if 0:#plot_circle:
+            angles   = np.linspace( 0, 2 * np.pi, 100 )
+            circle_inner = circle_c2 + circle_r2 * np.append(np.cos(angles).reshape(1,-1) , np.sin(angles).reshape(1,-1), axis=0 )
+            self.ax1[1].plot( circle_inner[0,:], circle_inner[1,:], 'c--', label='Inner Circle' )
+            self.ax1[1].scatter(self.u2_ref_vol.value[0,0], self.u2_ref_vol.value[1,0],s = 70, edgecolors='r', facecolors='none' )
+            self.ax1[1].scatter(self.u2_vol.value[0,0], self.u2_vol.value[1,0],s = 50, edgecolors='r', facecolors='r' )
         
-        # self.fig1.canvas.draw()
-        # self.fig1.canvas.flush_events
-        return self.robot.X[3,0], self.u2_vol.value[1,0]
+        self.fig1.canvas.draw()
+        self.fig1.canvas.flush_events
+        return self.robot.X[3,0], self.u2_vol.value[1,0].item()
     
-    def policy_cbf_volume_adapt(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, dt):
+        # self.robot.set_state(robot_state)
+        # self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        # self.robot.step( self.u2_ref_base.value, dt )
+        # return self.robot.X[3,0], self.u2_ref_base.value[1,0]
+    
+    def policy_cbf_volume_adapt(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, dt, node_clock):
 
         self.robot.set_state(robot_state)
         

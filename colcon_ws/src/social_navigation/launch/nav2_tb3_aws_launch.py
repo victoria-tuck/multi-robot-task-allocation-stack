@@ -29,7 +29,7 @@ def generate_launch_description():
                 # 'namespace': 'test',
                 # 'use_namespace': 'True'
                 'slam': 'False',
-                'map': os.path.join(social_navigation_dir, 'worlds', 'map_aws', 'map6.yaml')
+                'map': os.path.join(social_navigation_dir, 'worlds', 'map_aws', 'my_map.yaml')
                 # 'world': world_file
             }.items()
         )

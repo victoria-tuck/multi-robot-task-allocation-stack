@@ -7,7 +7,7 @@ from geometry_msgs.msg import PoseStamped, Pose
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
-
+import time
 # from cbf_controller import cbf_controller
 from cbf_obstacle_controller import cbf_controller
 import numpy as np
@@ -21,7 +21,7 @@ class RobotController(Node):
         super().__init__('robot_controller')
 
         # Variables
-        self.num_humans = 20
+        self.num_humans = 6
         self.num_obstacles = 12
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
         self.obstacle_states = np.zeros((2,self.num_obstacles))
@@ -31,7 +31,7 @@ class RobotController(Node):
         self.human_states_dot = np.zeros((2,self.num_humans)) 
         self.robot_radius = 0.18
 
-        self.timer_period = 0.1#0.05 # seconds
+        self.timer_period = 0.05 # seconds
         self.time_step = self.timer_period
         self.goal = np.array([0,0]).reshape(-1,1)
         
@@ -39,16 +39,16 @@ class RobotController(Node):
         self.control_prev  = np.array([0.0,0.0])
         self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
         # Call once to initiate JAX JIT
-        self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+        self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
         # self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
 
 
         # Subscribers
-        self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
-        self.robot_state_callback = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 10 )        
-        self.goal_pose_subscriber = self.create_subscription( PoseStamped, 'goal_pose_custom', self.robot_goal_callback, 10 )
-        self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, '/robot_closest_obstacles', self.obstacle_callback, 10 )
-        self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
+        self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 1 )
+        self.robot_state_callback = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 1 )        
+        self.goal_pose_subscriber = self.create_subscription( PoseStamped, 'goal_pose_custom', self.robot_goal_callback, 1 )
+        self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, '/robot_closest_obstacles', self.obstacle_callback, 1 )
+        self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 1 )
         self.human_states_valid = False
         self.robot_state_valid = False
         self.path_active = False
@@ -87,11 +87,24 @@ class RobotController(Node):
 
     def human_state_callback(self, msg):
         self.human_states_prev = np.copy(self.human_states)
+        humans_temp = np.zeros((2,len(msg.states)))
+        humans_dot_temp = np.zeros((2,len(msg.states)))
         for i in range( len(msg.states) ):#:self.num_humans):
-            self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
-            self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
+            humans_temp[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
+            humans_dot_temp[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
+        
+        
+        if self.robot_state_valid:
+            # print(f"callback human_states: {humans_temp}")
+            dist = humans_dot_temp - self.robot_state[0:2]
+            dist_norm = np.linalg.norm(dist, axis=0)
+            dist_sorted = np.argsort(dist_norm)[0:self.num_humans]
+            # print(f"dists: {dist_norm}, args: {dist_sorted}")
+            self.human_states = humans_temp[:,dist_sorted]
+            self.human_states_dot = humans_dot_temp[:,dist_sorted]
         self.human_states_valid = True
-        # print(f"callback human_states: {self.human_states_dot}")
+                    
+        # print(f"new human_states: {self.human_states}")
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
@@ -186,17 +199,20 @@ class RobotController(Node):
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
+            self.get_logger().info(f'time {dt}')
             try:
                 # speed, omega = self.controller.policy_nominal( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf_volume( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                t0 = time.time()
+                speed, omega = self.controller.policy_cbf_volume( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                self.get_logger().info(f"QP time: {time.time() - t0}")
                 self.control_prev = np.array([speed, omega])
             except Exception as e:
                 speed = self.control_prev[0]  #0.0
                 omega = self.control_prev[1]  #0.0
                 self.error_count = self.error_count + 1
-                print(f"ERROR ******************************** count: {self.error_count}")
+                self.get_logger().info(f"ERROR ******************************** count: {self.error_count}, {e}")
                 
             self.time_prev = t_new
             # print(f"CBF speed: {speed}, omega: {omega}, dt:{dt}")

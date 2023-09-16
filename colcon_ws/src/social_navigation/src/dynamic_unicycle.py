@@ -180,7 +180,11 @@ class dynamic_unicycle:
         if (distance>0.1):
             desired_heading = np.arctan2( targetX[1,0]-self.X[1,0], targetX[0,0]-self.X[0,0] )
             error_heading = wrap_angle( desired_heading - self.X[2,0] )
-            speed = min(k_x * distance * np.cos(error_heading), 1.5)
+            if np.abs(error_heading) < np.pi/2:
+                speed = min(k_x * distance * np.cos(error_heading), 1.5)
+            else:
+                speed = 0
+            # min(k_x * distance * np.cos(error_heading), 1.5)
         else:
             error_heading = 0
             speed = 0
@@ -197,7 +201,11 @@ class dynamic_unicycle:
         if (distance>0.1):
             desired_heading = jnp.arctan2( targetX[1,0]-self.X[1,0], targetX[0,0]-self.X[0,0] )
             error_heading = wrap_angle( desired_heading - self.X[2,0] )
-            speed = min(k_x * distance * jnp.cos(error_heading), 1.5)
+            if jnp.abs(error_heading) < jnp.pi/2:
+                speed = min(k_x * distance * jnp.cos(error_heading), 1.5)
+            else:
+                speed = 0
+            # speed = min(k_x * distance * jnp.cos(error_heading), 1.5)
         else:
             error_heading = 0
             speed = 0
@@ -312,6 +320,27 @@ class dynamic_unicycle:
         dh_dot_dx1 = jnp.append( ( self.f_jax(X)[0:2] - targetU[0:2] ).T, jnp.array([[0,0]]), axis = 1 ) + 2 * ( X[0:2] - targetX[0:2] ).T @ df_dx[0:2,:]
         dh_dot_dx2 = - 2 * ( self.f_jax(X)[0:2].T -targetU[0:2].T )
         return dh_dot_dx1, dh_dot_dx2, h_dot, h
+    
+        # human_heading_angle = jnp.arctan2( targetU[1,0], targetU[0,0] )
+        # human_heading_bias = jnp.pi/12        
+        # Rot_human = jnp.array( [  
+        #                 [ cd.cos(human_heading_angle[i]+human_heading_bias), cd.sin(human_heading_angle[i]+human_heading_bias) ],
+        #                 [ -cd.sin(human_heading_angle[i]+human_heading_bias), cd.cos(human_heading_angle[i]+human_heading_bias) ]
+        #             ] ) 
+
+        # Rot_human = np.eye(2)
+        # assume rotation matrix constant
+        # a = np.sqrt(1.2)
+        # dist = X[0:2] - targetX[0:2]  # take horizon step into account  
+        # dist = Rot_human @ dist
+        # dist[0,0] = dist[0,0] / a
+        # h = dist.T @ dist - d_human**2
+        # h_dot = 2 * dist.T @ Rot_human @ ( self.f_jax(X)[0:2] - targetU[0:2] )
+        # df_dx = self.df_dx_jax(X)
+        # dh_dot_dx1 = Rot_human.T @ Rot_human @ jnp.append( ( self.f_jax(X)[0:2] - targetU[0:2] ).T, jnp.array([[0,0]]), axis = 1 ) + 2 * ( X[0:2] - targetX[0:2] ).T @ df_dx[0:2,:]
+        # dh_dot_dx2 = - 2 * ( self.f_jax(X)[0:2].T -targetU[0:2].T )
+        # return dh_dot_dx1, dh_dot_dx2, h_dot, h
+        
     
     def barrier_humans_alpha(self, targetX, targetU, d_min = 0.5):
  

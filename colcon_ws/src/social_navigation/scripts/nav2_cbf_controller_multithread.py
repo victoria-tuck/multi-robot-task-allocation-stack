@@ -7,6 +7,9 @@ from geometry_msgs.msg import PoseStamped, Pose
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
+import matplotlib.pyplot as plt
+
+from rclpy.executors import MultiThreadedExecutor
 
 # from cbf_controller import cbf_controller
 from cbf_obstacle_controller import cbf_controller
@@ -31,7 +34,7 @@ class RobotController(Node):
         self.human_states_dot = np.zeros((2,self.num_humans)) 
         self.robot_radius = 0.18
 
-        self.timer_period = 0.1#0.05 # seconds
+        self.timer_period = 0.05 # seconds
         self.time_step = self.timer_period
         self.goal = np.array([0,0]).reshape(-1,1)
         
@@ -39,16 +42,20 @@ class RobotController(Node):
         self.control_prev  = np.array([0.0,0.0])
         self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
         # Call once to initiate JAX JIT
-        self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+        self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+        # self.controller.policy_nominal(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
         # self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
 
+        plt.ion()
+        self.fig, self.ax = plt.subplots()
+        self.min_dist = []        
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
         self.robot_state_callback = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 10 )        
         self.goal_pose_subscriber = self.create_subscription( PoseStamped, 'goal_pose_custom', self.robot_goal_callback, 10 )
         self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, '/robot_closest_obstacles', self.obstacle_callback, 10 )
-        self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
+        self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 15 )
         self.human_states_valid = False
         self.robot_state_valid = False
         self.path_active = False
@@ -92,11 +99,18 @@ class RobotController(Node):
             self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
         self.human_states_valid = True
         # print(f"callback human_states: {self.human_states_dot}")
+        
+        # if self.robot_state_valid:
+        #     dist = np.linalg.norm(self.human_states - self.robot_state[0:2], axis=0)
+        #     self.min_dist.append(np.min( dist ))
+        #     # self.get_logger(  ).info('human min_dist: "%f"' % self.min_dist[-1])
+        #     self.ax.clear()
+        #     self.ax.plot(self.min_dist)
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
         self.robot_state_valid = True
-        # print(f"robot state: {self.robot_state}")
+        print(f"robot state callback: {self.robot_state}")
         
         # if self.pose_init==False:
         #     initial_pose = PoseStamped()
@@ -186,17 +200,23 @@ class RobotController(Node):
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
+            # self.get_logger().info('time "%f"' % dt)
             try:
+                # print(f"out state: {self.robot_state}")
                 # speed, omega = self.controller.policy_nominal( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf_volume( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                speed, omega = self.controller.policy_cbf_volume( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                # speed, omega = self.controller.policy_nominal( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                
                 self.control_prev = np.array([speed, omega])
             except Exception as e:
                 speed = self.control_prev[0]  #0.0
                 omega = self.control_prev[1]  #0.0
                 self.error_count = self.error_count + 1
-                print(f"ERROR ******************************** count: {self.error_count}")
+                print(f"Error: {e}")
+                self.get_logger().info('Error count: "%f"' % self.error_count)
+                # print(f"ERROR ******************************** count: {self.error_count}, error: {e}")
                 
             self.time_prev = t_new
             # print(f"CBF speed: {speed}, omega: {omega}, dt:{dt}")
@@ -204,6 +224,7 @@ class RobotController(Node):
             ############## Publish Control Input ###################
             control = Twist()
             control.linear.x = speed
+            # print(f"CBF omega: {type(omega)}, dt:{dt}")
             control.angular.z = omega
             self.robot_command_pub.publish(control)
 
@@ -230,7 +251,15 @@ class RobotController(Node):
 def main(args=None):
     rclpy.init(args=args)
     robot_controller = RobotController()
-    rclpy.spin(robot_controller)
+    
+    executor = MultiThreadedExecutor(num_threads=5)
+    executor.add_node(robot_controller)
+    executor.spin()
+    
+    # rclpy.spin(robot_controller)
+    
+    executor.shutdown()
+    control_node.destroy_node()
     rclpy.shutdown()
     
 if __name__ == '__main__':

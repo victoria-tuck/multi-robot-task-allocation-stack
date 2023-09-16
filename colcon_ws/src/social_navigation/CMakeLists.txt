@@ -22,7 +22,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 
-
 include_directories(include)
 include_directories(SYSTEM
   /usr/local/include #for lightsfm
@@ -31,6 +30,7 @@ include_directories(SYSTEM
 install(DIRECTORY launch worlds configs
   DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
+
 
 add_executable(set_gazebo_state_node nodes/gazebo_set_state.cpp)
 ament_target_dependencies(set_gazebo_state_node rclcpp gazebo_msgs std_msgs)
