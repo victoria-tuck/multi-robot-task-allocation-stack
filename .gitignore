@@ -16,3 +16,5 @@ colcon_ws/src/lightsfm/log/
 .vscode/*
 colcon_ws/src/social_navigation/src/__pycache__/
 colcon_ws/src/social_navigation/src/__pycache__/*
+colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/__pycache__/*
+colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/utils/__pycache__/*
