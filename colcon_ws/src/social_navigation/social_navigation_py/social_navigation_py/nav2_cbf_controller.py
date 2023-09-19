@@ -9,7 +9,7 @@ from nav_msgs.msg import Path
 from std_msgs.msg import Bool
 
 # from cbf_controller import cbf_controller
-from cbf_obstacle_controller import cbf_controller
+from .utils.cbf_obstacle_controller import cbf_controller
 import numpy as np
 # import jax.numpy as jnp
 
@@ -31,7 +31,7 @@ class RobotController(Node):
         self.human_states_dot = np.zeros((2,self.num_humans)) 
         self.robot_radius = 0.18
 
-        self.timer_period = 0.1#0.05 # seconds
+        self.timer_period = 0.05#0.05 # seconds
         self.time_step = self.timer_period
         self.goal = np.array([0,0]).reshape(-1,1)
         
@@ -39,7 +39,7 @@ class RobotController(Node):
         self.control_prev  = np.array([0.0,0.0])
         self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
         # Call once to initiate JAX JIT
-        self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+        self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
         # self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
 
 
@@ -186,11 +186,12 @@ class RobotController(Node):
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
+            self.get_logger().info(f"dt: {dt}")
             try:
                 # speed, omega = self.controller.policy_nominal( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf_volume( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                speed, omega = self.controller.policy_cbf_volume( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
                 self.control_prev = np.array([speed, omega])
             except Exception as e:
                 speed = self.control_prev[0]  #0.0

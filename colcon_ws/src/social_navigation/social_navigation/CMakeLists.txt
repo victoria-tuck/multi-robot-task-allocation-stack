@@ -29,7 +29,7 @@ include_directories(SYSTEM
 # this needed to tell colcon to place launch files in the share folder
 install(DIRECTORY launch worlds configs
   DESTINATION share/${PROJECT_NAME})
-install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
+# install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
 
 
 add_executable(set_gazebo_state_node nodes/gazebo_set_state.cpp)

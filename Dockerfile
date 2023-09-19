@@ -10,3 +10,10 @@ RUN echo "source /usr/share/gazebo/setup.sh" >> ~/.bashrc
 RUN echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc
 RUN pip3 install gurobipy
 WORKDIR /home/
+RUN echo "alias rgazebo='ros2 launch aws_robomaker_hospital_world view_hospital.launch.py'" >> ~/.bashrc
+RUN echo "alias rnav2='ros2 launch social_navigation nav2_tb3_aws_launch.py'" >> ~/.bashrc
+RUN echo "alias rcsetup='ros2 launch social_navigation init_controller_setup.launch.py'" >> ~/.bashrc
+RUN echo "alias rcpub='ros2 topic pub /planner_init std_msgs/msg/Bool data:\ true'" >> ~/.bashrc
+RUN echo "alias rcbf='python3 /home/colcon_ws/src/social_navigation/scripts/nav2_cbf_controller.py'" >> ~/.bashrc
+RUN echo "alias rcbf2='ros2 run social_navigation_py nav2_cbf --ros-args -p use_sim_time:=True'"
+RUN python3 -m pip install jaxopt
