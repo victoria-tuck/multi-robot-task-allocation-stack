@@ -19,7 +19,7 @@ class cbf_controller:
     num_obstacles = 2
     alpha1 = 1.0
     alpha2 = 2.0
-    alpha_polytope = 0.7
+    alpha_polytope = 1.0#0.7
     robot = 0
     k_x = 2.0#30.0
     k_v = 3.5#1.5
@@ -43,11 +43,11 @@ class cbf_controller:
         cbf_controller.alpha2_human = 2*np.ones(cbf_controller.num_people) #3 # v5:2, v6: 2
         cbf_controller.alpha1_obstacle = 2*np.ones(cbf_controller.num_obstacles+1) #2 # v5:2, v6: 2
         cbf_controller.alpha2_obstacle = 6*np.ones(cbf_controller.num_obstacles+1) # 6 # v5:6, v6: 4
-        cbf_controller.alpha_polytope = 2.0
+        cbf_controller.alpha_polytope = 2.0 #2.0
         self.control_bound = 3.0
         self.goal = np.array([-3.0,1.0]).reshape(-1,1)
-        cbf_controller.k_x = 1.5#  1.5#0.5#30.0
-        cbf_controller.k_v = 3.0#  3.0#1.5
+        cbf_controller.k_x = 1.5#2.0#1.5#  1.5#0.5#30.0
+        cbf_controller.k_v = 3.0#2.5#3.0#  3.0#1.5
         self.d_min_human = 0.2#0.5
         
         # v7: bad
@@ -94,7 +94,8 @@ class cbf_controller:
 
         # Robot
         cbf_controller.robot = dynamic_unicycle( self.ax1[0], pos = np.array([ robot_init_state[0,0], robot_init_state[1,0], robot_init_state[2,0], 0.0 ]), dt = self.dt, plot_polytope=False )
-        self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound+1.0], [-self.control_bound, self.control_bound+1.0], [-self.control_bound, -self.control_bound-1.0], [self.control_bound, -self.control_bound-1.0] ])
+        self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound+2.0], [-self.control_bound, self.control_bound+2.0], [-self.control_bound, -self.control_bound-2.0], [self.control_bound, -self.control_bound-2.0] ])
+        # self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound], [-self.control_bound, self.control_bound], [-self.control_bound, -self.control_bound], [self.control_bound, -self.control_bound] ])
         self.control_bound_polytope = pt.qhull( self.control_input_limit_points )
         print(f"hull: {self.control_bound_polytope}")
         
@@ -123,9 +124,9 @@ class cbf_controller:
     @jit
     def construct_barrier_from_states(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
         # barrier function
-        A1, b1 = cbf_controller.construct_barrier_from_states_humans(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
-        A2, b2 = cbf_controller.construct_barrier_from_states_obstacles(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
-        return jnp.append(A1, A2, axis=0), jnp.append(b1, b2, axis=0)
+        A1, b1, h_human_min = cbf_controller.construct_barrier_from_states_humans(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
+        A2, b2, h_obs_min = cbf_controller.construct_barrier_from_states_obstacles(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
+        return jnp.append(A1, A2, axis=0), jnp.append(b1, b2, axis=0), h_human_min, h_obs_min
                 
             
     @staticmethod
@@ -133,26 +134,30 @@ class cbf_controller:
     def construct_barrier_from_states_humans(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
         # barrier function
         A = jnp.zeros((cbf_controller.num_people,2)); b = jnp.zeros((cbf_controller.num_people,1))
+        h_min = 100
         def body(i, inputs):
-            A, b = inputs
+            A, b, h_min = inputs
             dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.3)
             A = A.at[i, :].set( (dh_dot_dx1 @ cbf_controller.robot.g_jax(robot_state))[0,:  ]  )
             b = b.at[i,:].set( (- dh_dot_dx1 @ cbf_controller.robot.f_jax(robot_state) - dh_dot_dx2 @ human_states_dot[:,i].reshape(-1,1) - alpha1_human[i] * h_dot - alpha2_human[i] * (h_dot + alpha1_human[i]*h))[0,:] )
-            return A, b
-        return lax.fori_loop( 0, cbf_controller.num_people, body, (A, b) )
+            h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
+            return A, b, h_min
+        return lax.fori_loop( 0, cbf_controller.num_people, body, (A, b, h_min) )
     
     @staticmethod
     @jit
     def construct_barrier_from_states_obstacles(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
         # barrier function
         A = jnp.zeros((cbf_controller.num_obstacles,2)); b = jnp.zeros((cbf_controller.num_obstacles,1))
+        h_min = 100
         def body(i, inputs):
-            A, b = inputs
+            A, b, h_min = inputs
             dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_alpha_jax( robot_state, obstacle_states[:,i].reshape(-1,1), d_min = robot_radius)
             A = A.at[i,:].set((dh_dot_dx1 @ cbf_controller.robot.g_jax(robot_state))[0,:] )
             b = b.at[i,:].set((- dh_dot_dx1 @ cbf_controller.robot.f_jax(robot_state) - alpha1_obstacle[i] * h_dot - alpha2_obstacle[i] * (h_dot + alpha1_obstacle[i]*h))[0,:] )
-            return A, b
-        return lax.fori_loop( 0, cbf_controller.num_obstacles, body, (A, b) )
+            h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
+            return A, b, h_min
+        return lax.fori_loop( 0, cbf_controller.num_obstacles, body, (A, b, h_min) )
     
     @staticmethod        
     @jit
@@ -162,7 +167,7 @@ class cbf_controller:
     # Cvxpylayers
     @staticmethod
     def compute_circle_from_states(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius, control_A, control_B):
-        A, b = cbf_controller.construct_barrier_from_states(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
+        A, b, _, _ = cbf_controller.construct_barrier_from_states(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
         A2 = jnp.append( -A, control_A, axis=0 )
         A2_root = jnp.linalg.norm( A2, axis=1 )
         b2 = jnp.append( -b, control_B, axis=0 )
@@ -218,7 +223,7 @@ class cbf_controller:
         
     @staticmethod
     def get_next_step_circle( robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius, control_A, control_B, robot_goal, dt ):
-        A, b = cbf_controller.construct_barrier_from_states(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius)
+        A, b, _, _ = cbf_controller.construct_barrier_from_states(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius)
         u_ref = cbf_controller.robot.nominal_controller_jax( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
         A = jnp.append( A, -control_A, axis=0 )
         b = jnp.append( b, -control_B, axis=0 )
@@ -242,7 +247,7 @@ class cbf_controller:
     def policy_cbf(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
         
         self.robot.set_state(robot_state)
-        A, b = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
+        A, b, h_human_min, h_obs_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
         self.A2_base.value = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
         self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
         self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
@@ -267,7 +272,11 @@ class cbf_controller:
         
         # self.fig1.canvas.draw()
         # self.fig1.canvas.flush_events
-        return self.robot.X[3,0], self.u2_base.value[1,0]
+        return self.robot.X[3,0], self.u2_base.value[1,0], h_human_min, h_obs_min
+    
+        # vels = self.robot.wheel_to_vel_g() @ np.array([ self.robot.X[3,0], self.u2_base.value[1,0] ]).reshape(-1,1)
+        # return self.robot.X[3,0], vels[1,0]
+        
     
     @staticmethod
     @jit
@@ -278,18 +287,18 @@ class cbf_controller:
     def policy_cbf_volume(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
         self.robot.set_state(robot_state)
         
-        t0 = time.time()
-        A, b = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
+        # t0 = time.time()
+        A, b, h_human_min, h_obs_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
         A = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
         b = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
         
-        t1 = time.time()
+        # t1 = time.time()
         
         self.u2_ref_vol.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
         
-        t2 = time.time()
+        # t2 = time.time()
         circle_r2, circle_c2, volume_new = cbf_controller.compute_circle_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, jnp.asarray(self.control_bound_polytope.A), jnp.asarray(self.control_bound_polytope.b.reshape(-1,1)) )
-        t3 = time.time()
+        # t3 = time.time()
         
         
         # volume_grad_robot, volume_grad_humansX, volume_grad_humansU = cbf_controller.polytope_circle_volume_from_states_grad(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, jnp.asarray(self.control_bound_polytope.A), jnp.asarray(self.control_bound_polytope.b.reshape(-1,1)))
@@ -297,14 +306,14 @@ class cbf_controller:
         volume_new, grads = cbf_controller.polytope_circle_volume_from_states_grad(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, jnp.asarray(self.control_bound_polytope.A), jnp.asarray(self.control_bound_polytope.b.reshape(-1,1)))
         volume_grad_robot, volume_grad_humansX, volume_grad_humansU = grads
         
-        t4 = time.time()
+        # t4 = time.time()
         
         h_polytope = volume_new - self.min_polytope_volume_circle
         dh_polytope_dx = volume_grad_robot.T
         A_polytope = np.asarray(dh_polytope_dx @ self.robot.g())
         b_polytope = np.asarray(- dh_polytope_dx @ self.robot.f() - self.alpha_polytope * h_polytope - np.sum(volume_grad_humansX * human_states_dot ))
         
-        t5 = time.time()
+        # t5 = time.time()
         # Plot polytope       
         # self.ax1[1].clear()
         # self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
@@ -347,7 +356,7 @@ class cbf_controller:
         
         # self.fig1.canvas.draw()
         # self.fig1.canvas.flush_events
-        return self.robot.X[3,0], self.u2_vol.value[1,0]
+        return self.robot.X[3,0], self.u2_vol.value[1,0], h_human_min, h_obs_min
         # print(f"U osqp: {u_sol.T}, r:{circle_r2}")
         # return self.robot.X[3,0],u_sol[1,0].item()
     

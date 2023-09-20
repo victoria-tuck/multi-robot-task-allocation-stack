@@ -7,6 +7,8 @@ from geometry_msgs.msg import PoseStamped, Pose
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
+import matplotlib.pyplot as plt
+# from geometry_msgs.msg import Point
 
 # from cbf_controller import cbf_controller
 from .utils.cbf_obstacle_controller import cbf_controller
@@ -19,6 +21,10 @@ class RobotController(Node):
 
     def __init__(self):
         super().__init__('robot_controller')
+        
+        # 0: cbf
+        # 1: cbf_volume
+        self.controller_id = 1
 
         # Variables
         self.num_humans = 20
@@ -39,7 +45,10 @@ class RobotController(Node):
         self.control_prev  = np.array([0.0,0.0])
         self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
         # Call once to initiate JAX JIT
-        self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+        if self.controller_id == 0:
+            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+        elif self.controller_id == 1:
+            self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
         # self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
 
 
@@ -57,7 +66,19 @@ class RobotController(Node):
         self.goal_init = False
         self.planner_init = False
         self.error_count = 0
+        self.h_min_human_count = 0
+        self.h_min_obs_count = 0
         # self.robot_nearest_obstacle_sub = self.create_sunscription(  )
+        
+        #Plot h
+        # plt.ion()
+        # self.fig, self.ax = plt.subplots(1)# )#, gridspec_kw={'height_ratios': [1, 1]} )
+        # self.ax.set_ylim([-0.1,6])
+        # self.ax.axhline(y=0.0)
+        # self.hs_human = [100]
+        # self.hs_obs = [100]
+        # self.plot_human, = self.ax.plot(self.hs_human)
+        # self.plot_obs, = self.ax.plot(self.hs_obs)
 
         # Publishers
         self.robot_command_pub = self.create_publisher( Twist, '/cmd_vel', 10 )
@@ -94,6 +115,7 @@ class RobotController(Node):
         # print(f"callback human_states: {self.human_states_dot}")
 
     def robot_state_callback(self, msg):
+        # vel = np.array([ msg.twist.twist.linear.x, msg.twist.twist.angular.z ])
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
         self.robot_state_valid = True
         # print(f"robot state: {self.robot_state}")
@@ -164,7 +186,7 @@ class RobotController(Node):
         if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
-            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.8):
+            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<1.0):#0.8
                 if len(self.path.poses)>1:
                     # self.get_logger().info('hello "%d"' % len(self.path.poses))
                     self.path.poses = self.path.poses[1:]
@@ -186,18 +208,36 @@ class RobotController(Node):
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
-            self.get_logger().info(f"dt: {dt}")
+            # self.get_logger().info(f"dt: {dt}")
             try:
                 # speed, omega = self.controller.policy_nominal( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf_volume( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
                 # speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                speed, omega = self.controller.policy_cbf_volume( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                self.control_prev = np.array([speed, omega])
+                
+                if self.controller_id == 0:
+                    speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                elif self.controller_id == 1:
+                    speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf_volume( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                    
+                # self.hs_human.append(h_human_min)
+                # self.hs_obs.append(h_obs_min)
+                # self.plot_obs.set_ydata(self.hs_obs)
+                # self.plot_human.set_ydata(self.hs_human)
+                # self.control_prev = np.array([speed, omega])
+                # self.fig.canvas.draw()
+                # self.fig.canvas.flush_events
+                
+                if h_human_min < -0.01:
+                    self.h_min_human_count += 1
+                    self.get_logger().info(f"human violate: {self.h_min_human_count}")
+                if h_obs_min < -0.01:
+                    self.h_min_obs_count = 0
+                    self.get_logger().info(f"human violate: {self.h_min_obs_count}")
             except Exception as e:
                 speed = self.control_prev[0]  #0.0
                 omega = self.control_prev[1]  #0.0
                 self.error_count = self.error_count + 1
-                print(f"ERROR ******************************** count: {self.error_count}")
+                print(f"ERROR ******************************** count: {self.error_count} {e}")
                 
             self.time_prev = t_new
             # print(f"CBF speed: {speed}, omega: {omega}, dt:{dt}")

@@ -21,6 +21,7 @@ class dynamic_unicycle:
         '''
         
         self.type = 'SingleIntegrator2D'        
+        self.s = 0.287
         
         self.X0 = pos.reshape(-1,1)
         self.X = np.copy(self.X0)
@@ -89,12 +90,28 @@ class dynamic_unicycle:
             0.0, 
             0.0
         ] ) 
+        
+    def vel_to_wheel_g(self):
+        s = 0.287
+        return np.array([ [ 1.0, -0.5/s  ], [ 1.0, 0.5/s ] ])
+    
+    def wheel_to_vel_g(self):
+        s = 0.287
+        return s * np.array([ [0.5/s, 0.5/s], [-1.0, 1.0] ])
+    
+    def vel_to_wheel_g_jax(self):
+        s = 0.287
+        return jnp.array([ [ 1.0, -0.5/s  ], [ 1.0, 0.5/s ] ])
+    
+    def wheel_to_vel_g_jax(self):
+        s = 0.287
+        return s * jnp.array([ [0.5/s, 0.5/s], [-1.0, 1.0] ])
     
     def g(self):
-        return np.array([ [0, 0],[0, 0], [0, 1], [1, 0] ])
+        return np.array([ [0, 0],[0, 0], [0, 1], [1, 0] ])# @ self.vel_to_wheel_g()
 
     def g_jax(self, X):
-        return jnp.array([ [0, 0],[0, 0], [0, 1.0], [1.0, 0] ])
+        return jnp.array([ [0, 0],[0, 0], [0, 1.0], [1.0, 0] ])# @ self.vel_to_wheel_g_jax()
     
     # @jit
     def xdot_jax(self,X, U):
@@ -168,10 +185,11 @@ class dynamic_unicycle:
         
         b_f = np.copy(b)
         b_g = A @ Rot.T # to be multiplied with control input
-        
+         
         return A, b_f, b_g*self.dt
-
-    def nominal_controller(self, targetX, k_omega = 1.0, k_v = 1.0, k_x = 1.0):
+    #v1-v3, v6: 1.5, v4-5: 1.0
+    #1.0 with base CBF initial bad
+    def nominal_controller(self, targetX, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
         # k_omega = 3.0#2.0 
         # k_v = 1.0#3.0#0.3#0.15##5.0#0.15
         # k_x = k_v
@@ -196,7 +214,7 @@ class dynamic_unicycle:
         # print(f"CBF nominal acc: {u_r}, omega:{omega}")
         return np.array([u_r, omega]).reshape(-1,1)
     
-    def nominal_controller_jax(self, targetX, k_omega = 1.0, k_v = 1.0, k_x = 1.0):
+    def nominal_controller_jax(self, targetX, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
         distance = jnp.linalg.norm( self.X[0:2]-targetX[0:2] )
         if (distance>0.1):
             desired_heading = jnp.arctan2( targetX[1,0]-self.X[1,0], targetX[0,0]-self.X[0,0] )

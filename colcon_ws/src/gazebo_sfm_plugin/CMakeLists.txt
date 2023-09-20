@@ -33,6 +33,28 @@ link_directories(
   ${GAZEBO_LIBRARY_DIRS}
 )
 
+# gazebo_ros_diff_drive
+# add_library(GazeboRosDiffDrivePlugin SHARED src/gazebo_ros_diff_drive.cpp
+# )
+# target_include_directories(GazeboRosDiffDrivePlugin PUBLIC include)
+# ament_target_dependencies(GazeboRosDiffDrivePlugin
+#   "gazebo_dev"
+#   "gazebo_ros"
+#   "geometry_msgs"
+#   "nav_msgs"
+#   "rclcpp"
+#   "tf2" 1
+#   "tf2_geometry_msgs"
+#   "tf2_ros"
+# )
+# ament_export_libraries(GazeboRosDiffDrivePlugin)
+# target_link_libraries(GazeboRosDiffDrivePlugin ${GAZEBO_LIBRARIES}) #${Boost_LIBRARIES
+# install(TARGETS GazeboRosDiffDrivePlugin
+#   ARCHIVE DESTINATION lib
+#   LIBRARY DESTINATION lib
+#   RUNTIME DESTINATION bin
+# )
+
 
 add_library(PedestrianSFMPlugin SHARED src/PedestrianSFMPlugin.cpp)
 target_include_directories(PedestrianSFMPlugin PUBLIC include)

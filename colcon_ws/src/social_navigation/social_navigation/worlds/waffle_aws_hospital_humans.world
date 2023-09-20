@@ -138,7 +138,7 @@
       </plugin>
     </actor>
 
-    <actor name="actor4">
+    <!-- <actor name="actor4">
       <pose>-4.5 11.5 0.1 0 0 3.14</pose>
       <skin>
         <filename>walk.dae</filename> 
@@ -181,7 +181,7 @@
           <waypoint>3.7 10.7 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
 
     <actor name="actor5">
@@ -219,7 +219,7 @@
         <trajectory>
           <cyclic>true</cyclic>
           <waypoint>5 -8 0.1</waypoint>
-          <waypoint>4.5 1 0.1</waypoint>
+          <waypoint>5.0 1 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
@@ -564,9 +564,9 @@
         <trajectory>
           <cyclic>true</cyclic>
           <waypoint>10.5 4.5 0.1</waypoint>
-          <waypoint>3.5 4.5 0.1</waypoint>
+          <waypoint>4.5 4.5 0.1</waypoint>
           <waypoint>0.0 10.0 0.1</waypoint>
-          <waypoint>3.0 4.5 0.1</waypoint>
+          <waypoint>4.5 4.5 0.1</waypoint>
         </trajectory>
       </plugin>
     </actor>
@@ -2720,7 +2720,7 @@
           <!-- <namespace>/tb3</namespace> -->
         </ros>
 
-        <update_rate>30</update_rate>
+        <update_rate>40</update_rate>
 
         <!-- wheels -->
         <left_joint>wheel_left_joint</left_joint>
@@ -2735,7 +2735,7 @@
         <max_wheel_acceleration>1.0</max_wheel_acceleration> -->
 
         <max_wheel_torque>20</max_wheel_torque>
-        <max_wheel_acceleration>3.0</max_wheel_acceleration>
+        <max_wheel_acceleration>30.0</max_wheel_acceleration>
 
         <command_topic>cmd_vel</command_topic>
 
