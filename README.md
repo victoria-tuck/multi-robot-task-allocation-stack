@@ -21,6 +21,17 @@ colcon build --symlink-install
 ```
 Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. 
 
+Change number of humans and obstacle in following files
+```
+nav2_cbf_controller.py: 
+- line for self.num_humans, and self.num_obstacles
+get_human_states.cpp : 
+- line this->declare_parameter<int>("num_humans",25)
+```
+Choose nominal controller gains and CBF parameters in 
+```
+cbf_obstacle_controller.py
+```
 
 Then run the codes in the following sequence. To aid in implementation, several aliases are defined in `~/.bashrc` file.
 

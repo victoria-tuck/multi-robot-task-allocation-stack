@@ -27,8 +27,8 @@ class RobotController(Node):
         self.controller_id = 0#1
 
         # Variables
-        self.num_humans = 20
-        self.num_obstacles = 12
+        self.num_humans = 20 # upper bound
+        self.num_obstacles = 12 # exact
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
         self.obstacle_states = np.zeros((2,self.num_obstacles))
         self.human_states = 100*np.ones((2,self.num_humans))
@@ -196,7 +196,7 @@ class RobotController(Node):
                     self.get_logger().info(f"human violate: {self.h_min_human_count}")
                 if h_obs_min < -0.01:
                     self.h_min_obs_count = 0
-                    self.get_logger().info(f"human violate: {self.h_min_obs_count}")
+                    self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
             except Exception as e:
                 speed = self.control_prev[0]  #0.0
                 omega = self.control_prev[1]  #0.0
