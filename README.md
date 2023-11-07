@@ -1,4 +1,4 @@
-This documentation is for `ros2` branch of `cbfkit-internal` repository and of this repository. The video accompanying this documentation can be found at 
+This documentation is for `ozgur` branch of `hsr` repository and of this repository. The video accompanying this documentation can be found at 
 https://drive.google.com/file/d/144wxIIqVRloF_41ngfn34iR-X_7aCdBs/view?usp=drive_link
 
 To prepare the environment, first, mount the correct folder in docker-compose.yaml. The colcon_ws (ROS2) workspace should be in mounted at /home/colcon_ws. Then to build the environment, run
@@ -21,34 +21,34 @@ colcon build --symlink-install
 ```
 Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. 
 
-After this, from each terminal, usually you need to source the following two lines but they were added to `bashrc` in the Dockerfile so you don't have to run the following commands
-```
-source /opt/ros/galactic/setup.bash
-source /home/colcon_ws/install/local_setup.bash
-```
 
-Then run the codes in the following sequence
+Then run the codes in the following sequence. To aid in implementation, several aliases are defined in `~/.bashrc` file.
 
 1. To launch the gazebo environment with the robot inside it
 
 ```
-ros2 launch aws_robomaker_hospital_world view_hospital.launch.py 
+rgazebo2
 ```
 
 2. To launch the ROS2 navigation stack (to use its planners)
 ```
-ros2 launch social_navigation nav2_tb3_aws_launch.py
+rnav2
 ```
 
-3. To get human states from gazebo and publish it
+3. To get human states from gazebo and to find closest obstacle points to robot
 ```
-ros2 run social_navigation get_human_states 
+rcsetup
 
 ```
 
-4 Finally, to run the user controller
+4 To start the user controller
 ```
-python3 colcon_ws/src/social_navigation/scripts/nav2_cbf_controller.py
+rcbf2
+```
+
+5. Finally, when the controller status is ONLINE, run the following command to set goal and run controller simulation
+```
+rcpub
 ```
 
 Now you can use `rviz` to give the robot a goal. You can use `Nav2 Goal` button to send let ROS2 Navigation2 package plan the path and also control the robot, or you can publish to `2D Goal` button to send the goal location to the nav2_cbf_controller node that we ran in the last line. (Note: u need to add the 2D Goal button on rviz. See the attached video on how to do that).

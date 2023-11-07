@@ -1,1 +1,0 @@
-pedsim_msgs/ObstaclePoint[] points

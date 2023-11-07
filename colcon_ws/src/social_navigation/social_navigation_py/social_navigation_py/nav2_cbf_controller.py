@@ -22,9 +22,9 @@ class RobotController(Node):
     def __init__(self):
         super().__init__('robot_controller')
         
-        # 0: cbf
-        # 1: cbf_volume
-        self.controller_id = 1
+        # 0: cbf controller
+        # 1: nominal controller
+        self.controller_id = 0#1
 
         # Variables
         self.num_humans = 20
@@ -48,9 +48,7 @@ class RobotController(Node):
         if self.controller_id == 0:
             self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
         elif self.controller_id == 1:
-            self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
-        # self.controller.policy_cbf_volume(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.time_step)
-
+            self.controller.policy_nominal(self.robot_state, self.goal, self.time_step)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
@@ -69,16 +67,6 @@ class RobotController(Node):
         self.h_min_human_count = 0
         self.h_min_obs_count = 0
         # self.robot_nearest_obstacle_sub = self.create_sunscription(  )
-        
-        #Plot h
-        # plt.ion()
-        # self.fig, self.ax = plt.subplots(1)# )#, gridspec_kw={'height_ratios': [1, 1]} )
-        # self.ax.set_ylim([-0.1,6])
-        # self.ax.axhline(y=0.0)
-        # self.hs_human = [100]
-        # self.hs_obs = [100]
-        # self.plot_human, = self.ax.plot(self.hs_human)
-        # self.plot_obs, = self.ax.plot(self.hs_obs)
 
         # Publishers
         self.robot_command_pub = self.create_publisher( Twist, '/cmd_vel', 10 )
@@ -112,24 +100,10 @@ class RobotController(Node):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
             self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
         self.human_states_valid = True
-        # print(f"callback human_states: {self.human_states_dot}")
 
     def robot_state_callback(self, msg):
-        # vel = np.array([ msg.twist.twist.linear.x, msg.twist.twist.angular.z ])
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
         self.robot_state_valid = True
-        # print(f"robot state: {self.robot_state}")
-        
-        # if self.pose_init==False:
-        #     initial_pose = PoseStamped()
-        #     initial_pose.header.frame_id = 'map'
-        #     initial_pose.header.stamp = self.navigator.get_clock().now().to_msg()
-        #     initial_pose.pose.position.x = msg.pose.pose.position.x
-        #     initial_pose.pose.position.y = msg.pose.pose.position.y
-        #     initial_pose.pose.orientation.z = msg.pose.pose.orientation.z
-        #     initial_pose.pose.orientation.w = msg.pose.pose.orientation.w
-        #     self.navigator.setInitialPose(initial_pose)
-        #     self.pose_init = True
         
     def obstacle_callback(self, msg):
         # self.num_obstacles = msg.num_obstacles
@@ -145,6 +119,7 @@ class RobotController(Node):
     def controller_callback(self):     
         if not self.planner_init:
             return
+        
         # set goal for first time
         if not self.goal_init:
             if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
@@ -181,18 +156,18 @@ class RobotController(Node):
                         print(f"Trying to find path again")
                         success = False
             
-               
-        # if self.robot_state_valid and self.human_states_valid:
+        # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
         if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
             while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<1.0):#0.8
                 if len(self.path.poses)>1:
-                    # self.get_logger().info('hello "%d"' % len(self.path.poses))
                     self.path.poses = self.path.poses[1:]
                     goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
                 else:
                     break
+                
+            # Publish path for visualization (no other use)
             self.nav2_path_publisher.publish(self.path)
             goal_msg = PoseStamped()
             goal_msg.pose.position.x = goal[0,0]
@@ -209,24 +184,13 @@ class RobotController(Node):
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
             # self.get_logger().info(f"dt: {dt}")
-            try:
-                # speed, omega = self.controller.policy_nominal( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
-                # speed, omega = self.controller.policy_cbf_volume( self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, dt )
-                # speed, omega = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                
+            try:                
                 if self.controller_id == 0:
                     speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
                 elif self.controller_id == 1:
-                    speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf_volume( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                    
-                # self.hs_human.append(h_human_min)
-                # self.hs_obs.append(h_obs_min)
-                # self.plot_obs.set_ydata(self.hs_obs)
-                # self.plot_human.set_ydata(self.hs_human)
-                # self.control_prev = np.array([speed, omega])
-                # self.fig.canvas.draw()
-                # self.fig.canvas.flush_events
+                    speed, omega, h_human_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                 
+                # Check if any collision constraints violated
                 if h_human_min < -0.01:
                     self.h_min_human_count += 1
                     self.get_logger().info(f"human violate: {self.h_min_human_count}")
@@ -276,35 +240,3 @@ def main(args=None):
     
 if __name__ == '__main__':
     main()
-
-
-
-
-            ########### Nominal Controller ##################
-            # print(f"loc: {self.robot_state}, goal:{self.goal}")
-            # print(f"robot state: {self.robot_state.T}, goal: {self.goal.T}")
-            # self.goal = np.array([0,8.7]).reshape(-1,1)
-            
-            
-            # error = self.goal[:,0] - self.robot_state[0:2,0]
-            # theta_desired = np.arctan2( error[1], error[0] )
-            # e_theta = self.wrap_angle(theta_desired - self.robot_state[2,0])
-            # omega = 1.0 * e_theta
-            # if np.linalg.norm(error)>0.05:
-            #     speed = min(0.5 * np.linalg.norm(error) * np.cos(e_theta), 0.4)
-            # else:
-            #     speed = 0.0
-                # self.path_active = False
-            # print(f"speed: {speed}, omega: {omega}")
-            ############## CBF Controller #########################
-            # print(f"goal: {self.goal}")
-            
-                    # t_new = self.get_clock().now().nanoseconds
-        # self.human_states_dot = (self.human_states - self.human_states_prev)/ ((t_new - self.t_human)/10**9)
-        # self.t_human = t_new
-        
-        # control = Twist()
-        # control.linear.x = 0.0
-        # control.angular.z = 0.0
-        # self.robot_command_pub.publish(control)
-        # return 

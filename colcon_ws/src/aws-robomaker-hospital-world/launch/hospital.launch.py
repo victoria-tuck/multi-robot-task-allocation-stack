@@ -30,33 +30,8 @@ def generate_launch_description():
 
             )
 
-    # gazebo_ros = get_package_share_directory('gazebo_ros')
-    # gazebo_client = launch.actions.IncludeLaunchDescription(
-	# launch.launch_description_sources.PythonLaunchDescriptionSource(
-    #         os.path.join(gazebo_ros, 'launch', 'gzclient.launch.py')),
-    #     condition=launch.conditions.IfCondition(launch.substitutions.LaunchConfiguration('gui'))
-    #     # launch_arguments={'extra_gazebo_args': '--ros-args -p -publish_rate:=100 '}.items()
-    #     # launch_arguments={'extra_gazebo_args': '--ros-args --params-file ' + '/home/colcon_ws/src/social_navigation/configs/gazebo_params.yaml'}.items()
-    #  )
-    # gazebo_server = launch.actions.IncludeLaunchDescription(
-    #     launch.launch_description_sources.PythonLaunchDescriptionSource(
-    #         os.path.join(gazebo_ros, 'launch', 'gzserver.launch.py')),
-    #         launch_arguments={'extra_gazebo_args': '--ros-args -p -publish_rate:=100 '}.items()
-    # )
-
-
     ld = launch.LaunchDescription([
         gazebo
-        # launch.actions.DeclareLaunchArgument(
-        #   'world',
-        #   default_value=[world, ''],
-        #   description='SDF world file'),
-        # launch.actions.DeclareLaunchArgument(
-        #     name='gui',
-        #     default_value='false'
-        # ),
-        # gazebo_server,
-        # gazebo_client
     ])
     return ld
 
