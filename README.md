@@ -2,6 +2,9 @@
 - NVIDIA discrete GPU (for gazbeo)
 - Diplay should use NVIDA and not integrated graphics
 - Docker installed (docker and nvidia-docker)
+- https://docs.docker.com/engine/install/ubuntu/
+- https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
 
 
 This documentation is for `ozgur` branch of `hsr` repository and of this repository. The video accompanying this documentation can be found at 
