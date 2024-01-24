@@ -47,7 +47,7 @@ Then run the codes in the following sequence. To aid in implementation, several 
 1. To launch the gazebo environment with the robot inside it
 
 ```
-rgazebo2
+rgazebo
 ```
 
 2. To launch the ROS2 navigation stack (to use its planners)
