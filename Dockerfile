@@ -2,7 +2,9 @@ FROM hardikparwana/cuda116desktop:ipopt-ros
 RUN apt-get update && apt-get -y upgrade
 RUN apt-get install -y ros-galactic-navigation2 ros-galactic-nav2-bringup ros-galactic-turtlebot3*
 RUN apt-get install -y ros-galactic-nav2-simple-commander
-RUN pip3 install cvxpy jax jaxlib testresources polytope cvxpylayers
+RUN pip3 install setuptools
+RUN pip3 install cvxpy jax jaxlib testresources cvxpylayers
+#RUN pip3 install polytope
 RUN pip3 install --upgrade numpy
 RUN echo "export PYTHONPATH=$PYTHONPATH:/home/colcon_ws/src/social_navigation/src" >> ~/.bashrc
 RUN echo "source /opt/ros/galactic/setup.bash" >> ~/.bashrc
@@ -17,3 +19,6 @@ RUN echo "alias rcpub='ros2 topic pub /planner_init std_msgs/msg/Bool data:\ tru
 RUN echo "alias rcbf='python3 /home/colcon_ws/src/social_navigation/scripts/nav2_cbf_controller.py'" >> ~/.bashrc
 RUN echo "alias rcbf2='ros2 run social_navigation_py nav2_cbf --ros-args -p use_sim_time:=True'" >> ~/.bashrc
 RUN python3 -m pip install jaxopt
+COPY ./polytope .
+WORKDIR /home/polytope
+#RUN python3 setup.py install

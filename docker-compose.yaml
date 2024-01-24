@@ -7,11 +7,7 @@ services:
     tty: true
     network_mode: "host"
     volumes:
-      #- /home/hardik/Research/hsr/:/home/hsr
-      #- /home/hardik/Desktop/Research/Toyota/hsr/:/home/hsr
-      # - /home/hardik/Research/hsr/colcon_ws/:/home/colcon_ws
-       - /home/hardik/Desktop/Research/Toyota/hsr/colcon_ws/:/home/colcon_ws
-      # - /home/hardik/Desktop/Research/hsr/catkin_ws/src/dependencies/CrowdNav:/home/CrowdNav
+      - ./colcon_ws:/home/colcon_ws
     environment:
       - NVIDIA_DISABLE_REQUIRE=1
       - DISPLAY=$DISPLAY
