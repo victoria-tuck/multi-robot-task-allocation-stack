@@ -30,6 +30,15 @@ colcon build --symlink-install
 ```
 Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. 
 
+Now source the installed packages with following command
+```
+source install/local_setup.bash
+```
+Finally, to give docker environment permission to use graphics of hist machine, run the following command **from host machine**
+```
+xhost +
+```
+
 Change number of humans and obstacle in following files
 ```
 nav2_cbf_controller.py: 
