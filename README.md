@@ -14,7 +14,7 @@ To prepare the environment, first, mount the correct folder in docker-compose.ya
 ```
 docker compose build
 docker compose up -d
-docker exec -it hsr-ozgur-ros-1 bash
+docker exec -it hsr-ros-1 bash
 ```
 Next, you need to make and install the social force model library
 ```
