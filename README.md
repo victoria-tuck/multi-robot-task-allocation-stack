@@ -1,3 +1,9 @@
+## Hardware requirements
+- NVIDIA discrete GPU (for gazbeo)
+- Diplay should use NVIDA and not integrated graphics
+- Docker installed (docker and nvidia-docker)
+
+
 This documentation is for `ozgur` branch of `hsr` repository and of this repository. The video accompanying this documentation can be found at 
 https://drive.google.com/file/d/144wxIIqVRloF_41ngfn34iR-X_7aCdBs/view?usp=drive_link
 
