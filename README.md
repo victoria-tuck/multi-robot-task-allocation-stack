@@ -1,3 +1,12 @@
+## Hardware requirements
+- NVIDIA discrete GPU (for gazbeo)
+- Diplay should use NVIDA and not integrated graphics
+- Docker installed (docker and nvidia-docker)
+- https://docs.docker.com/engine/install/ubuntu/
+- https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
+
+
 This documentation is for `ozgur` branch of `hsr` repository and of this repository. The video accompanying this documentation can be found at 
 https://drive.google.com/file/d/144wxIIqVRloF_41ngfn34iR-X_7aCdBs/view?usp=drive_link
 
@@ -5,7 +14,7 @@ To prepare the environment, first, mount the correct folder in docker-compose.ya
 ```
 docker compose build
 docker compose up -d
-docker exec -it hsr-ozgur-ros-1 bash
+docker exec -it hsr-ros-1 bash
 ```
 Next, you need to make and install the social force model library
 ```
@@ -20,6 +29,15 @@ cd /home/colcon_ws
 colcon build --symlink-install
 ```
 Note sometimes ROS does not figure out package dependency order properly when multiple ROS packages are present. In this case, it may take multiple runs of colon build to be successful. 
+
+Now source the installed packages with following command
+```
+source install/local_setup.bash
+```
+Finally, to give docker environment permission to use graphics of hist machine, run the following command **from host machine**
+```
+xhost +
+```
 
 Change number of humans and obstacle in following files
 ```
@@ -38,7 +56,7 @@ Then run the codes in the following sequence. To aid in implementation, several 
 1. To launch the gazebo environment with the robot inside it
 
 ```
-rgazebo2
+rgazebo
 ```
 
 2. To launch the ROS2 navigation stack (to use its planners)
