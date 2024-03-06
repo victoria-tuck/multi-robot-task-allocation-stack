@@ -180,7 +180,7 @@
       </plugin>
     </actor>
 
-    <actor name="actor9">
+    <!-- <actor name="actor9">
       <pose>5.0 -24.5 0.1 0 0 0</pose>
       <skin>
         <filename>walk.dae</filename>
@@ -218,7 +218,7 @@
           <waypoint>5.0 -9.5 0.1</waypoint>        
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
     <actor name="actor10">
       <pose>5.0 13.0 0.1 0 0 0</pose>
@@ -258,7 +258,7 @@
       </plugin>
     </actor>
 
-    <actor name="actor14">
+    <!-- <actor name="actor14">
       <pose>2.5 -11 0.1 0 0 0</pose>
       <skin> <filename>walk-blue.dae</filename> <scale>1.0</scale> </skin>
       <animation name="walking">
@@ -285,7 +285,7 @@
           <waypoint>2.5 -11 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
     <actor name="actor16">
       <pose>10.5 4.5 0.1 0 0 0</pose>
@@ -311,7 +311,7 @@
       </plugin>
     </actor>
 
-    <actor name="actor18">
+    <!-- <actor name="actor18">
       <pose>8.5 -13.5 0.1 0 0 0</pose>
       <skin> <filename>walk-blue.dae</filename> <scale>1.0</scale> </skin>
       <animation name="walking">
@@ -335,7 +335,7 @@
           <waypoint>8.5 -22.5 0.1</waypoint>
         </trajectory>
       </plugin>
-    </actor>
+    </actor> -->
 
     <actor name="actor21">
       <pose>5.8 -22.5 0.1 0 0 0</pose>

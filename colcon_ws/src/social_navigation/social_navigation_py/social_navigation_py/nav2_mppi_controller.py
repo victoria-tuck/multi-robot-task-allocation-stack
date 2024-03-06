@@ -2,18 +2,19 @@ import rclpy
 from rclpy.node import Node
 
 from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Vector3, Point
 from geometry_msgs.msg import PoseStamped, Pose
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
 import matplotlib.pyplot as plt
 # from geometry_msgs.msg import Point
+from visualization_msgs.msg import Marker, MarkerArray
 
 # from cbf_controller import cbf_controller
 from .utils.mppi_obstacle_controller import MPPI_FORESEE
 import numpy as np
-# import jax.numpy as jnp
+import jax.numpy as jnp
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
@@ -28,13 +29,16 @@ class RobotController(Node):
 
         # Variables
         self.num_humans = 20 # upper bound
+        self.num_humans_mppi = 5
         self.num_obstacles = 12 # exact
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
         self.obstacle_states = np.zeros((2,self.num_obstacles))
         self.human_states = 100*np.ones((2,self.num_humans))
+        self.human_states_mppi = 100*np.ones((2,self.num_humans_mppi))
         self.human_states_prev = np.zeros((2,self.num_humans))
         # self.t_human = self.get_clock().now().nanoseconds
         self.human_states_dot = np.zeros((2,self.num_humans)) 
+        self.human_states_dot_mppi = np.zeros((2,self.num_humans_mppi)) 
         self.robot_radius = 0.18
 
         self.timer_period = 0.05#0.05 # seconds
@@ -45,7 +49,7 @@ class RobotController(Node):
         self.control_prev = np.array([0.0,0.0])
 
         # MPPI related parameters
-        self.use_GPU = False
+        self.use_GPU = True
         self.human_noise_cov = 4.0
         self.human_noise_mean = 0
         self.human_localization_noise = 0.05
@@ -56,7 +60,7 @@ class RobotController(Node):
         self.sensing_radius = 2
         self.factor = 2.0 # no of standard deviations
         self.choice = 0
-        self.samples = 500
+        self.samples = 1000 #500
         self.horizon = 40
         self.human_ci_alpha = 0.05
 
@@ -69,10 +73,82 @@ class RobotController(Node):
 
         u_guess = np.zeros((self.horizon, 2))
 
-        self.controller = MPPI_FORESEE(horizon=self.horizon, samples=self.samples, input_size=2, dt=self.dt, sensing_radius=self.sensing_radius, human_noise_cov=self.human_noise_cov, std_factor=self.factor, control_bound=self.control_bound, u_guess=u_guess, human_nominal_speed=self.human_nominal_speed, human_repulsion_gain=self.human_repulsion_gain, costs_lambda=self.costs_lambda, cost_goal_coeff=self.cost_goal_coeff, cost_safety_coeff=self.cost_safety_coeff, num_humans=self.num_humans, num_obstacles = self.num_obstacles, use_GPU=self.use_GPU)
+        self.controller = MPPI_FORESEE(horizon=self.horizon, samples=self.samples, input_size=2, dt=self.dt, sensing_radius=self.sensing_radius, human_noise_cov=self.human_noise_cov, std_factor=self.factor, control_bound=self.control_bound, u_guess=u_guess, human_nominal_speed=self.human_nominal_speed, human_repulsion_gain=self.human_repulsion_gain, costs_lambda=self.costs_lambda, cost_goal_coeff=self.cost_goal_coeff, cost_safety_coeff=self.cost_safety_coeff, num_humans=self.num_humans_mppi, num_obstacles = self.num_obstacles, use_GPU=self.use_GPU)
         # Call once to initiate JAX JIT
-        robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state, self.goal, self.human_stats, self.human_localization_noise * jnp.ones((2,self.num_humans)), self.obstacle_states)
+        robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], self.goal, self.human_states_mppi, self.human_localization_noise * jnp.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states)
         
+
+        # Marker array initialization
+        self.robot_marker_array = MarkerArray()        
+        self.robot_selected_marker_array = MarkerArray()
+        self.human_marker_array = MarkerArray()
+        self.plot_samples = min(10, self.samples)
+
+        marker_robot = Marker()
+        marker_robot.id = 0                    
+        marker_robot.header.frame_id = "map"
+        marker_robot.type = Marker.LINE_STRIP
+        marker_robot.action = Marker.ADD
+        scale_vector = Vector3()
+        scale_vector.x = 0.05; scale_vector.y = 0.05; scale_vector.z = 0.0
+        marker_robot.scale = scale_vector
+        marker_robot.color.r = 1.0
+        marker_robot.color.a = 1.0
+        for j in range(self.horizon):
+                point = Point()
+                point.x = 0.0
+                point.y = 0.0
+                marker_robot.points.append(point)
+        self.robot_selected_marker_array.markers.append(marker_robot)
+
+        for i in range(self.plot_samples):
+            marker_robot = Marker()
+            marker_robot.id = i                    
+            marker_robot.header.frame_id = "map"
+            marker_robot.type = Marker.LINE_STRIP
+            marker_robot.action = Marker.ADD
+            scale_vector = Vector3()
+            scale_vector.x = 0.05; scale_vector.y = 0.05; scale_vector.z = 0.0
+            marker_robot.scale = scale_vector
+            marker_robot.color.g = 1.0
+            marker_robot.color.a = 1.0
+
+            for j in range(self.horizon):
+
+                # robot
+                point = Point()
+                point.x = 0.0
+                point.y = 0.0
+                marker_robot.points.append(point)
+            self.robot_marker_array.markers.append(marker_robot)
+
+            for j in range(self.num_humans_mppi):
+                
+                marker_human = Marker()
+                marker_human.id = i*self.samples+j                    
+                marker_human.header.frame_id = "map"
+                marker_human.type = Marker.LINE_STRIP
+                marker_human.action = Marker.ADD
+                scale_vector = Vector3()
+                scale_vector.x = 0.05; scale_vector.y = 0.05; scale_vector.z = 0.0
+                marker_human.scale = scale_vector
+                marker_human.color.g = 0.0
+                marker_human.color.r = 0.0
+                marker_human.color.b = 0.0
+                marker_human.color.a = 1.0
+
+                for k in range(self.horizon):
+                    # robot
+                    point = Point()
+                    point.x = 0.0
+                    point.y = 0.0
+                    marker_human.points.append(point)
+                self.human_marker_array.markers.append(marker_human)
+        # i * self.num_humans_mppi + j for ith sample and jth human
+        # i * self.num_humans_mppi
+
+
+
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
         self.robot_state_callback = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 10 )        
@@ -95,12 +171,14 @@ class RobotController(Node):
         self.robot_command_pub = self.create_publisher( Twist, '/cmd_vel', 10 )
         self.nav2_path_publisher = self.create_publisher( Path, '/plan', 1)
         self.robot_local_goal_pub = self.create_publisher( PoseStamped, '/local_goal', 1)
+        self.mppi_robot_sample_paths_pub = self.create_publisher( MarkerArray, '/mppi_robot_sampled_paths', 1 )
+        self.mppi_humans_sample_paths_pub = self.create_publisher( MarkerArray, '/mppi_human_sampled_paths', 1 )
+        self.mppi_robot_selected_sample_paths_pub = self.create_publisher( MarkerArray, '/mppi_robot_selected_sampled_paths', 1 )
         
         # Planner
         self.navigator = BasicNavigator()
         self.path = Path() 
         self.path_waypoint_index = 0
-
         
         self.get_logger().info("User Controller is ONLINE")
         self.timer = self.create_timer(self.timer_period, self.controller_callback)
@@ -113,6 +191,12 @@ class RobotController(Node):
 
         # Goal
         self.robot_goal = np.array([1,1]).reshape(-1,1)
+
+        
+
+
+
+
         
     def controller_plan_init_callback(self, msg):
         self.planner_init = msg.data
@@ -207,9 +291,51 @@ class RobotController(Node):
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
             # self.get_logger().info(f"dt: {dt}")
-            try:                
-                robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state, goal, self.human_states, self.human_localization_noise * np.ones((2,self.num_humans)), self.human_states_dot, self.obstacle_states)
+            if 1: #try:                
+                dist_humans = np.linalg.norm( self.robot_state[0:2] - self.human_states, axis=0 )
+                nearest_5_humans = np.argsort(dist_humans)[:5]
+                self.human_states_mppi = self.human_states[:,nearest_5_humans]
+                self.human_states_dot_mppi = self.human_states_dot[:,nearest_5_humans]
+                robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], goal, self.human_states_mppi, self.human_localization_noise * np.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states)
                 speed, omega = robot_action[0,0], robot_action[1,0]
+
+                marker_array = MarkerArray()
+                
+                for i in range(self.plot_samples):
+                    
+                    time_stamp = self.navigator.get_clock().now().to_msg()
+
+                    self.robot_marker_array.markers[i].header.stamp = time_stamp
+                    
+                    for j in range(self.horizon):
+                        # robot
+                        point = Point()
+                        point.x = float(robot_sampled_states[2*i, j])
+                        point.y = float(robot_sampled_states[2*i+1, j])
+                        self.robot_marker_array.markers[i].points[j] = point
+
+                        if i==0:
+                            self.robot_selected_marker_array.markers[i].header.stamp = time_stamp
+                            point = Point()
+                            point.x = float(robot_chosen_states[0, j])
+                            point.y = float(robot_chosen_states[1, j])
+                            self.robot_selected_marker_array.markers[i].points[j] = point
+
+
+                    for j in range(self.num_humans_mppi):
+                        # i * samples + j for ith sample and jth human
+                        self.human_marker_array.markers[i*self.num_humans_mppi+j].header.stamp = time_stamp
+
+                        for k in range(self.horizon):
+                            point = Point()
+                            point.x = float(human_mus_traj[2*i, j,k])
+                            point.y = float(human_mus_traj[2*i+1, j,k])
+                            self.human_marker_array.markers[i*self.num_humans_mppi+j].points[k] = point              
+
+                self.mppi_robot_sample_paths_pub.publish(self.robot_marker_array)
+                self.mppi_humans_sample_paths_pub.publish(self.human_marker_array)
+                self.mppi_robot_selected_sample_paths_pub.publish(self.robot_selected_marker_array)
+
                 # speed, omega, h_human_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                 
                 # # Check if any collision constraints violated
@@ -219,19 +345,19 @@ class RobotController(Node):
                 # if h_obs_min < -0.01:
                 #     self.h_min_obs_count = 0
                 #     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
-            except Exception as e:
-                speed = self.control_prev[0]  #0.0
-                omega = self.control_prev[1]  #0.0
-                self.error_count = self.error_count + 1
-                print(f"ERROR ******************************** count: {self.error_count} {e}")
+            # except Exception as e:
+            #     speed = self.control_prev[0]  #0.0
+            #     omega = self.control_prev[1]  #0.0
+            #     self.error_count = self.error_count + 1
+            #     print(f"ERROR ******************************** count: {self.error_count} {e}")
                 
             self.time_prev = t_new
-            # print(f"CBF speed: {speed}, omega: {omega}, dt:{dt}")
+            # print(f"CBF speed: {float(speed)}, omega: {float(omega)}, dt:{dt}")
 
             ############## Publish Control Input ###################
             control = Twist()
-            control.linear.x = speed
-            control.angular.z = omega
+            control.linear.x = 0.0 #float(speed)
+            control.angular.z = 0.0 #float(omega)
             self.robot_command_pub.publish(control)
 
     def robot_goal_callback(self, msg):
