@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # from geometry_msgs.msg import Point
 
 # from cbf_controller import cbf_controller
-from .utils.cbf_obstacle_controller import cbf_controller
+from .utils.mppi_obstacle_controller import MPPI_FORESEE
 import numpy as np
 # import jax.numpy as jnp
 
@@ -42,15 +42,37 @@ class RobotController(Node):
         self.goal = np.array([0,0]).reshape(-1,1)
         
         #Controller
-        self.control_prev  = np.array([0.0,0.0])
-        self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
+        self.control_prev = np.array([0.0,0.0])
 
+        # MPPI related parameters
+        self.use_GPU = False
+        self.human_noise_cov = 4.0
+        self.human_noise_mean = 0
+        self.human_localization_noise = 0.05
+        self.dt = 0.05 
+        self.T = 50 # simulation steps
+        self.control_bound = 4
+        self.kx = 4.0
+        self.sensing_radius = 2
+        self.factor = 2.0 # no of standard deviations
+        self.choice = 0
+        self.samples = 500
+        self.horizon = 40
+        self.human_ci_alpha = 0.05
+
+        # cost terms
+        self.human_nominal_speed = np.array([3.0,0]).reshape(-1,1)
+        self.human_repulsion_gain = 2.0
+        self.costs_lambda = 0.03 
+        self.cost_goal_coeff = 0.2 
+        self.cost_safety_coeff = 10.0 
+
+        u_guess = np.zeros((self.horizon, 2))
+
+        self.controller = MPPI_FORESEE(horizon=self.horizon, samples=self.samples, input_size=2, dt=self.dt, sensing_radius=self.sensing_radius, human_noise_cov=self.human_noise_cov, std_factor=self.factor, control_bound=self.control_bound, u_guess=u_guess, human_nominal_speed=self.human_nominal_speed, human_repulsion_gain=self.human_repulsion_gain, costs_lambda=self.costs_lambda, cost_goal_coeff=self.cost_goal_coeff, cost_safety_coeff=self.cost_safety_coeff, num_humans=self.num_humans, num_obstacles = self.num_obstacles, use_GPU=self.use_GPU)
         # Call once to initiate JAX JIT
-        if self.controller_id == 0:
-            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
-        elif self.controller_id == 1:
-            self.controller.policy_nominal(self.robot_state, self.goal, self.time_step)
-
+        robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state, self.goal, self.human_stats, self.human_localization_noise * jnp.ones((2,self.num_humans)), self.obstacle_states)
+        
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
         self.robot_state_callback = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 10 )        
@@ -186,18 +208,17 @@ class RobotController(Node):
             dt = (t_new - self.time_prev)/10**9
             # self.get_logger().info(f"dt: {dt}")
             try:                
-                if self.controller_id == 0:
-                    speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
-                elif self.controller_id == 1:
-                    speed, omega, h_human_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
+                robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state, goal, self.human_states, self.human_localization_noise * np.ones((2,self.num_humans)), self.human_states_dot, self.obstacle_states)
+                speed, omega = robot_action[0,0], robot_action[1,0]
+                # speed, omega, h_human_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                 
-                # Check if any collision constraints violated
-                if h_human_min < -0.01:
-                    self.h_min_human_count += 1
-                    self.get_logger().info(f"human violate: {self.h_min_human_count}")
-                if h_obs_min < -0.01:
-                    self.h_min_obs_count = 0
-                    self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
+                # # Check if any collision constraints violated
+                # if h_human_min < -0.01:
+                #     self.h_min_human_count += 1
+                #     self.get_logger().info(f"human violate: {self.h_min_human_count}")
+                # if h_obs_min < -0.01:
+                #     self.h_min_obs_count = 0
+                #     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
             except Exception as e:
                 speed = self.control_prev[0]  #0.0
                 omega = self.control_prev[1]  #0.0

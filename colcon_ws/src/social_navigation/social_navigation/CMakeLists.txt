@@ -32,12 +32,12 @@ install(DIRECTORY launch worlds configs
 # install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
 
 
-add_executable(set_gazebo_state_node nodes/gazebo_set_state.cpp)
-ament_target_dependencies(set_gazebo_state_node rclcpp gazebo_msgs std_msgs)
-install( TARGETS
-  set_gazebo_state_node
-  DESTINATION lib/${PROJECT_NAME}
-)
+# add_executable(set_gazebo_state_node nodes/gazebo_set_state.cpp)
+# ament_target_dependencies(set_gazebo_state_node rclcpp gazebo_msgs std_msgs)
+# install( TARGETS
+#   set_gazebo_state_node
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 add_executable(get_human_states nodes/get_human_states.cpp)
 ament_target_dependencies(get_human_states rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs visualization_msgs)

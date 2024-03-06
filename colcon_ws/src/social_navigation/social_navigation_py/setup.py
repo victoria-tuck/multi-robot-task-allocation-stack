@@ -22,6 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'nav2_cbf = social_navigation_py.nav2_cbf_controller:main',
+            'nav2_mppi = social_navigation_py.nav2_mppi_controller:main',
         ],
     },
 )

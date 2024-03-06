@@ -10,8 +10,8 @@ from social_navigation_py.utils.polytope_utils import *
 from matplotlib.animation import FFMpegWriter
 import jax.numpy as jnp
 
-from jaxopt import CvxpyQP
-from jaxopt import OSQP
+# from jaxopt import CvxpyQP
+# from jaxopt import OSQP
 
 class cbf_controller:
     
@@ -122,7 +122,7 @@ class cbf_controller:
         self.robot.step( self.u2_ref_base.value, dt )
         return self.robot.X[3,0], self.u2_ref_base.value[1,0]
     
-    
+                
     def policy_cbf(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
         
         self.robot.set_state(robot_state)
