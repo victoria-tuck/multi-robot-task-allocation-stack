@@ -79,6 +79,7 @@ class RobotController(Node):
         
 
         # Marker array initialization
+        self.plot_init = False
         self.robot_marker_array = MarkerArray()        
         self.robot_selected_marker_array = MarkerArray()
         self.human_marker_array = MarkerArray()
@@ -108,7 +109,7 @@ class RobotController(Node):
             marker_robot.type = Marker.LINE_STRIP
             marker_robot.action = Marker.ADD
             scale_vector = Vector3()
-            scale_vector.x = 0.05; scale_vector.y = 0.05; scale_vector.z = 0.0
+            scale_vector.x = 0.03; scale_vector.y = 0.03; scale_vector.z = 0.0
             marker_robot.scale = scale_vector
             marker_robot.color.g = 1.0
             marker_robot.color.a = 1.0
@@ -130,7 +131,7 @@ class RobotController(Node):
                 marker_human.type = Marker.LINE_STRIP
                 marker_human.action = Marker.ADD
                 scale_vector = Vector3()
-                scale_vector.x = 0.05; scale_vector.y = 0.05; scale_vector.z = 0.0
+                scale_vector.x = 0.03; scale_vector.y = 0.03; scale_vector.z = 0.0
                 marker_human.scale = scale_vector
                 marker_human.color.g = 0.0
                 marker_human.color.r = 0.0
@@ -146,8 +147,11 @@ class RobotController(Node):
                 self.human_marker_array.markers.append(marker_human)
         # i * self.num_humans_mppi + j for ith sample and jth human
         # i * self.num_humans_mppi
-
-
+                
+        self.robot_sampled_states = 0
+        self.robot_chosen_states = 0
+        self.human_mus_traj = 0
+        self.human_covs_traj = 0
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
@@ -182,6 +186,7 @@ class RobotController(Node):
         
         self.get_logger().info("User Controller is ONLINE")
         self.timer = self.create_timer(self.timer_period, self.controller_callback)
+        self.timer_plot = self.create_timer(self.timer_period, self.plot_callback)
         
         self.time_prev = self.get_clock().now().nanoseconds
         
@@ -191,11 +196,6 @@ class RobotController(Node):
 
         # Goal
         self.robot_goal = np.array([1,1]).reshape(-1,1)
-
-        
-
-
-
 
         
     def controller_plan_init_callback(self, msg):
@@ -267,7 +267,7 @@ class RobotController(Node):
         if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
-            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<1.0):#0.8
+            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<3.0): #1.0):#0.8
                 if len(self.path.poses)>1:
                     self.path.poses = self.path.poses[1:]
                     goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
@@ -291,65 +291,27 @@ class RobotController(Node):
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
             # self.get_logger().info(f"dt: {dt}")
-            if 1: #try:                
+            try:                
                 dist_humans = np.linalg.norm( self.robot_state[0:2] - self.human_states, axis=0 )
                 nearest_5_humans = np.argsort(dist_humans)[:5]
                 self.human_states_mppi = self.human_states[:,nearest_5_humans]
                 self.human_states_dot_mppi = self.human_states_dot[:,nearest_5_humans]
-                robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], goal, self.human_states_mppi, self.human_localization_noise * np.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states)
+                self.robot_sampled_states, self.robot_chosen_states, robot_action, self.human_mus_traj, self.human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], goal, self.human_states_mppi, self.human_localization_noise * np.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states)
                 speed, omega = robot_action[0,0], robot_action[1,0]
+                self.plot_init = True
 
-                marker_array = MarkerArray()
-                
-                for i in range(self.plot_samples):
-                    
-                    time_stamp = self.navigator.get_clock().now().to_msg()
-
-                    self.robot_marker_array.markers[i].header.stamp = time_stamp
-                    
-                    for j in range(self.horizon):
-                        # robot
-                        point = Point()
-                        point.x = float(robot_sampled_states[2*i, j])
-                        point.y = float(robot_sampled_states[2*i+1, j])
-                        self.robot_marker_array.markers[i].points[j] = point
-
-                        if i==0:
-                            self.robot_selected_marker_array.markers[i].header.stamp = time_stamp
-                            point = Point()
-                            point.x = float(robot_chosen_states[0, j])
-                            point.y = float(robot_chosen_states[1, j])
-                            self.robot_selected_marker_array.markers[i].points[j] = point
-
-
-                    for j in range(self.num_humans_mppi):
-                        # i * samples + j for ith sample and jth human
-                        self.human_marker_array.markers[i*self.num_humans_mppi+j].header.stamp = time_stamp
-
-                        for k in range(self.horizon):
-                            point = Point()
-                            point.x = float(human_mus_traj[2*i, j,k])
-                            point.y = float(human_mus_traj[2*i+1, j,k])
-                            self.human_marker_array.markers[i*self.num_humans_mppi+j].points[k] = point              
-
-                self.mppi_robot_sample_paths_pub.publish(self.robot_marker_array)
-                self.mppi_humans_sample_paths_pub.publish(self.human_marker_array)
-                self.mppi_robot_selected_sample_paths_pub.publish(self.robot_selected_marker_array)
-
-                # speed, omega, h_human_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
-                
-                # # Check if any collision constraints violated
+                # Check if any collision constraints violated
                 # if h_human_min < -0.01:
                 #     self.h_min_human_count += 1
                 #     self.get_logger().info(f"human violate: {self.h_min_human_count}")
                 # if h_obs_min < -0.01:
                 #     self.h_min_obs_count = 0
                 #     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
-            # except Exception as e:
-            #     speed = self.control_prev[0]  #0.0
-            #     omega = self.control_prev[1]  #0.0
-            #     self.error_count = self.error_count + 1
-            #     print(f"ERROR ******************************** count: {self.error_count} {e}")
+            except Exception as e:
+                speed = self.control_prev[0]  #0.0
+                omega = self.control_prev[1]  #0.0
+                self.error_count = self.error_count + 1
+                print(f"ERROR ******************************** count: {self.error_count} {e}")
                 
             self.time_prev = t_new
             # print(f"CBF speed: {float(speed)}, omega: {float(omega)}, dt:{dt}")
@@ -359,6 +321,45 @@ class RobotController(Node):
             control.linear.x = 0.0 #float(speed)
             control.angular.z = 0.0 #float(omega)
             self.robot_command_pub.publish(control)
+
+    def plot_callback(self):
+        if not self.plot_init:
+            return
+        
+        for i in range(self.plot_samples):
+                    
+            time_stamp = self.navigator.get_clock().now().to_msg()
+
+            self.robot_marker_array.markers[i].header.stamp = time_stamp
+            
+            for j in range(self.horizon):
+                # robot
+                point = Point()
+                point.x = float(self.robot_sampled_states[2*i, j])
+                point.y = float(self.robot_sampled_states[2*i+1, j])
+                self.robot_marker_array.markers[i].points[j] = point
+
+                if i==0:
+                    self.robot_selected_marker_array.markers[i].header.stamp = time_stamp
+                    point = Point()
+                    point.x = float(self.robot_chosen_states[0, j])
+                    point.y = float(self.robot_chosen_states[1, j])
+                    self.robot_selected_marker_array.markers[i].points[j] = point
+
+
+            for j in range(self.num_humans_mppi):
+                # i * samples + j for ith sample and jth human
+                self.human_marker_array.markers[i*self.num_humans_mppi+j].header.stamp = time_stamp
+
+                for k in range(self.horizon):
+                    point = Point()
+                    point.x = float(self.human_mus_traj[2*i, j,k])
+                    point.y = float(self.human_mus_traj[2*i+1, j,k])
+                    self.human_marker_array.markers[i*self.num_humans_mppi+j].points[k] = point              
+
+        self.mppi_robot_sample_paths_pub.publish(self.robot_marker_array)
+        self.mppi_humans_sample_paths_pub.publish(self.human_marker_array)
+        self.mppi_robot_selected_sample_paths_pub.publish(self.robot_selected_marker_array)
 
     def robot_goal_callback(self, msg):
         print(f"Received new goal")
