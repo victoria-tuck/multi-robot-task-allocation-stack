@@ -22,7 +22,11 @@ def generate_launch_description():
         executable='get_human_states',
         name = 'get_human_states',
         output='screen',
-        parameters=[{'use_sim_time': use_sim_time}]
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'num_humans': 2,
+            'update_frequency': 20.0
+                     }]
     )
     
     robot_closest_obstacle_sector = Node(
@@ -30,7 +34,21 @@ def generate_launch_description():
         executable='robot_closest_obstacle_sector',
         name = 'robot_closest_obstacle_sector',
         output='screen',
-        parameters=[{'use_sim_time': use_sim_time}]
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'num_humans': 2
+            }]
+    )   
+
+    human_closest_obstacle_sector = Node(
+        package='social_navigation',
+        executable='human_closest_obstacle_sector',
+        name = 'human_closest_obstacle_sector',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'num_humans': 2
+            }]
     )   
     
     
@@ -38,4 +56,5 @@ def generate_launch_description():
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(get_human_states)
     ld.add_action(robot_closest_obstacle_sector)
+    ld.add_action(human_closest_obstacle_sector)
     return ld

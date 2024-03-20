@@ -30,6 +30,8 @@ class HumanStatePublihser : public rclcpp::Node{
             this->declare_parameter<float>("update_frequency",20);
             this->get_parameter("update_frequency", update_frequency);
 
+            std::cout << "update_frequency" << update_frequency << std::endl;
+
             for (int i=0; i<num_humans; i++){
 
                 geometry_msgs::msg::Pose pose;

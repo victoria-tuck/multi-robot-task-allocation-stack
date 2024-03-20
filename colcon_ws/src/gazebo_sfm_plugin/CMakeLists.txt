@@ -93,6 +93,27 @@ install(TARGETS ActorStatePublisherPlugin
   RUNTIME DESTINATION bin
 )
 
+add_library(ActorVelocitySubscriberPlugin SHARED
+  src/ActorVelocitySubscriberPlugin.cpp
+)
+target_include_directories(ActorVelocitySubscriberPlugin PUBLIC include)
+ament_target_dependencies(ActorVelocitySubscriberPlugin
+  "gazebo_ros"
+  "gazebo_dev"
+  "geometry_msgs"
+  "nav_msgs"
+  "rclcpp"
+  "tf2"
+  "tf2_geometry_msgs"
+  "tf2_ros"
+)
+ament_export_libraries(ActorVelocitySubscriberPlugin)
+install(TARGETS ActorVelocitySubscriberPlugin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
 
 add_library(ModelStatePublisherPlugin SHARED
   src/ModelStatePublisherPlugin.cpp

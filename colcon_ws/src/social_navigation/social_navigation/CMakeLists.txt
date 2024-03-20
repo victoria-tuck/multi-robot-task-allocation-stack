@@ -74,6 +74,13 @@ robot_closest_obstacle_sector
   DESTINATION lib/${PROJECT_NAME}
 )
 
+add_executable(human_closest_obstacle_sector nodes/human_nearest_sector_obstacle_from_map.cpp)
+ament_target_dependencies(human_closest_obstacle_sector rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs sensor_msgs)
+install( TARGETS
+human_closest_obstacle_sector
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # add_executable(humans_sfm_node nodes/humans_sfm_node.cpp)
 # ament_target_dependencies(humans_sfm_node rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs)
 # install( TARGETS

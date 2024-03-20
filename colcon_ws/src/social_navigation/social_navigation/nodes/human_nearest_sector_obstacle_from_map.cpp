@@ -10,6 +10,8 @@
 #include "social_navigation_msgs/msg/human_closest_obstacles.hpp"
 #include "sensor_msgs/msg/point_cloud.hpp"
 
+#define M_PI 3.14157
+
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
@@ -18,12 +20,13 @@ class HumanNearestObstacle: public rclcpp::Node {
         HumanNearestObstacle(nav_msgs::msg::OccupancyGrid map): Node("HumanNearestObstacle"){
             
             map_ = map;
-            resolution_ = map_.info.width;
+            resolution_ = map_.info.resolution;
             width_ = map_.info.width;
             height_ = map_.info.height;
             origin_ = map_.info.origin;
             num_cells = width_ * height_;
-            std::cout << "hello" << std::endl;
+            std::cout << "width: " << width_  << " height:  " << height_ << "Origin: x: " << origin_.position.x << " y: " << origin_.position.y << std::endl;
+
 
             // read parameters
             this->declare_parameter<int>("num_humans",25);
@@ -31,8 +34,9 @@ class HumanNearestObstacle: public rclcpp::Node {
 
 
             //Publishers
-            human_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::HumanClosestObstacles>("/human_closest_obstacles", 10);
-            obstacle_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud>("/closest_obstacles_cloud", 10);
+            human_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::HumanClosestObstacle>("/human_closest_obstacles", 10);
+            human_single_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::HumanClosestObstacle>("/human_single_closest_obstacles", 10);
+            obstacle_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud>("/human_closest_obstacles_cloud", 10);
 
             //Subscribers
             human_sub_ = this->create_subscription<social_navigation_msgs::msg::HumanStates>( "/human_states", 2, std::bind(&HumanNearestObstacle::human_callback, this, _1) );
@@ -51,11 +55,12 @@ class HumanNearestObstacle: public rclcpp::Node {
             if (human_states_init==false)
                 return;
 
-            std::cout << "hello2" << std::endl;
-            social_navigation_msgs::msg::HumanClosestObstacles human_obstacle_distances;
+            // std::cout << "hello2" << std::endl;
+            // social_navigation_msgs::msg::HumanClosestObstacles human_obstacle_points;
             sensor_msgs::msg::PointCloud obstacle_cloud;
 
             social_navigation_msgs::msg::HumanClosestObstacle obstacle_points;
+            social_navigation_msgs::msg::HumanClosestObstacle single_obstacle_points;
             obstacle_points.num_obstacles = 0;
 
             for (int i=0; i<num_humans; i++){
@@ -65,44 +70,66 @@ class HumanNearestObstacle: public rclcpp::Node {
                 worldToMap( state.position.x, state.position.y, mx, my );
 
                 // search: 
-                    // put a limit on distance: maybe 3 meters?
-                    int max_depth = 3.0 / resolution_;
+                    // search: 
+                int max_depth = 10.0; //10.0;
 
-                    for (int d=0; d<max_depth; d++){
-                        // fopr depth d, size of square is 2*d+1
-                        for (int j=-d; j<d; j++){
-                            for (int k=-d; k<d; k++){
-                                int index_x = mx - j;
-                                int index_y = my - k;
-                                if ((index_x<mx) & (index_y<my) & (index_x>=0) & (index_y>=0)){
-                                    if (map_.data.at( index_y*width_+index_x )>0.5){  // found nearest obstacle
-                                        obstacle_points.num_obstacles += 1 ;
-                                        geometry_msgs::msg::Point point = mapToWorld( index_x, index_y );  // convert to world
-                                        geometry_msgs::msg::Point32 point32;
-                                        point32.x = point.x; point32.y = point.y; point32.z = point.z;
-                                        obstacle_points.obstacle_locations.push_back(point);
-                                        obstacle_cloud.points.push_back(point32);
- 
-                                        goto search_end;
-                                    }
+                float angle_increment = M_PI/6;
+                float depth_increment = resolution_+0.01;
+                // std::cout << "pi " << M_PI << "icrement: " << angle_increment << std::endl;
+                geometry_msgs::msg::Point single_loc;
+                single_loc.x = 100.0;
+                single_loc.y = 100.0;
+                single_loc.z = 0.0;
+                float d_prev = 100.0;
+                for (float angle=0; angle<2*M_PI; angle=angle+angle_increment){
+                    // std::cout << "hello2.5 " << angle << " " << std::endl;
+                    for (float d=0; d<max_depth; d=d+depth_increment){
+                        // std::cout << "hello3 " << d << " " << std::endl;
+                        geometry_msgs::msg::Point loc;
+                        loc.x = state.position.x + cosf(angle) * d;
+                        loc.y = state.position.y + sinf(angle) * d;
+                        loc.z = 0.008; //state.position.z;
+                        unsigned int loc_mx, loc_my;
+                        if (worldToMap( loc.x, loc.y, loc_mx, loc_my )){         
+                            // std::cout << "hello4 " << d << " " << std::endl;               
+                            if (map_.data.at( loc_my*width_+loc_mx )>0.5){
+                                // std::cout << "hello5 " << d << " " << std::endl;
+                                obstacle_points.num_obstacles += 1 ;
+                                geometry_msgs::msg::Point32 loc32;
+                                loc32.x = loc.x; loc32.y = loc.y; loc32.z = loc.z;
+                                obstacle_points.obstacle_locations.push_back(loc);
+                                obstacle_cloud.points.push_back(loc32);
+                                sensor_msgs::msg::ChannelFloat32 channel;
+                                channel.name = "distance";
+                                channel.values.push_back( d );
+                                obstacle_cloud.channels.push_back(channel);
+
+                                if (d_prev>d){
+                                    d_prev = d;
+                                    single_loc.x = loc.x;
+                                    single_loc.y = loc.y;
                                 }
+                                // std::cout << "found point" << std::endl;
+                                break; // if found an obstacle at this angle, then no need to search more. move on to next angle
                             }
                         }
-
-                        // if reach here, then ignore collision avoidance with this human
+                        else{ // out of map bounds
+                            continue;
+                        } 
                     }
+                }
 
-                    search_end:
-                        human_obstacle_distances.obstacle_info.push_back(obstacle_points);
-                        // do nothing
+                single_obstacle_points.num_obstacles += 1;
+                single_obstacle_points.obstacle_locations.push_back(single_loc);                
 
             }
-            std::cout << "hello3" << std::endl;
+            // std::cout << "hello3" << std::endl;
             // publish results
-            obstacle_cloud.header.frame_id = "world";
+            obstacle_cloud.header.frame_id = "map";
             obstacle_cloud.header.stamp = this->get_clock()->now();
             obstacle_cloud_pub_->publish(obstacle_cloud);
-            human_obstacle_pub_->publish(human_obstacle_distances);
+            human_obstacle_pub_->publish(obstacle_points);
+            human_single_obstacle_pub_->publish(single_obstacle_points);
         }          
 
         geometry_msgs::msg::Point mapToWorld(unsigned int mx, unsigned int my) const{
@@ -135,7 +162,8 @@ class HumanNearestObstacle: public rclcpp::Node {
         bool human_states_init = false;
 
         rclcpp::Subscription<social_navigation_msgs::msg::HumanStates>::SharedPtr human_sub_;
-        rclcpp::Publisher<social_navigation_msgs::msg::HumanClosestObstacles>::SharedPtr human_obstacle_pub_;
+        rclcpp::Publisher<social_navigation_msgs::msg::HumanClosestObstacle>::SharedPtr human_obstacle_pub_;
+        rclcpp::Publisher<social_navigation_msgs::msg::HumanClosestObstacle>::SharedPtr human_single_obstacle_pub_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud>::SharedPtr obstacle_cloud_pub_;
 
         rclcpp::TimerBase::SharedPtr timer_;
@@ -178,24 +206,3 @@ int main(int argc, char** argv){
     rclcpp::shutdown();
     return 0;
 }
-
-
-
- // Get the map and store it
-// rclcpp::Client<nav_msgs::srv::GetMap>::SharedPtr client = this->create_client<nav_msgs::srv::GetMap>("/map_server/map");
-// auto request = std::make_shared<nav_msgs::srv::GetMap::Request>();
-// while (!client->wait_for_service(1s)) {
-//     if (!rclcpp::ok()) {
-//     RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-//     // return 0;
-//     }
-//     RCLCPP_INFO(this->get_logger(), "service not available, waiting again...");
-// }
-
-// auto result = client->async_send_request(request);
-// // Wait for the result.
-// if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result) == rclcpp::FutureReturnCode::SUCCESS){
-//         RCLCPP_INFO(this->get_logger(), "Sum: ");//%ld", result.get()->sum);
-//     } else {
-//         RCLCPP_ERROR(this->get_logger(), "Failed to call service add_two_ints");
-//     }
