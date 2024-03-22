@@ -26,6 +26,11 @@ RUN echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc
 
 WORKDIR /home/
 
+RUN git clone https://github.com/robotics-upo/lightsfm.git
+WORKDIR /home/lightsfm
+RUN make && make install
+
+WORKDIR /home/colcon_ws
 #RUN add-apt-repository ppa:deadsnakes/ppa
 #RUN apt-get install -y python3.11
 #RUN apt-get install -y python3.11-distutils
@@ -60,4 +65,4 @@ RUN echo "alias rcpub='ros2 topic pub /planner_init std_msgs/msg/Bool data:\ tru
 RUN echo "alias rcbf='python3 /home/colcon_ws/src/social_navigation/scripts/nav2_cbf_controller.py'" >> ~/.bashrc
 RUN echo "alias rcbf2='ros2 run social_navigation_py nav2_cbf --ros-args -p use_sim_time:=True'" >> ~/.bashrc
 RUN echo "alias rmppi='ros2 run social_navigation_py nav2_mppi --ros-args -p use_sim_time:=True'" >> ~/.bashrc
-
+RUN echo "alias rsfm='ros2 launch social_navigation human_sfm.launch.py'" >> ~/.bashrc

@@ -93,6 +93,17 @@ def generate_launch_description():
             '-robot_namespace', '/adv',
             '-x', pose2['x'], '-y', pose2['y'], '-z', pose2['z'],
             '-R', pose2['R'], '-P', pose2['P'], '-Y', pose2['Y']])
+    
+    # start_gazebo_human_spawner_cmd = Node(
+    #     package='gazebo_ros',
+    #     executable='spawn_entity.py',
+    #     output='screen',
+    #     arguments=[
+    #         '-entity', 'actor3',
+    #         '-file', os.path.join(social_navigation_dir, 'worlds', 'human_actor.model'),
+    #         '-robot_namespace', '/actor3',
+    #         '-x', '1.0', '-y', '6.0', '-z', '1.0',
+    #         '-R', '0.0', '-P', '0.0', '-Y', '3.14'])
 
 
 
@@ -103,6 +114,7 @@ def generate_launch_description():
     ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(gazebo)
     ld.add_action(start_gazebo_spawner_cmd)
+    # ld.add_action(start_gazebo_human_spawner_cmd)
     # ld.add_action(start_gazebo_spawner_cmd2)
     return ld
 

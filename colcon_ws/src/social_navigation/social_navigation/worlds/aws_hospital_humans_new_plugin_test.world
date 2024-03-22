@@ -21,140 +21,82 @@
 
     <actor name="actor1">
       <pose>-4 11.02 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
+      <skin>
+        <filename>walk.dae</filename> 
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+
       <plugin name="actor1_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human1</remapping> </ros> 
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human1</remapping>
+        </ros>
         <update_rate>10</update_rate>
       </plugin>
+
       <plugin name="actor1_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor1</namespace> </ros>
+       <ros>
+        <namespace>actor1</namespace>
+       </ros>
        <update_rate>20</update_rate>
       </plugin>
     </actor>
 
-   <actor name="actor2">
-      <pose>5 -8 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
+    <actor name="actor2">
+      <pose>4 11 1.0 0 0 3.14</pose>
+      <skin>
+        <filename>walk.dae</filename> 
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+
       <plugin name="actor2_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human2</remapping> </ros> 
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human2</remapping>
+        </ros>
         <update_rate>10</update_rate>
       </plugin>
+
       <plugin name="actor2_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor2</namespace> </ros>
+       <ros>
+        <namespace>actor2</namespace>
+       </ros>
        <update_rate>20</update_rate>
       </plugin>
     </actor>
 
     <actor name="actor3">
-      <pose>5.5 -8 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
+      <pose>1 6 1.0 0 0 3.14</pose>
+      <skin>
+        <filename>walk.dae</filename> 
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
       <plugin name="actor3_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human3</remapping> </ros> 
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human3</remapping>
+        </ros>
         <update_rate>10</update_rate>
       </plugin>
       <plugin name="actor3_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor3</namespace> </ros>
-       <update_rate>20</update_rate>
-      </plugin>
-    </actor>
-
-    <actor name="actor4">
-      <pose>5.0 1.0 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
-      <plugin name="actor4_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human4</remapping> </ros> 
-        <update_rate>10</update_rate>
-      </plugin>
-      <plugin name="actor4_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor4</namespace> </ros>
-       <update_rate>20</update_rate>
-      </plugin>
-    </actor>
-
-    <actor name="actor5">
-      <pose>5.0 13.0 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
-      <plugin name="actor5_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human5</remapping> </ros> 
-        <update_rate>10</update_rate>
-      </plugin>
-      <plugin name="actor5_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor5</namespace> </ros>
-       <update_rate>20</update_rate>
-      </plugin>
-    </actor>
-
-    <actor name="actor6">
-      <pose>10.5 4.5 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
-      <plugin name="actor6_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human6</remapping> </ros> 
-        <update_rate>10</update_rate>
-      </plugin>
-      <plugin name="actor6_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor6</namespace> </ros>
-       <update_rate>20</update_rate>
-      </plugin>
-    </actor>
-
-    <actor name="actor7">
-      <pose>5.8 -22.5 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
-      <plugin name="actor7_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human7</remapping> </ros> 
-        <update_rate>10</update_rate>
-      </plugin>
-      <plugin name="actor7_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor7</namespace> </ros>
-       <update_rate>20</update_rate>
-      </plugin>
-    </actor>
-
-    <actor name="actor8">
-      <pose>5.3 -11.5 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
-      <plugin name="actor8_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human8</remapping> </ros> 
-        <update_rate>10</update_rate>
-      </plugin>
-      <plugin name="actor8_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor8</namespace> </ros>
-       <update_rate>20</update_rate>
-      </plugin>
-    </actor>
-
-    <actor name="actor9">
-      <pose>5.5 10.5 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
-      <plugin name="actor9_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human9</remapping> </ros> 
-        <update_rate>10</update_rate>
-      </plugin>
-      <plugin name="actor9_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor9</namespace> </ros>
-       <update_rate>20</update_rate>
-      </plugin>
-    </actor>
-
-    <actor name="actor10">
-      <pose>5.5 10.9 1.0 0 0 3.14</pose>
-      <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
-      <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
-      <plugin name="actor10_publisher" filename="libActorStatePublisherPlugin.so">
-        <ros> <namespace>/gazebo</namespace> <remapping>odom:=human10</remapping> </ros> 
-        <update_rate>10</update_rate>
-      </plugin>
-      <plugin name="actor10_subscriber" filename="libActorVelocitySubscriberPlugin.so">
-       <ros> <namespace>actor10</namespace> </ros>
+       <ros>
+        <namespace>actor3</namespace>
+       </ros>
        <update_rate>20</update_rate>
       </plugin>
     </actor>

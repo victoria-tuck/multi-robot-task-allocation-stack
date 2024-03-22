@@ -2,11 +2,12 @@ from setuptools import setup
 
 package_name = 'social_navigation_py'
 submodules = "social_navigation_py/utils"
+sfm_submodules = "social_navigation_py/socialforce"
 
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name, submodules],
+    packages=[package_name, submodules, sfm_submodules],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -23,6 +24,8 @@ setup(
         'console_scripts': [
             'nav2_cbf = social_navigation_py.nav2_cbf_controller:main',
             'nav2_mppi = social_navigation_py.nav2_mppi_controller:main',
+            'human_sfm = social_navigation_py.human_control_node:main',
+            'human_stop = social_navigation_py.human_stop_node:main'
         ],
     },
 )

@@ -9,10 +9,10 @@ See Helbing and Molnár 1998.
 import jax.numpy as jnp
 from jax import jit
 import matplotlib.pyplot as plt
-import socialforce
-from socialforce.potentials_jax import PedPedPotential
-from socialforce.fieldofview_jax import FieldOfView
-from socialforce import stateutils_jax
+# from .socialforce import socialforce
+from .potentials_jax import PedPedPotential
+from .fieldofview_jax import FieldOfView
+from . import stateutils_jax
 
 MAX_SPEED_MULTIPLIER = 1.3  # with respect to initial speed
 
@@ -33,7 +33,7 @@ class Simulator(object):
     U = 0 # Ped object potential
     w = 0 # 
 
-    def __init__(self, ped_space=None, delta_t=0.4, tau=0.5, initial_speed=1.0, v0=2.1, sigma=0.3):
+    def __init__(self, ped_space=None, delta_t=0.4, tau=0.5, initial_speed=1.0, v0=0.3, sigma=0.3):
         # Simulator.state = initial_state
         # Simulator.initial_speeds = jnp.ones((initial_state.shape[0])) * initial_speed
         # Simulator.max_speeds = MAX_SPEED_MULTIPLIER * Simulator.initial_speeds
@@ -84,7 +84,7 @@ class Simulator(object):
         # repulsive terms between pedestrians
         f_ab = Simulator.f_ab(state, delta_t)
         w = jnp.expand_dims(Simulator.w.__call__(e, -f_ab), -1)
-        F_ab = w * f_ab
+        F_ab = w * f_ab * 20
 
         # repulsive terms between pedestrians and boundaries
         F_aB = Simulator.f_aB(state, delta_t)

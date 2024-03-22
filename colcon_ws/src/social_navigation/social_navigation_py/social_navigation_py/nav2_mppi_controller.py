@@ -29,7 +29,7 @@ class RobotController(Node):
 
         # Variables
         self.num_humans = 20 # upper bound
-        self.num_humans_mppi = 5
+        self.num_humans_mppi = 3
         self.num_obstacles = 12 # exact
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
         self.obstacle_states = np.zeros((2,self.num_obstacles))
@@ -55,7 +55,7 @@ class RobotController(Node):
         self.human_localization_noise = 0.05
         self.dt = 0.05 
         self.T = 50 # simulation steps
-        self.control_bound = 4
+        self.control_bound = 2
         self.kx = 4.0
         self.sensing_radius = 2
         self.factor = 2.0 # no of standard deviations
@@ -69,13 +69,17 @@ class RobotController(Node):
         self.human_repulsion_gain = 2.0
         self.costs_lambda = 0.03 
         self.cost_goal_coeff = 0.2 
-        self.cost_safety_coeff = 10.0 
+        self.cost_safety_coeff = 6.0 #10.0 
+
+        self.aware = [True, True]
+        self.humans_interact = True
+        self.obstacles_interact = True
 
         u_guess = np.zeros((self.horizon, 2))
 
-        self.controller = MPPI_FORESEE(horizon=self.horizon, samples=self.samples, input_size=2, dt=self.dt, sensing_radius=self.sensing_radius, human_noise_cov=self.human_noise_cov, std_factor=self.factor, control_bound=self.control_bound, u_guess=u_guess, human_nominal_speed=self.human_nominal_speed, human_repulsion_gain=self.human_repulsion_gain, costs_lambda=self.costs_lambda, cost_goal_coeff=self.cost_goal_coeff, cost_safety_coeff=self.cost_safety_coeff, num_humans=self.num_humans_mppi, num_obstacles = self.num_obstacles, use_GPU=self.use_GPU)
+        self.controller = MPPI_FORESEE(horizon=self.horizon, samples=self.samples, input_size=2, dt=self.dt, sensing_radius=self.sensing_radius, human_noise_cov=self.human_noise_cov, std_factor=self.factor, control_bound=self.control_bound, u_guess=u_guess, human_nominal_speed=self.human_nominal_speed, human_repulsion_gain=self.human_repulsion_gain, costs_lambda=self.costs_lambda, cost_goal_coeff=self.cost_goal_coeff, cost_safety_coeff=self.cost_safety_coeff, num_humans=self.num_humans_mppi, num_obstacles = self.num_obstacles, use_GPU=self.use_GPU, aware=self.aware, humans_interact=self.humans_interact, obstacles_interact=self.obstacles_interact)
         # Call once to initiate JAX JIT
-        robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], self.goal, self.human_states_mppi, self.human_localization_noise * jnp.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states)
+        robot_sampled_states, robot_chosen_states, robot_action, human_mus_traj, human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], self.goal, self.human_states_mppi, self.human_localization_noise * jnp.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states, self.aware)
         
 
         # Marker array initialization
@@ -83,7 +87,7 @@ class RobotController(Node):
         self.robot_marker_array = MarkerArray()        
         self.robot_selected_marker_array = MarkerArray()
         self.human_marker_array = MarkerArray()
-        self.plot_samples = min(10, self.samples)
+        self.plot_samples = min(20, self.samples)
 
         marker_robot = Marker()
         marker_robot.id = 0                    
@@ -290,15 +294,15 @@ class RobotController(Node):
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
-            # self.get_logger().info(f"dt: {dt}")
+            self.get_logger().info(f"dt: {dt}")
             try:                
                 dist_humans = np.linalg.norm( self.robot_state[0:2] - self.human_states, axis=0 )
-                nearest_5_humans = np.argsort(dist_humans)[:5]
-                self.human_states_mppi = self.human_states[:,nearest_5_humans]
-                self.human_states_dot_mppi = self.human_states_dot[:,nearest_5_humans]
-                self.robot_sampled_states, self.robot_chosen_states, robot_action, self.human_mus_traj, self.human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], goal, self.human_states_mppi, self.human_localization_noise * np.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states)
-                speed, omega = robot_action[0,0], robot_action[1,0]
-                self.plot_init = True
+                nearest_N_humans = np.argsort(dist_humans)[:self.num_humans_mppi]
+                self.human_states_mppi = self.human_states[:,nearest_N_humans]
+                self.human_states_dot_mppi = self.human_states_dot[:,nearest_N_humans]
+                # self.robot_sampled_states, self.robot_chosen_states, robot_action, self.human_mus_traj, self.human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], goal, self.human_states_mppi, self.human_localization_noise * np.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states, self.aware)
+                # speed, omega = robot_action[0,0], robot_action[1,0]
+                # self.plot_init = True
 
                 # Check if any collision constraints violated
                 # if h_human_min < -0.01:
@@ -335,8 +339,8 @@ class RobotController(Node):
             for j in range(self.horizon):
                 # robot
                 point = Point()
-                point.x = float(self.robot_sampled_states[2*i, j])
-                point.y = float(self.robot_sampled_states[2*i+1, j])
+                point.x = float(self.robot_sampled_states[3*i, j])
+                point.y = float(self.robot_sampled_states[3*i+1, j])
                 self.robot_marker_array.markers[i].points[j] = point
 
                 if i==0:

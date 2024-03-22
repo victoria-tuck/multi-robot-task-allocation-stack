@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+<actor name="actor3">
+      <!-- <pose>-4 11 0.1 0 0 3.14</pose> -->
+      <pose>1 6 1.0 0 0 3.14</pose>
+      <skin>
+        <filename>walk.dae</filename> 
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <plugin name="actor3_publisher" filename="libActorStatePublisherPlugin.so">
+        <ros>
+          <namespace>/gazebo</namespace>
+          <remapping>odom:=human3</remapping>
+        </ros>
+        <update_rate>10</update_rate>
+      </plugin>
+      <plugin name="actor3_subscriber" filename="libActorVelocitySubscriberPlugin.so">
+       <ros>
+        <namespace>actor3</namespace>
+       </ros>
+       <update_rate>20</update_rate>
+      </plugin>
+    </actor>
+</sdf>

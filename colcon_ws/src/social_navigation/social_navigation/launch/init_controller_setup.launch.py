@@ -17,6 +17,12 @@ def generate_launch_description():
         default_value='true',
         description='Use simulation (Gazebo) clock if true')
     
+    num_humans = LaunchConfiguration('num_humans')
+    declare_num_humans_cmd = DeclareLaunchArgument(
+        'num_humans',
+        default_value='10',
+        description='Number of humans')
+    
     get_human_states = Node(
         package='social_navigation',
         executable='get_human_states',
@@ -24,7 +30,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': use_sim_time,
-            'num_humans': 2,
+            'num_humans': num_humans,
             'update_frequency': 20.0
                      }]
     )
@@ -36,7 +42,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': use_sim_time,
-            'num_humans': 2
+            'num_humans': num_humans
             }]
     )   
 
@@ -47,13 +53,14 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': use_sim_time,
-            'num_humans': 2
+            'num_humans': num_humans
             }]
     )   
     
     
     ld = LaunchDescription()
     ld.add_action(declare_use_sim_time_cmd)
+    ld.add_action(declare_num_humans_cmd)
     ld.add_action(get_human_states)
     ld.add_action(robot_closest_obstacle_sector)
     ld.add_action(human_closest_obstacle_sector)
