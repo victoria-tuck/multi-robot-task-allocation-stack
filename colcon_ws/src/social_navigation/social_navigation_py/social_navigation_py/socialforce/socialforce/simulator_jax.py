@@ -84,7 +84,7 @@ class Simulator(object):
         # repulsive terms between pedestrians
         f_ab = Simulator.f_ab(state, delta_t)
         w = jnp.expand_dims(Simulator.w.__call__(e, -f_ab), -1)
-        F_ab = w * f_ab * 20
+        F_ab = w * f_ab * 100
 
         # repulsive terms between pedestrians and boundaries
         F_aB = Simulator.f_aB(state, delta_t)

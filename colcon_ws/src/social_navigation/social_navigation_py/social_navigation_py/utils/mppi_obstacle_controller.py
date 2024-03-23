@@ -83,7 +83,7 @@ class MPPI_FORESEE():
         self.input_size = input_size        
         MPPI_FORESEE.control_bound = control_bound
         MPPI_FORESEE.control_mu = jnp.zeros(input_size)
-        MPPI_FORESEE.control_cov = 3.0 * jnp.eye(input_size)  #2.0 * jnp.eye(input_size)
+        MPPI_FORESEE.control_cov = 4.0 * jnp.eye(input_size)  #2.0 * jnp.eye(input_size)
         MPPI_FORESEE.control_bound_lb = -jnp.array([[1], [1]])
         MPPI_FORESEE.control_bound_ub = -self.control_bound_lb  
         self.U = u_guess
@@ -183,7 +183,8 @@ class MPPI_FORESEE():
             u_human = lax.cond( dist_obstacles[min_dist_obs_id]<MPPI_FORESEE.sensing_radius, MPPI_FORESEE.true_func_obstacle, MPPI_FORESEE.false_func, u_human, human_x, obstaclesX[:,[min_dist_obs_id]])
 
         # Clip the control input
-        u_human = jnp.clip(u_human, -4.0, 4.0)
+        # u_human = jnp.clip(u_human, -4.0, 4.0)
+        u_human = jnp.clip(u_human, -1.5, 1.5)
 
         # Propagate dynamics for human
         mu, cov = human_x + u_human * MPPI_FORESEE.dt, MPPI_FORESEE.human_noise_cov * jnp.eye(MPPI_FORESEE.human_n) * MPPI_FORESEE.dt**2
@@ -398,6 +399,7 @@ class MPPI_FORESEE():
         # sampled_robot_states, costs, human_sigma_points, human_sigma_weights, human_mus, human_covs, perturbation = MPPI_FORESEE.rollout_states_foresee(subkey, init_state, self.U, goal, human_states_mu, human_states_cov)
         tf = time.time()
         # print(f"costs: min: {jnp.min(costs)}, max: {jnp.max(costs)}")
+        print(f"costs: min {jnp.min(costs)}")
         self.U = MPPI_FORESEE.weighted_sum( self.U, perturbation, costs) #weights )
 
         states_final = MPPI_FORESEE.rollout_control(init_state, self.U)              

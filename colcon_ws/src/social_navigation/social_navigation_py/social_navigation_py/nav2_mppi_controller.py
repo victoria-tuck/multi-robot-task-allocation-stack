@@ -16,13 +16,15 @@ from .utils.mppi_obstacle_controller import MPPI_FORESEE
 import numpy as np
 import jax.numpy as jnp
 
+from std_msgs.msg import String
+
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 class RobotController(Node):
 
     def __init__(self):
         super().__init__('robot_controller')
-        
+
         # 0: cbf controller
         # 1: nominal controller
         self.controller_id = 0#1
@@ -61,14 +63,14 @@ class RobotController(Node):
         self.factor = 2.0 # no of standard deviations
         self.choice = 0
         self.samples = 1000 #500
-        self.horizon = 40
+        self.horizon = 60 #40
         self.human_ci_alpha = 0.05
 
         # cost terms
         self.human_nominal_speed = np.array([3.0,0]).reshape(-1,1)
-        self.human_repulsion_gain = 2.0
-        self.costs_lambda = 0.03 
-        self.cost_goal_coeff = 0.2 
+        self.human_repulsion_gain = 1.0 #2.0
+        self.costs_lambda = 0.03 #0.03 
+        self.cost_goal_coeff = 0.5 #0.2 
         self.cost_safety_coeff = 6.0 #10.0 
 
         self.aware = [True, True]
@@ -201,6 +203,13 @@ class RobotController(Node):
         # Goal
         self.robot_goal = np.array([1,1]).reshape(-1,1)
 
+    def timer_callback(self):
+        msg = String()
+        msg.data = 'Hello World: %d' % self.i
+        self.publisher_.publish(msg)
+        self.get_logger().info('Publishing: "%s"' % msg.data)
+        self.i += 1
+
         
     def controller_plan_init_callback(self, msg):
         self.planner_init = msg.data
@@ -228,6 +237,17 @@ class RobotController(Node):
         return np.arctan2( np.sin(theta), np.cos(theta) )
 
     def controller_callback(self):     
+        # t_new = self.get_clock().now().nanoseconds
+        # dt = (t_new - self.time_prev)/10**9
+        # # self.get_logger().info(f"dt: {dt}")
+      
+                
+        # self.time_prev = t_new
+        # control = Twist()
+        # control.linear.x = 0.0 #float(speed)
+        # control.angular.z = 0.0 #float(omega)
+        # self.robot_command_pub.publish(control)
+        # return 
         if not self.planner_init:
             return
         
@@ -300,9 +320,9 @@ class RobotController(Node):
                 nearest_N_humans = np.argsort(dist_humans)[:self.num_humans_mppi]
                 self.human_states_mppi = self.human_states[:,nearest_N_humans]
                 self.human_states_dot_mppi = self.human_states_dot[:,nearest_N_humans]
-                # self.robot_sampled_states, self.robot_chosen_states, robot_action, self.human_mus_traj, self.human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], goal, self.human_states_mppi, self.human_localization_noise * np.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states, self.aware)
-                # speed, omega = robot_action[0,0], robot_action[1,0]
-                # self.plot_init = True
+                self.robot_sampled_states, self.robot_chosen_states, robot_action, self.human_mus_traj, self.human_covs_traj = self.controller.policy_mppi(self.robot_state[0:3], goal, self.human_states_mppi, self.human_localization_noise * np.ones((2,self.num_humans_mppi)), self.human_states_dot_mppi, self.obstacle_states, self.aware)
+                speed, omega = robot_action[0,0], robot_action[1,0]
+                self.plot_init = True
 
                 # Check if any collision constraints violated
                 # if h_human_min < -0.01:
@@ -322,8 +342,8 @@ class RobotController(Node):
 
             ############## Publish Control Input ###################
             control = Twist()
-            control.linear.x = 0.0 #float(speed)
-            control.angular.z = 0.0 #float(omega)
+            control.linear.x = float(speed)
+            control.angular.z = float(omega)
             self.robot_command_pub.publish(control)
 
     def plot_callback(self):

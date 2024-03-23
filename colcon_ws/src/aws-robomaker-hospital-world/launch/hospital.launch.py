@@ -62,16 +62,26 @@ def generate_launch_description():
         description='Whether to start the simulator')
     
     gazebo_params_path = os.path.join(
-                  get_package_share_directory('social_navigation'),'configs','gazebo_params.yaml')
+                  get_package_share_directory('social_navigation'),'configs','gazebo_params.yml')
+    print(f"***************** params file: {gazebo_params_path}")
+    # gazebo = IncludeLaunchDescription(
+    #             PythonLaunchDescriptionSource([os.path.join(
+    #                 get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')]),
+    #                 launch_arguments={'extra_gazebo_args': '--verbose --ros-args --params_file ' + gazebo_params_path, 
+    #                                   'world': world,
+    #                                   'gui': 'true'}.items(),
+
+    #         )
+    print(f"world: {world}") #/home/colcon_ws/install/social_navigation/share/social_navigation/worlds/aws_hospital_humans_new_plugin.world
+
     gazebo = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([os.path.join(
                     get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')]),
-                    launch_arguments={'extra_gazebo_args': '--verbose --ros-args --params-file ' + gazebo_params_path, 
+                    launch_arguments={'params_file': gazebo_params_path, 
                                       'world': world,
                                       'gui': 'true'}.items(),
-
             )
-    
+    #ros2 launch gazebo_ros gazebo.launch.py params_file:=params.yml
     start_gazebo_spawner_cmd = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',

@@ -1,3 +1,6 @@
+import os
+os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
+
 import rclpy
 from rclpy.node import Node
 
@@ -11,7 +14,10 @@ import yaml
 # from cbf_controller import cbf_controller
 from .utils.mppi_obstacle_controller import MPPI_FORESEE
 import numpy as np
+import jax
 import jax.numpy as jnp
+jax.config.update('jax_platform_name', 'cpu')
+# %env XLA_PYTHON_CLIENT_PREALLOCATE=false
 
 from .socialforce import socialforce
 
@@ -27,11 +33,11 @@ class HumanController(Node):
         self.num_humans =  self.get_parameter('num_humans').get_parameter_value().integer_value#10
         self.timer_period = self.get_parameter('timer_period').get_parameter_value().double_value #  0.05
         self.human_config_file = self.get_parameter('human_config_file').get_parameter_value().string_value  #'humans_waypoint_config.yaml'
-
+        self.robot_force = True
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
-        self.robot_state_callback = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 10 )        
+        self.robot_state_sub = self.create_subscription( Odometry, '/odom', self.robot_state_callback, 10 )        
         self.human_obstacle_subscriber = self.create_subscription( RobotClosestObstacle, '/human_closest_obstacles', self.obstacle_callback, 10 )
         # self.human_single_obstacle_subscriber = self.create_subscription( RobotClosestObstacle, '/human_single_closest_obstacles', self.single_obstacle_callback, 10 )
 
@@ -76,9 +82,12 @@ class HumanController(Node):
 
         
         self.socialforce = socialforce.Simulator( delta_t = self.timer_period )                                                                                  
-        self.MAX_SPEED_MULTIPLIER = 1.3
+        self.MAX_SPEED_MULTIPLIER = 1.5
         initial_speed = 1.0 #1.0
-        self.initial_speeds = jnp.ones((self.num_humans)) * initial_speed
+        if self.robot_force:
+            self.initial_speeds = jnp.ones((self.num_humans+1)) * initial_speed
+        else:
+            self.initial_speeds = jnp.ones((self.num_humans)) * initial_speed
         self.max_speeds = self.MAX_SPEED_MULTIPLIER * self.initial_speeds
 
     def __del__(self):
@@ -129,6 +138,7 @@ class HumanController(Node):
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
+        self.robot_state_dot = np.array( [ msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.angular.z ] ).reshape(-1,1)
         self.robot_state_valid = True
         # self.get_logger().info("Robot Callback")
 
@@ -150,11 +160,11 @@ class HumanController(Node):
         # Set state here
 
         socialforce_initial_state = np.append( np.append( human_states.T, human_states_dot.T , axis = 1 ), self.human_goals.T, axis=1   )
-        # robot_goal = self.robot_state[0:2] + self.normalize(self.robot_state_dot[0:2]) * 10 # 10 meters away in the direction of current velocity
-        # robot_social_state = np.array([ self.robot_state[0,0], self.robot_state[1,0], self.robot_states_dot[0,0], self.robot_states_dot[1,0], robot_goal[0,0], self.robot_goal[1,0]])
-        # humans_socialforce.state[-1,0:6] = robot_social_state
-        
 
+        robot_goal = self.robot_state[0:2] + self.normalize(self.robot_state_dot[0:2]) * 20 # 10 meters away in the direction of current velocity
+        robot_social_state = np.array([[ self.robot_state[0,0], self.robot_state[1,0], self.robot_state_dot[0,0], self.robot_state_dot[1,0], robot_goal[0,0], robot_goal[1,0] ]])
+        socialforce_initial_state = np.append( socialforce_initial_state, robot_social_state, axis=0 )
+        
         tau = 0.5
         tau = tau * jnp.ones(socialforce_initial_state.shape[0])
         social_state = jnp.concatenate((socialforce_initial_state, jnp.expand_dims(tau, -1)), axis=-1)
