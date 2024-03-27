@@ -53,12 +53,12 @@ install( TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-add_executable(get_human_closest_obstacle nodes/human_nearest_obstacle_from_map.cpp)
-ament_target_dependencies(get_human_closest_obstacle rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs sensor_msgs)
-install( TARGETS
-  get_human_closest_obstacle
-  DESTINATION lib/${PROJECT_NAME}
-)
+# add_executable(get_human_closest_obstacle nodes/human_nearest_obstacle_from_map.cpp)
+# ament_target_dependencies(get_human_closest_obstacle rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs sensor_msgs)
+# install( TARGETS
+#   get_human_closest_obstacle
+#   DESTINATION lib/${PROJECT_NAME}
+# )
 
 add_executable(robot_closest_obstacle nodes/robot_nearest_obstacle_from_map.cpp)
 ament_target_dependencies(robot_closest_obstacle rclcpp gazebo_msgs std_msgs geometry_msgs social_navigation_msgs nav_msgs sensor_msgs)

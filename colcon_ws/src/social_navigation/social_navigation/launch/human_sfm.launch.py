@@ -25,10 +25,10 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': use_sim_time,
-            'num_humans': 10,
+            'num_humans': 8,
             'timer_period': 0.05,
             'human_config_file': os.path.join(
-            social_navigation_config_dir, 'humans_waypoint_config2.yaml')
+            social_navigation_config_dir, 'humans_waypoint_config3.yaml')
                      }]
     )
     

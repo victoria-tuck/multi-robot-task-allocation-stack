@@ -20,7 +20,7 @@ def generate_launch_description():
     num_humans = LaunchConfiguration('num_humans')
     declare_num_humans_cmd = DeclareLaunchArgument(
         'num_humans',
-        default_value='10',
+        default_value='8',
         description='Number of humans')
     
     get_human_states = Node(

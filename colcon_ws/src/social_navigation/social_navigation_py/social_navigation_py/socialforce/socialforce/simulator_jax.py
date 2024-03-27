@@ -10,7 +10,7 @@ import jax.numpy as jnp
 from jax import jit
 import matplotlib.pyplot as plt
 # from .socialforce import socialforce
-from .potentials_jax import PedPedPotential
+from .potentials_jax import PedPedPotential, PedSpacePotential
 from .fieldofview_jax import FieldOfView
 from . import stateutils_jax
 
@@ -47,7 +47,7 @@ class Simulator(object):
 
         # potentials
         Simulator.V = PedPedPotential(v0=v0, sigma=sigma)
-        Simulator.U = ped_space
+        Simulator.U = PedSpacePotential() #ped_space
         # field of view
         Simulator.w = FieldOfView(twophi=360.0)
 
@@ -57,12 +57,12 @@ class Simulator(object):
         return -1.0 * Simulator.V.grad_r_ab(state, delta_t)
 
     @staticmethod
-    def f_aB(state, delta_t):
+    def f_aB(state, delta_t, space):
         return jnp.zeros((state.shape[0], 0, 2))
         """Compute f_aB."""
         # if Simulator.U is None:
         #     return jnp.zeros((Simulator.state.shape[0], 0, 2))
-        return -1.0 * Simulator.U.grad_r_aB(state)
+        return -1.0 * Simulator.U.grad_r_aB(state, space)
 
     @staticmethod
     def capped_velocity(desired_velocity, max_speeds):
@@ -73,7 +73,7 @@ class Simulator(object):
     
     @staticmethod
     @jit
-    def step_(state, initial_speeds, max_speeds, delta_t):
+    def step_(state, initial_speeds, max_speeds, delta_t, space):
         """Do one step in the simulation and update the state in place."""
         # accelerate to desired velocity
         e = stateutils_jax.desired_directions(state)
@@ -84,10 +84,10 @@ class Simulator(object):
         # repulsive terms between pedestrians
         f_ab = Simulator.f_ab(state, delta_t)
         w = jnp.expand_dims(Simulator.w.__call__(e, -f_ab), -1)
-        F_ab = w * f_ab * 100
+        F_ab = w * f_ab * 90
 
         # repulsive terms between pedestrians and boundaries
-        F_aB = Simulator.f_aB(state, delta_t)
+        F_aB = Simulator.f_aB(state, delta_t, space)
 
         # social force
         F = F0 + jnp.sum(F_ab, axis=1) + jnp.sum(F_aB, axis=1)
@@ -104,8 +104,8 @@ class Simulator(object):
 
         return F, state
 
-    def step(self,state, initial_speeds, max_speeds, delta_t):
+    def step(self,state, initial_speeds, max_speeds, delta_t, space):
         """Do one step in the simulation and update the state in place."""
         # accelerate to desired velocity
-        F, state = Simulator.step_(state, initial_speeds, max_speeds, delta_t)
+        F, state = Simulator.step_(state, initial_speeds, max_speeds, delta_t, space)
         return F, state

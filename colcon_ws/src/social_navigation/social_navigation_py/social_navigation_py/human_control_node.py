@@ -51,6 +51,8 @@ class HumanController(Node):
         self.robot_state = np.zeros((3,1))
         self.robot_state_dot = np.zeros((3,1))
         self.human_goals = np.zeros((2,self.num_humans))
+        self.obstacle_states = []
+        self.space_sfm = []
 
         self.humans_socialforce = socialforce.Simulator( delta_t = self.timer_period )
 
@@ -144,15 +146,19 @@ class HumanController(Node):
 
     def obstacle_callback(self, msg):
         # self.num_obstacles = msg.num_obstacles
-        self.obstacle_states_temp = 100*np.ones((2,self.num_obstacles))
+        obstacle_states_temp = 100*np.ones((2,self.num_obstacles))
+        space_temp = []
         for i in range(min(msg.num_obstacles, self.num_obstacles)):
-            self.obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ])            
-        self.obstacle_states = np.copy(self.obstacle_states_temp)
+            obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ])            
+            space_temp.append( obstacle_states_temp[:,[i]].T )
+        self.obstacle_states = np.copy(obstacle_states_temp)
+        self.space_sfm = space_temp
+        self.get_logger().info("Obs received")
         self.obstacles_valid = True
 
     def controller_callback(self):
 
-        if not ( self.human_states_valid and self.robot_state_valid and self.goals_valid ):
+        if not ( self.human_states_valid and self.robot_state_valid and self.goals_valid): # and self.obstacles_valid ):
             return
 
         human_states = np.copy(self.human_states)
@@ -171,7 +177,7 @@ class HumanController(Node):
 
         # print(f"social_state: {social_state}")
 
-        F, state = self.socialforce.step(social_state, self.initial_speeds, self.max_speeds, self.timer_period)
+        F, state = self.socialforce.step(social_state, self.initial_speeds, self.max_speeds, self.timer_period, self.space_sfm)
         
         human_controls = state[:,2:4].copy().T
         # print(f"human_controls: {human_controls}")

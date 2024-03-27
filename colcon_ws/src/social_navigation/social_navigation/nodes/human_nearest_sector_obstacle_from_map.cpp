@@ -5,9 +5,8 @@
 // #include "nav_msgs/srv/get_map.hpp"
 #include "nav_msgs/srv/get_map.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
-#include "social_navigation_msgs/msg/human_state.hpp"
 #include "social_navigation_msgs/msg/human_states.hpp"
-#include "social_navigation_msgs/msg/human_closest_obstacles.hpp"
+#include "social_navigation_msgs/msg/human_closest_obstacle.hpp"
 #include "sensor_msgs/msg/point_cloud.hpp"
 
 #define M_PI 3.14157
@@ -31,7 +30,6 @@ class HumanNearestObstacle: public rclcpp::Node {
             // read parameters
             this->declare_parameter<int>("num_humans",25);
             this->get_parameter("num_humans", num_humans);
-
 
             //Publishers
             human_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::HumanClosestObstacle>("/human_closest_obstacles", 10);

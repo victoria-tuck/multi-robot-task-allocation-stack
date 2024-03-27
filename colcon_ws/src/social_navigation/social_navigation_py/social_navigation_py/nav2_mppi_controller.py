@@ -30,7 +30,7 @@ class RobotController(Node):
         self.controller_id = 0#1
 
         # Variables
-        self.num_humans = 20 # upper bound
+        self.num_humans = 8 #20 # upper bound
         self.num_humans_mppi = 3
         self.num_obstacles = 12 # exact
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
@@ -62,18 +62,20 @@ class RobotController(Node):
         self.sensing_radius = 2
         self.factor = 2.0 # no of standard deviations
         self.choice = 0
-        self.samples = 1000 #500
-        self.horizon = 60 #40
+        self.samples = 500 #500
+        self.horizon = 50 #60 #40
         self.human_ci_alpha = 0.05
 
         # cost terms
         self.human_nominal_speed = np.array([3.0,0]).reshape(-1,1)
-        self.human_repulsion_gain = 1.0 #2.0
+        self.human_repulsion_gain = 0.8 #1.0 #2.0
         self.costs_lambda = 0.03 #0.03 
         self.cost_goal_coeff = 0.5 #0.2 
         self.cost_safety_coeff = 6.0 #10.0 
 
         self.aware = [True, True]
+        # aware[0]: human collision with robot
+        # aware[1]: particle vs mean based switching
         self.humans_interact = True
         self.obstacles_interact = True
 

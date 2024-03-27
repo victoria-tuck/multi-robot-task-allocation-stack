@@ -115,9 +115,9 @@ class PedSpacePotential(object):
     #     return PedSpacePotential.value_r_aB(PedSpacePotential.r_aB(state))
 
     @staticmethod
-    def grad_r_aB(state, delta=1e-3):
+    def grad_r_aB(state, space, delta=1e-3):
         """Compute gradient wrt r_aB using finite difference differentiation."""
-        r_aB = PedSpacePotential.r_aB(state)
+        r_aB = PedSpacePotential.r_aB(state, space)
 
         dx = jnp.array([[[delta, 0.0]]])
         dy = jnp.array([[[0.0, delta]]])
