@@ -59,7 +59,8 @@ WORKDIR /home/colcon_ws
 #RUN echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc
 
 RUN echo "alias rgazebo='ros2 launch aws_robomaker_hospital_world view_hospital.launch.py'" >> ~/.bashrc
-RUN echo "alias rnav2='ros2 launch social_navigation nav2_tb3_aws_launch_multi.py'" >> ~/.bashrc
+# RUN echo "alias rnav2='ros2 launch social_navigation nav2_tb3_aws_launch_multi.py'" >> ~/.bashrc
+RUN echo "alias rnav2='ros2 launch social_navigation nav2_tb3_aws_launch.py'" >> ~/.bashrc
 RUN echo "alias rcsetup='ros2 launch social_navigation init_controller_setup.launch.py'" >> ~/.bashrc
 RUN echo "alias rcpub='ros2 topic pub /planner_init std_msgs/msg/Bool data:\ true'" >> ~/.bashrc
 RUN echo "alias rcbf='python3 /home/colcon_ws/src/social_navigation/scripts/nav2_cbf_controller.py'" >> ~/.bashrc
