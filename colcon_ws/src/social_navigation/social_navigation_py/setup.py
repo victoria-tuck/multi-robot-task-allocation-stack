@@ -26,8 +26,8 @@ setup(
             'nav2_mppi = social_navigation_py.nav2_mppi_controller:main',
             'human_sfm = social_navigation_py.human_control_node:main',
             'human_stop = social_navigation_py.human_stop_node:main',
-            'minimal_publisher = social_navigation_py.minimal_publisher:main'
-            'goal_setter = social_navigation_py.goal_setter:main',
+            'minimal_publisher = social_navigation_py.minimal_publisher:main',
+            'goal_setter = social_navigation_py.goal_setter:main'
         ],
     },
 )
