@@ -5,9 +5,10 @@ services:
     build: .
     privileged: true
     tty: true
-    network_mode: "host"
+      #network_mode: "host"
     volumes:
       - ./colcon_ws:/home/colcon_ws
+      - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
       - NVIDIA_DISABLE_REQUIRE=1
       - DISPLAY=$DISPLAY

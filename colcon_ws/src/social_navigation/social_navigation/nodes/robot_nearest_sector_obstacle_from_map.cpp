@@ -18,7 +18,7 @@ using std::placeholders::_1;
 
 class RobotNearestObstacle: public rclcpp::Node {
     public:
-        RobotNearestObstacle(nav_msgs::msg::OccupancyGrid map): Node("RobotNearestObstacleSectors"){
+        RobotNearestObstacle(nav_msgs::msg::OccupancyGrid map, std::string name=""): Node("RobotNearestObstacleSectors"){
             
             map_ = map;
             
@@ -30,12 +30,12 @@ class RobotNearestObstacle: public rclcpp::Node {
             std::cout << "width: " << width_  << " height:  " << height_ << "Origin: x: " << origin_.position.x << " y: " << origin_.position.y << std::endl;
 
             //Publishers
-            robot_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::RobotClosestObstacle>("/robot_closest_obstacles", 10);
-            obstacle_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud>("/robot_closest_obstacles_cloud", 10);
+            robot_obstacle_pub_ = this->create_publisher<social_navigation_msgs::msg::RobotClosestObstacle>(name + "/robot_closest_obstacles", 10);
+            obstacle_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud>(name + "/robot_closest_obstacles_cloud", 10);
             human_pose_init_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("initialpose", 10);
 
             //Subscribers
-            robot_sub_ = this->create_subscription<nav_msgs::msg::Odometry>( "/odom", 2, std::bind(&RobotNearestObstacle::robot_callback, this, _1) );
+            robot_sub_ = this->create_subscription<nav_msgs::msg::Odometry>( name + "/odom", 2, std::bind(&RobotNearestObstacle::robot_callback, this, _1) );
 
             // Timer callbacks
             timer_ = this->create_wall_timer(100ms, std::bind(&RobotNearestObstacle::run, this));
@@ -193,7 +193,14 @@ int main(int argc, char** argv){
         }
     nav_msgs::msg::OccupancyGrid map_ = result.get()->map;
 
-    rclcpp::spin( std::make_shared<RobotNearestObstacle>(map_) );
+    // rclcpp::spin( std::make_shared<RobotNearestObstacle>(map_, "/tb3") );
+    auto node1 = std::make_shared<RobotNearestObstacle>(map_, "/tb3");
+    auto node2 = std::make_shared<RobotNearestObstacle>(map_, "/tb3_adv");
+    rclcpp::executors::MultiThreadedExecutor executor;
+    executor.add_node(node1);
+    executor.add_node(node2);
+    executor.spin();
+
     rclcpp::shutdown();
     return 0;
 }

@@ -20,14 +20,14 @@ def generate_launch_description():
     social_navigation_dir = get_package_share_directory('social_navigation')
 
     # world_file = os.path.join(social_navigation_dir, 'worlds', 'waffle_aws_hospital.world'),
-    turtle_bot3_demo = IncludeLaunchDescription(
+    turtle_bot3 = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(social_navigation_dir, 'launch/tb3_simulation_launch.py')),
         launch_arguments={
                 'headless': 'False',
                 'use_simulator': 'False',
-                # 'namespace': 'test',
-                # 'use_namespace': 'True'
+                # 'namespace': 'tb3',
+                # 'use_namespace': 'True',
                 'slam': 'False',
                 'map': os.path.join(social_navigation_dir, 'worlds', 'map_aws', 'my_map.yaml')
                 # 'world': world_file
@@ -40,7 +40,7 @@ def generate_launch_description():
     ld.add_action(env_cmd1)
     ld.add_action(env_cmd2)
     # ld.add_action(env_cmd3)
-    ld.add_action(turtle_bot3_demo)
+    ld.add_action(turtle_bot3)
     return ld
 
 # FOR SLAM and making a map
