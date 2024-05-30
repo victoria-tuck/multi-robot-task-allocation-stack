@@ -73,6 +73,7 @@ def generate_launch_description():
 
     declare_use_namespace_cmd = DeclareLaunchArgument(
         'use_namespace',
+        # default_value='true',
         default_value='false',
         description='Whether to apply a namespace to the navigation stack')
 

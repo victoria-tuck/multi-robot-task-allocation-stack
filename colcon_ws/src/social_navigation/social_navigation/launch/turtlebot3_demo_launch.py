@@ -20,7 +20,7 @@ def generate_launch_description():
             os.path.join(turtlebot_dir, 'launch/tb3_simulation_launch.py')),
         launch_arguments={
                 'headless': 'False',
-                # 'namespace': 'test',
+                # 'namespace': '/robot1',
                 # 'use_namespace': 'True'
                 'use_slam': 'True'
             }.items()

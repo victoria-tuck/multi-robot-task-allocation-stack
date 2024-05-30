@@ -87,7 +87,7 @@ def generate_launch_description():
 
     declare_use_namespace_cmd = DeclareLaunchArgument(
         'use_namespace',
-        default_value='false',
+        default_value='true',
         description='Whether to apply a namespace to the navigation stack')
 
     declare_slam_cmd = DeclareLaunchArgument(
@@ -125,6 +125,17 @@ def generate_launch_description():
         'log_level', default_value='info',
         description='log level')
 
+    param_substitutions = {
+        'global_costmap.global_costmap.ros__parameters.inflation_layer.inflation_radius': '10.0',
+        'local_costmap.local_costmap.ros__parameters.inflation_layer.inflation_radius': '10.0'
+    }
+
+    nav2_configured_params = RewrittenYaml(
+            source_file=params_file,
+            root_key=namespace,
+            param_rewrites=param_substitutions,
+            convert_types=True)
+
     # Specify the actions
     bringup_cmd_group = GroupAction([
         PushRosNamespace(
@@ -141,14 +152,14 @@ def generate_launch_description():
             remappings=remappings,
             output='screen'),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(os.path.join(launch_dir, 'slam_launch.py')),
-            condition=IfCondition(slam),
-            launch_arguments={'namespace': namespace,
-                              'use_sim_time': use_sim_time,
-                              'autostart': autostart,
-                              'use_respawn': use_respawn,
-                              'params_file': params_file}.items()),
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(os.path.join(launch_dir, 'slam_launch.py')),
+        #     condition=IfCondition(slam),
+        #     launch_arguments={'namespace': namespace,
+        #                       'use_sim_time': use_sim_time,
+        #                       'autostart': autostart,
+        #                       'use_respawn': use_respawn,
+        #                       'params_file': params_file}.items()),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(launch_dir,
@@ -167,7 +178,8 @@ def generate_launch_description():
             launch_arguments={'namespace': namespace,
                               'use_sim_time': use_sim_time,
                               'autostart': autostart,
-                              'params_file': params_file,
+                              'parameters': [nav2_configured_params],
+                            #   'params_file': params_file,
                               'use_composition': use_composition,
                               'use_respawn': use_respawn,
                               'container_name': 'nav2_container'}.items()),

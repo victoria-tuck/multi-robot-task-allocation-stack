@@ -111,6 +111,12 @@ def generate_launch_description():
         'log_level', default_value='info',
         description='log level')
 
+    declare_inflation_radius = DeclareLaunchArgument(
+        'inflation_radius',
+        default_value='1.0',
+        description='Inflation radius for the costmap'
+    )
+
     load_nodes = GroupAction(
         condition=IfCondition(PythonExpression(['not ', use_composition])),
         actions=[
@@ -120,7 +126,7 @@ def generate_launch_description():
                 output='screen',
                 respawn=use_respawn,
                 respawn_delay=2.0,
-                parameters=[configured_params],
+                parameters=[configured_params, {'controller_server.global_costmap.inflation_layer.inflation_radius': LaunchConfiguration('inflation_radius')}],
                 arguments=['--ros-args', '--log-level', log_level],
                 remappings=remappings + [('cmd_vel', 'cmd_vel_nav')]),
             Node(

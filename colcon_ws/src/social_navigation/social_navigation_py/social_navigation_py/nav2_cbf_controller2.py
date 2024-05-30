@@ -358,11 +358,11 @@ class RobotController(Node):
     
 def main(args=None):
     rclpy.init(args=args)
-    robot_controller = RobotController("robot1")
+    # robot_controller = RobotController("robot1")
     # robot_controller = RobotController('')
-    # robot_controller2 = RobotController("robot2")
-    # rclpy.spin(robot_controller2)
-    rclpy.spin(robot_controller)
+    robot_controller2 = RobotController("robot2")
+    rclpy.spin(robot_controller2)
+    # rclpy.spin(robot_controller)
     # executor = MultiThreadedExecutor()
     # executor.add_node(robot_controller)
     # executor.add_node(robot_controller2)

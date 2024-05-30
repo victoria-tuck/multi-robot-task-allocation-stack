@@ -22,8 +22,10 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.descriptions import ComposableNode, ParameterFile
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
+from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
@@ -101,7 +103,7 @@ def generate_launch_description():
 
     declare_params_file_cmd = DeclareLaunchArgument(
         'params_file',
-        default_value=os.path.join(bringup_dir, 'params', 'nav2_params.yaml'),
+        default_value=os.path.join(social_navigation_config_dir, 'nav2_params.yaml'),
         description='Full path to the ROS2 parameters file to use for all launched nodes')
 
     declare_autostart_cmd = DeclareLaunchArgument(
@@ -220,6 +222,31 @@ def generate_launch_description():
     #                       'use_sim_time': use_sim_time,
     #                       'params_file': params_file,
     #                       'autostart': autostart}.items())
+
+    # nav2_config_path = get_package_share_directory('social_navigation') + '/configs/nav2_params.yml'
+
+    # param_substitutions = {
+    #     'global_costmap.global_costmap.ros__parameters' : {'update_frequency' :0.0},
+    #     'local_costmap.local_costmap.ros__parameters' : {'update_frequency': 0.0},
+    #     'local_costmap.local_costmap.ros__parameters.inflation_layer' : {'inflation_radius': 1.0},
+    #     'global_costmap.global_costmap.ros__parameters.inflation_layer' : {'inflation_radius': 1.0}}
+
+    # param_substitutions = {}
+
+    # param_substitutions = {
+    #     'global_costmap.global_costmap.ros__parameters.inflation_layer.inflation_radius': '10.0',
+    #     'local_costmap.local_costmap.ros__parameters.inflation_layer.inflation_radius': '10.0'
+    # }
+
+    # configured_params = RewrittenYaml(
+    #         source_file=params_file,
+    #         root_key=namespace,
+    #         param_rewrites=param_substitutions,
+    #         convert_types=True)
+
+    # configured_params = {}
+
+    # print(f"{configured_params}")
     
     bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -229,6 +256,7 @@ def generate_launch_description():
                           'slam': slam,
                           'map': map_yaml_file,
                           'use_sim_time': use_sim_time,
+                        #   'parameters': [configured_params],
                           'params_file': params_file,
                           'autostart': autostart,
                           'use_composition': use_composition,

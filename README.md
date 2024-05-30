@@ -10,6 +10,14 @@
 This documentation is for `ozgur` branch of `hsr` repository and of this repository. The video accompanying this documentation can be found at 
 https://drive.google.com/file/d/144wxIIqVRloF_41ngfn34iR-X_7aCdBs/view?usp=drive_link
 
+To setup SMrTa, first compile bitwuzla by running
+```
+git submodule init
+git submodule update
+cd colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa
+sh setup_bitwuzla.sh
+```
+
 To prepare the environment, first, mount the correct folder in docker-compose.yaml. The colcon_ws (ROS2) workspace should be in mounted at /home/colcon_ws. Then to build the environment, run
 ```
 docker compose build
@@ -70,12 +78,17 @@ rcsetup
 
 ```
 
-4 To start the user controller
+4. To start social force model
+```
+rsfm
+```
+
+5. To start the user controller
 ```
 rcbf2
 ```
 
-5. Finally, when the controller status is ONLINE, run the following command to set goal and run controller simulation
+6. Finally, when the controller status is ONLINE, run the following command to set goal and run controller simulation
 ```
 rcpub
 ```

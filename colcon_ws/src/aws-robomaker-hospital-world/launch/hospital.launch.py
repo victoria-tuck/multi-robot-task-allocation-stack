@@ -7,13 +7,14 @@ from launch.substitutions import PythonExpression, LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
+from launch_ros.actions import Node, PushRosNamespace
 
 def generate_launch_description():
    
     # world_file_name = "waffle_aws_hospital.world"
     world_file_name = "aws_hospital_humans.world"
     world_file_name = "aws_hospital_humans_new_plugin3.world"
+    world_file_name = "aws_hospital_no_humans.world"
     # world_file_name = "hospital.world"
     world = os.path.join(get_package_share_directory('social_navigation'), 'worlds', world_file_name)
 
@@ -26,8 +27,20 @@ def generate_launch_description():
     headless = LaunchConfiguration('headless')
 
     # world = LaunchConfiguration('world')
-    pose = {'x': LaunchConfiguration('x_pose', default='-4.9'),
-            'y': LaunchConfiguration('y_pose', default='13.8'),
+    base_pose = {'x': LaunchConfiguration('x_pose', default='1.2'),
+            'y': LaunchConfiguration('y_pose', default='15.6'),
+            'z': LaunchConfiguration('z_pose', default='0.01'),
+            'R': LaunchConfiguration('roll', default='0.00'),
+            'P': LaunchConfiguration('pitch', default='0.00'),
+            'Y': LaunchConfiguration('yaw', default='0.00')}
+    # pose1 = {'x': LaunchConfiguration('x_pose', default='-4.9'),
+    #         'y': LaunchConfiguration('y_pose', default='13.8'),
+    #         'z': LaunchConfiguration('z_pose', default='0.01'),
+    #         'R': LaunchConfiguration('roll', default='0.00'),
+    #         'P': LaunchConfiguration('pitch', default='0.00'),
+    #         'Y': LaunchConfiguration('yaw', default='0.00')}
+    pose1 = {'x': LaunchConfiguration('x_pose', default='0.00'),
+            'y': LaunchConfiguration('y_pose', default='2.20'),
             'z': LaunchConfiguration('z_pose', default='0.01'),
             'R': LaunchConfiguration('roll', default='0.00'),
             'P': LaunchConfiguration('pitch', default='0.00'),
@@ -43,6 +56,7 @@ def generate_launch_description():
 
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace',
+        # default_value='robot1',
         default_value='',
         description='Top-level namespace')
     
@@ -82,25 +96,39 @@ def generate_launch_description():
                                       'gui': 'true'}.items(),
             )
     #ros2 launch gazebo_ros gazebo.launch.py params_file:=params.yml
-    start_gazebo_spawner_cmd = Node(
+    start_gazebo_spawner_cmd_base = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
         output='screen',
         arguments=[
             '-entity', robot_name,
             '-file', robot_sdf,
+            # '-robot_namespace', 'robot1',
             '-robot_namespace', namespace,
-            '-x', pose['x'], '-y', pose['y'], '-z', pose['z'],
-            '-R', pose['R'], '-P', pose['P'], '-Y', pose['Y']])
+            '-x', base_pose['x'], '-y', base_pose['y'], '-z', base_pose['z'],
+            '-R', base_pose['R'], '-P', base_pose['P'], '-Y', base_pose['Y']])
     
+    start_gazebo_spawner_cmd1 = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        output='screen',
+        arguments=[
+            '-entity', 'robot1',
+            '-file', robot_sdf,
+            '-robot_namespace', 'robot1',
+            # '-robot_namespace', namespace,
+            '-x', pose1['x'], '-y', pose1['y'], '-z', pose1['z'],
+            '-R', pose1['R'], '-P', pose1['P'], '-Y', pose1['Y']])
+
     start_gazebo_spawner_cmd2 = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
         output='screen',
         arguments=[
-            '-entity', 'adv',
+            '-entity', 'robot2',
             '-file', robot_sdf,
-            '-robot_namespace', '/adv',
+            '-robot_namespace', 'robot2',
+            # '-robot_namespace', namespace,
             '-x', pose2['x'], '-y', pose2['y'], '-z', pose2['z'],
             '-R', pose2['R'], '-P', pose2['P'], '-Y', pose2['Y']])
     
@@ -123,9 +151,12 @@ def generate_launch_description():
     ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(gazebo)
-    ld.add_action(start_gazebo_spawner_cmd)
+    ld.add_action(start_gazebo_spawner_cmd_base)
+    PushRosNamespace('robot1')
+    ld.add_action(start_gazebo_spawner_cmd1)
     # ld.add_action(start_gazebo_human_spawner_cmd)
-    # ld.add_action(start_gazebo_spawner_cmd2)
+    PushRosNamespace('robot2')
+    ld.add_action(start_gazebo_spawner_cmd2)
     return ld
 
 

@@ -11,37 +11,61 @@ def generate_launch_description():
     
     # Set environment variable
     env_cmd1 = SetEnvironmentVariable(name='TURTLEBOT3_MODEL', value='waffle')
+    env_cmd4 = SetEnvironmentVariable(name='TURTLEBOT3_MODEL', value='waffle2')
     env_cmd2 = SetEnvironmentVariable(name='GAZEBO_MODEL_PATH', value='$GAZEBO_MODEL_PATH:/opt/ros/galactic/share/turtlebot3_gazebo/models')
     env_cmd3 = SetEnvironmentVariable(name='GAZEBO_MODEL_PATH', value='$GAZEBO_MODEL_PATH:/home/colcon_ws/src/aws-robomaker-hospital-world/ignition_models')
 
 
     # Launch turtlebot
     # turtlebot_dir = get_package_share_directory('nav2_bringup')
-    social_navigation_dir = get_package_share_directory('social_navigation')
+    social_navigation_dir1 = get_package_share_directory('social_navigation')
+    social_navigation_dir2 = get_package_share_directory('social_navigation')
 
     # world_file = os.path.join(social_navigation_dir, 'worlds', 'waffle_aws_hospital.world'),
-    turtle_bot3_demo = IncludeLaunchDescription(
+    turtle_bot3_1 = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(social_navigation_dir, 'launch/tb3_simulation_launch.py')),
+            os.path.join(social_navigation_dir1, 'launch/tb3_simulation_launch.py')),
         launch_arguments={
                 'headless': 'False',
                 'use_simulator': 'False',
-                # 'namespace': 'robot1',
-                # 'use_namespace': 'True',
+                'namespace': 'tb3',
+                'use_namespace': 'True',
                 'slam': 'False',
-                'map': os.path.join(social_navigation_dir, 'worlds', 'map_aws', 'my_map.yaml')
+                'map': os.path.join(social_navigation_dir1, 'worlds', 'map_aws', 'my_map.yaml')
+                # 'world': world_file
+            }.items()
+        )
+    turtle_bot3_2 = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(social_navigation_dir2, 'launch/tb3_simulation_launch.py')),
+        launch_arguments={
+                'headless': 'False',
+                'use_simulator': 'False',
+                'namespace': 'tb3_adv',
+                'use_namespace': 'True',
+                'slam': 'False',
+                'map': os.path.join(social_navigation_dir2, 'worlds', 'map_aws', 'my_map.yaml')
                 # 'world': world_file
             }.items()
         )
     
     
-    
-    ld = LaunchDescription()
+    ld = LaunchDescription([
+        # PushRosNamespace('tb3'),
+        # turtle_bot3_1, 
+        # PushRosNamespace('tb3_adv'),
+        # turtle_bot3_2,
+    ])
     ld.add_action(env_cmd1)
     ld.add_action(env_cmd2)
+    ld.add_action(env_cmd4)
+    PushRosNamespace('tb3')
+    ld.add_action(turtle_bot3_1)
+    PushRosNamespace('tb3_adv')
+    ld.add_action(turtle_bot3_2)
     # ld.add_action(env_cmd3)
-    # PushRosNamespace('robot1')
-    ld.add_action(turtle_bot3_demo)
+    # ld.add_action(turtle_bot3_1)
+    # ld.add_action(turtle_bot3_2)
     return ld
 
 # FOR SLAM and making a map
