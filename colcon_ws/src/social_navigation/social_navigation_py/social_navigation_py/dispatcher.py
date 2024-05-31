@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from nav2_simple_commander.robot_navigator import BasicNavigator
+import pickle
 
 from geometry_msgs.msg import Pose, PoseArray
 
@@ -23,7 +24,7 @@ class Dispatcher(Node):
         self.name = name
 
         # MRTASolver arguments
-        file = 'benchmark/single/config/t_10_a_10_d_3-0.json'
+        file = 'benchmark/testcase.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
         capacity = 2
@@ -41,17 +42,28 @@ class Dispatcher(Node):
         num_aps = math.ceil(tot_tasks / num_agents) * 2 + 1
         aps_list = list(range(3, num_aps+1, 2))
 
-        room_dictionary = load_weighted_graph()
-        room_count, room_graph = dictionary_to_matrix(room_dictionary)
-
+        # room_dictionary = load_weighted_graph()
+        # room_count, room_graph = dictionary_to_matrix(room_dictionary)
+        with open('weighted_graph_hospital.pkl', 'rb') as file:
+            data = pickle.load(file)
+            room_count, room_graph = data
+        
         self.solver = MRTASolver(solver, theory, agents, tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
 
         sol = self.solver.extract_model(self.solver.s)
         print(sol)
         # Get coordinates from solution
+
+        coordinate_map = {0: (0, 2.2), 
+                          1: (4.25, -27.5), 
+                          2: (-7.75, -21.7), 
+                          3: (7.85, -21.8), 
+                          4: (7.9, -7.5), 
+                          5: (-7.75, -7.5)}
         def coord(rid):
             # TODO: get x, y coordinates from room id
-            return rid, rid + 1
+            # return rid, rid + 1
+            return coordinate_map.get(rid, None)
 
         self.pose_lists = []
         for agt in sol['agt']:

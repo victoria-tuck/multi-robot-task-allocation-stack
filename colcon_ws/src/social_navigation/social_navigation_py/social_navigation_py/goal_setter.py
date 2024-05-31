@@ -3,7 +3,6 @@ from rclpy.node import Node
 from rclpy.clock import Clock
 from rclpy.executors import MultiThreadedExecutor
 from nav2_simple_commander.robot_navigator import BasicNavigator
-import csv
 
 from geometry_msgs.msg import PoseStamped, PoseArray
 
@@ -36,24 +35,12 @@ class GoalSetter(Node):
 
         # self.navigator = BasicNavigator()
         # self.delivery_locations = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
-        self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
-        # self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7)]
-        self.starting_idx = 0
-        self.ending_idx = 1
-        self.goal_idx = 1
-        self.iteration = 1
-        self.max_iterations = 40
-        self.traveling_to_start = False
-        self.finished = False
-        # self.locs = [(0, 2.2), (4.25, -27.5)]
-        # self.locs = []
-        location_indices = list(range(len(self.locs)))
-        self.travel_times = {key1: {key2: [] for key2 in location_indices if key1 != key2} for key1 in location_indices}
-        self.arrived_at_start = False
-        self.pull_travel_time = False
-        self.start_time = None
+        # self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
+        self.locs = []
+        # self.travel_time = []
+        # self.pull_travel_time = False
+        # self.start_time = None
         self.loc_idx = 0
-        self.data_saved = False
 
         self.goal_reached = True
 
@@ -63,8 +50,8 @@ class GoalSetter(Node):
         print(f"{self.name} updated its goals: {self.locs}")
 
     def publish_goal(self):
-        if self.goal_idx < len(self.locs) and not self.finished:
-            goal = self.locs[self.goal_idx]
+        if self.loc_idx < len(self.locs):
+            goal = self.locs[self.loc_idx]
             if self.goal_reached:
                 msg = PoseStamped()
                 msg.header.frame_id = "map"
@@ -78,59 +65,21 @@ class GoalSetter(Node):
                 msg.pose.orientation.z = 0.0
                 msg.pose.orientation.w = 1.0
                 self.publisher_.publish(msg)
-                self.start_time = self.get_clock().now().nanoseconds * 1.0e-9
                 self.goal_reached = False
                 self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")
             else:
                 self.get_logger().info(f"Waiting for goal {goal} to be reached...")
-        elif not self.data_saved:
-            self.get_logger().info("All goals reached. Saving...")
-            with open("travel_time2.csv", "w") as f:
-                write = csv.writer(f)
-                for key1, sub_dict in self.travel_times.items():
-                    for key2, travel_time_list in sub_dict.items():
-                        write.writerow([key1] + [key2] + travel_time_list)
-            self.data_saved = True
 
     def listen_location_callback(self, msg):
         cur_loc = (msg.pose.position.x, msg.pose.position.y)
-        # print(f"Received {self.name}'s current location: {cur_loc}")
-        if self.goal_idx < len(self.locs):
-            if dist(self.locs[self.goal_idx], cur_loc) < DIST_THRES:
-                if self.start_time is not None:
-                    current_time = self.get_clock().now().nanoseconds * 1.0e-9
-                    travel_time = current_time - self.start_time
-                    print(f"Travel time: {travel_time}")
-                    if not self.traveling_to_start:
-                        if self.goal_idx == self.ending_idx:
-                            self.travel_times[self.starting_idx][self.ending_idx].append(travel_time)
-                        elif self.goal_idx == self.starting_idx:
-                            self.travel_times[self.ending_idx][self.starting_idx].append(travel_time)
-                        else:
-                            self.get_logger().info("Goal index value invalid")
-                    self.start_time = None  
-                if self.goal_idx == self.starting_idx:
-                    if self.iteration >= self.max_iterations:
-                        if self.ending_idx + 1 >= len(self.locs):
-                            if self.starting_idx + 2 >= len(self.locs):
-                                self.finished = True
-                            else:
-                                self.starting_idx += 1
-                                self.ending_idx = self.starting_idx + 1
-                                self.goal_idx = self.starting_idx
-                                self.traveling_to_start = True
-                                self.iteration = 0
-                        else:
-                            self.ending_idx += 1
-                            self.goal_idx = self.ending_idx
-                            self.iteration = 1
-                    else:
-                        if self.iteration == 0:
-                            self.traveling_to_start = False
-                        self.iteration += 1
-                        self.goal_idx = self.ending_idx
-                else:
-                    self.goal_idx = self.starting_idx
+        print(f"Received {self.name}'s current location: {cur_loc}")
+        if self.loc_idx < len(self.locs):
+            if dist(self.locs[self.loc_idx], cur_loc) < DIST_THRES:
+                # if self.start_time is not None:
+                #     current_time = Clock().now()
+                #     self.travel_time.append(current_time - self.start_time)
+                #     self.start_time = current_time
+                self.loc_idx += 1
                 # if self.loc_idx + 1 > len(self.locs):
                 #     self.start_time = None
                 # self.loc_idx = min(self.loc_idx + 1, len(self.locs) - 1)
