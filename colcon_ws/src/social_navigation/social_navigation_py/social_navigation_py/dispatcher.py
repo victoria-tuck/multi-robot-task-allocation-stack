@@ -16,6 +16,22 @@ from MRTASolver.create_randomized_inputs import load_config
 class Dispatcher(Node):
     def __init__(self, name='', robot_list=[]):
         super().__init__(f'dispatcher_{name}')
+
+        self.clock = self.get_clock()
+
+        def wait_for_non_zero_clock_time():
+            self.get_logger().info("Waiting for non-zero clock time...")
+            while rclpy.ok():
+                rclpy.spin_once(self, timeout_sec=0.1)
+                current_clock = self.clock.now()
+                current_time_s = current_clock.nanoseconds * 1e-9
+                if current_time_s > 0:
+                    self.run_start_time_s = current_time_s
+                    self.get_logger().info(f"Non-zero clock time received: {self.run_start_time_s} s")
+                    break
+
+        wait_for_non_zero_clock_time()
+
         self.get_logger().info("Dispatcher starts!")
 
         self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
@@ -78,6 +94,7 @@ class Dispatcher(Node):
 
         self.has_new_sequences = True
 
+
     def room_id(self, task_id, agents, tasks_stream):
         task_counts = [len(tasks) for tasks, _ in tasks_stream]
         num_agents = len(agents)
@@ -98,6 +115,15 @@ class Dispatcher(Node):
             prev_ids += curr_count * 2
         assert False, f"Task id {task_id} does not exist"
 
+
+    def create_pose_from_point(self, point) -> Pose:
+        msg = Pose()
+        print(point)
+        msg.position.x = float(point[0])
+        msg.position.y = float(point[1])
+        return msg
+    
+
     def publish_goal_sequence_callback(self):
         if self.has_new_sequences:
             for (name, publisher), pose_list in zip(self.publishers_.items(), self.pose_lists):
@@ -109,12 +135,6 @@ class Dispatcher(Node):
                 self.has_new_sequences = False
                 self.get_logger().info(f"New goal sequence sent to {name}: {msg}")
 
-    def create_pose_from_point(self, point) -> Pose:
-        msg = Pose()
-        print(point)
-        msg.position.x = float(point[0])
-        msg.position.y = float(point[1])
-        return msg
 
 def main(args=None):
     rclpy.init(args=args)
@@ -126,6 +146,7 @@ def main(args=None):
     rclpy.spin(dispatcher)
     dispatcher.destroy_node()
     rclpy.shutdown() 
+
 
 if __name__ == '__main__':
     main()
