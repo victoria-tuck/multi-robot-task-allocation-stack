@@ -40,7 +40,6 @@ class Dispatcher(Node):
         self.name = name
 
         # MRTASolver arguments
-        # file = 'benchmark/testcase.json'
         file = 'simulation/testcase.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
