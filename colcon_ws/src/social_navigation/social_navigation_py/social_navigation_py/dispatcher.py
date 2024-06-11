@@ -36,9 +36,23 @@ class Dispatcher(Node):
 
         self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
         self.timer_period = 1.0
-        self.timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
-        self.name = name
+        self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
+        self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
 
+        self.name = name
+        self.task_set_index = 0
+
+        self.pose_lists = []
+        # _, current_plan = self.plans[0]
+        # for agt in current_plan['agt']:
+        #     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
+        #     self.pose_lists.append([self.coord(rid) for rid in room_ids])
+
+        # self.has_new_sequences = True
+
+        self.generate_plans()
+
+    def generate_plans(self):
         # MRTASolver arguments
         file = 'simulation/testcase.json'
         solver = 'bitwuzla'
@@ -52,9 +66,9 @@ class Dispatcher(Node):
         incremental = True
         verbose = False
         
-        agents, tasks_stream = load_config(file)
-        num_agents = len(agents)
-        tot_tasks = sum([len(tasks) for tasks, _ in tasks_stream])
+        self.agents, self.tasks_stream = load_config(file)
+        num_agents = len(self.agents)
+        tot_tasks = sum([len(tasks) for tasks, _ in self.tasks_stream])
         num_aps = math.ceil(tot_tasks / num_agents) * 2 + 1
         aps_list = list(range(3, num_aps+1, 2))
 
@@ -64,36 +78,19 @@ class Dispatcher(Node):
             data = pickle.load(file)
             room_count, room_graph = data
         
-        self.solver = MRTASolver(solver, theory, agents, tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
+        self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
+        self.plans = self.solver.solutions
 
-        sol = self.solver.extract_model(self.solver.s)
-        print(sol)
-        # Get coordinates from solution
-
+    def coord(self, rid):
         coordinate_map = {0: (0, 2.2), 
                           1: (4.25, -27.5), 
                           2: (-7.75, -21.7), 
                           3: (7.85, -21.8), 
                           4: (7.9, -7.5), 
                           5: (-7.75, -7.5)}
-        def coord(rid):
-            # TODO: get x, y coordinates from room id
-            # return rid, rid + 1
-            return coordinate_map.get(rid, None)
-
-        self.pose_lists = []
-        for agt in sol['agt']:
-            room_ids = [self.room_id(rid, agents, tasks_stream) for rid in agt['id']]
-            self.pose_lists.append([coord(rid) for rid in room_ids])
-        
-
-        # self.pose_lists = [
-        #         [(6.5, 11.5), (0.0, 2.0), (5.0, -9.0)],
-        #         [(0.0, 2.0), (5.0, -9.0), (6.5, 11.5)]
-        #         ]
-
-        self.has_new_sequences = True
-
+        # TODO: get x, y coordinates from room id
+        # return rid, rid + 1
+        return coordinate_map.get(rid, None)
 
     def room_id(self, task_id, agents, tasks_stream):
         task_counts = [len(tasks) for tasks, _ in tasks_stream]
@@ -115,14 +112,26 @@ class Dispatcher(Node):
             prev_ids += curr_count * 2
         assert False, f"Task id {task_id} does not exist"
 
-
     def create_pose_from_point(self, point) -> Pose:
         msg = Pose()
         print(point)
         msg.position.x = float(point[0])
         msg.position.y = float(point[1])
         return msg
-    
+
+    def update_plan_callback(self):
+        current_time_s = self.clock.now().nanoseconds * 1e-9
+        if self.task_set_index < len(self.plans):
+            next_batch_arrives, next_plan = self.plans[self.task_set_index]
+            self.get_logger().info(f"Current time: {current_time_s - self.run_start_time_s}")
+            if current_time_s - self.run_start_time_s > next_batch_arrives:
+                pose_lists = []
+                for agt in next_plan['agt']:
+                    room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
+                    pose_lists.append([self.coord(rid) for rid in room_ids])
+                self.pose_lists = pose_lists
+                self.task_set_index += 1
+                self.has_new_sequences = True
 
     def publish_goal_sequence_callback(self):
         if self.has_new_sequences:

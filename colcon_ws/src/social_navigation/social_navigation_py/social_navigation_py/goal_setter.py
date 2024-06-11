@@ -46,7 +46,7 @@ class GoalSetter(Node):
 
     def goal_sequence_callback(self, msg):
         self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
-        self.loc_idx = 0
+        # self.loc_idx = 0
         print(f"{self.name} updated its goals: {self.locs}")
 
     def publish_goal(self):
@@ -72,7 +72,7 @@ class GoalSetter(Node):
 
     def listen_location_callback(self, msg):
         cur_loc = (msg.pose.position.x, msg.pose.position.y)
-        print(f"Received {self.name}'s current location: {cur_loc}")
+        # print(f"Received {self.name}'s current location: {cur_loc}")
         if self.loc_idx < len(self.locs):
             if dist(self.locs[self.loc_idx], cur_loc) < DIST_THRES:
                 # if self.start_time is not None:
