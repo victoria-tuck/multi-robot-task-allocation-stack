@@ -136,7 +136,7 @@ class RobotController(Node):
         
     def controller_plan_init_callback(self, msg):
         self.planner_init = msg.data
-        print(f"Started {self.name}")
+        # print(f"Started {self.name}")
 
     def human_state_callback(self, msg):
         self.human_states_valid = False
@@ -210,7 +210,7 @@ class RobotController(Node):
         #     print(f"new_goal_pose: {self.new_goal_pose}")
         # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
         if not self.goal_init and self.new_goal_pose is not None:
-            print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
+            # print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
             if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
                 # if self.print_count > 100:
                 #     print("Start planning...")
@@ -338,8 +338,8 @@ class RobotController(Node):
                 # control.angular.z = 0.0
             # control.linear.x = speed
             # control.angular.z = omega
-            if self.print_count > 10:
-                print(f"Robot's name: {self.name}")
+            # if self.print_count > 10:
+            #     print(f"Robot's name: {self.name}")
                 # print(f"{self.name}'s control: {control}")
                 # print(f"{self.name}'s intended control: {speed}, {omega}")
             self.robot_command_pub.publish(control)

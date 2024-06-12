@@ -83,7 +83,7 @@ class Dispatcher(Node):
 
     def coord(self, rid):
         coordinate_map = {0: (0, 2.2), 
-                          1: (4.25, -27.5), 
+                          1: (4.25, -27.5), # updated to (4.5, -27.75), # was (4.25, -27.5)
                           2: (-7.75, -21.7), 
                           3: (7.85, -21.8), 
                           4: (7.9, -7.5), 
@@ -129,6 +129,11 @@ class Dispatcher(Node):
                 for agt in next_plan['agt']:
                     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
                     pose_lists.append([self.coord(rid) for rid in room_ids])
+                    # Test case that some times caused issues:
+                    # if self.task_set_index == 0:
+                    #     pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
+                    # else:
+                    #     pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
                 self.pose_lists = pose_lists
                 self.task_set_index += 1
                 self.has_new_sequences = True
@@ -139,7 +144,7 @@ class Dispatcher(Node):
                 msg = PoseArray()
                 msg.header.frame_id = "map"
                 msg.header.stamp = self.get_clock().now().to_msg()
-                msg.poses = [self.create_pose_from_point(pose) for pose in pose_list]
+                msg.poses = [self.create_pose_from_point(pose) for pose in pose_list][1:]
                 publisher.publish(msg)
                 self.has_new_sequences = False
                 self.get_logger().info(f"New goal sequence sent to {name}: {msg}")

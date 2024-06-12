@@ -22,6 +22,9 @@ class GoalSetter(Node):
         else:
             prefix = ""
 
+        self.clock = self.get_clock()
+        self.actual_arrival_times = []
+
         self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
         # self.subscriber = self.create_subscription( PoseArray, '/goal_sequence', self.goal_sequence_callback, 10 )
 
@@ -79,6 +82,9 @@ class GoalSetter(Node):
                 #     current_time = Clock().now()
                 #     self.travel_time.append(current_time - self.start_time)
                 #     self.start_time = current_time
+                current_clock = self.clock.now()
+                self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
+                print(self.actual_arrival_times)
                 self.loc_idx += 1
                 # if self.loc_idx + 1 > len(self.locs):
                 #     self.start_time = None
