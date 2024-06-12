@@ -35,15 +35,24 @@ class RobotController(Node):
         self.name = name
         self.prefix = prefix
 
-        # Variables
-        self.num_humans = 20 # upper bound
-        self.num_obstacles = 12 # exact
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
+
+        # Obstacles
+        self.num_obstacles = 12 # exact
         self.obstacle_states = np.zeros((2,self.num_obstacles))
+
+        # Dynamic Obstacles
+        self.num_other_robots = 1 # exact
+        self.num_humans = 20 # upper bound
+        self.num_dynamic_obstacles = self.num_other_robots + self.num_humans
+        self.other_robot_states = 100*np.ones((2,self.num_other_robots))
+        self.other_robot_states_prev = np.zeros((2,self.num_other_robots))
+        self.other_robot_states_dot = np.zeros((2,self.num_other_robots))
         self.human_states = 100*np.ones((2,self.num_humans))
         self.human_states_prev = np.zeros((2,self.num_humans))
-        # self.t_human = self.get_clock().now().nanoseconds
-        self.human_states_dot = np.zeros((2,self.num_humans)) 
+        self.human_states_dot = np.zeros((2,self.num_humans))
+
+        # Parameters
         self.robot_radius = 0.18
         self.replan_count = 0
         self.print_count = 0
@@ -54,16 +63,19 @@ class RobotController(Node):
         
         #Controller
         self.control_prev  = np.array([0.0,0.0])
-        self.controller = cbf_controller( self.robot_state, self.num_humans, self.num_obstacles)
+        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles)
 
         # Call once to initiate JAX JIT
         if self.controller_id == 0:
-            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, self.time_step)
+            self.dynamic_obstacle_states_valid, self.human_states_valid, self.other_robot_states_valid = True, True, True
+            self.update_dynamic_obstacles()
+            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, self.time_step)
         elif self.controller_id == 1:
             self.controller.policy_nominal(self.robot_state, self.goal, self.time_step)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
+        self.other_robot_state_sub = self.create_subscription(Odometry, '/robot1/odom', self.other_robot_state_callback, 10)
         self.robot_state_subscriber = self.create_subscription( Odometry, self.prefix + '/odom', self.robot_state_callback, 10 )
         # self.goal_pose_subscriber = self.create_subscription( PoseStamped, '/goal_pose_custom', self.robot_goal_callback, 10 )
         self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, self.prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
@@ -75,6 +87,7 @@ class RobotController(Node):
         # self.goal_listener = self.create_subscription( PoseStamped, prefix + '/goal_location', self.new_goal_callback, 1 )
         self.new_goal_pose = None
         self.human_states_valid = False
+        self.other_robot_states_valid = False
         self.robot_state_valid = False
         self.path_active = False
         self.obstacles_valid = False
@@ -103,7 +116,6 @@ class RobotController(Node):
         self.navigator = BasicNavigator()
         self.path = Path() 
         self.path_waypoint_index = 0
-
         
         self.get_logger().info("User Controller is ONLINE")
         self.timer = self.create_timer(self.timer_period, self.controller_callback)
@@ -111,22 +123,40 @@ class RobotController(Node):
         self.time_prev = self.get_clock().now().nanoseconds
         
         print(f"time: {self.time_prev}")
-        # exit()
 
-
-        # Goal
         self.robot_goal = np.array([1,1]).reshape(-1,1)
+
+    def update_dynamic_obstacles(self):
+        if self.human_states_valid and self.other_robot_states_valid and self.dynamic_obstacle_states_valid:
+            self.dynamic_obstacle_states_valid = False
+            self.dynamic_obstacle_states = np.hstack((self.other_robot_states, self.human_states))
+            self.dynamic_obstacle_states_prev = np.hstack((self.other_robot_states_prev, self.human_states_prev))
+            self.dynamic_obstacle_states_dot = np.hstack((self.other_robot_states_dot, self.human_states_dot))
+            self.dynamic_obstacle_states_valid = True
         
     def controller_plan_init_callback(self, msg):
         self.planner_init = msg.data
         print(f"Started {self.name}")
 
     def human_state_callback(self, msg):
+        self.human_states_valid = False
         self.human_states_prev = np.copy(self.human_states)
         for i in range( len(msg.states) ):#:self.num_humans):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
             self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
         self.human_states_valid = True
+        self.update_dynamic_obstacles()
+
+    def other_robot_state_callback(self, msg):
+        self.other_robot_states_prev = np.copy(self.other_robot_states)
+        self.other_robot_states_valid = False
+        # just handling one robot
+        position = msg.pose.pose.position
+        self.other_robot_states = np.array([[position.x], [position.y]])
+        velocity = msg.twist.twist.linear
+        self.other_robot_states_dot = np.array([[velocity.x], [velocity.y]])
+        self.other_robot_states_valid = True
+        self.update_dynamic_obstacles()
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
@@ -271,14 +301,15 @@ class RobotController(Node):
             # self.get_logger().info(f"dt: {dt}")
             try:                
                 if self.controller_id == 0:
-                    speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
+                    speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                    # speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
                 elif self.controller_id == 1:
-                    speed, omega, h_human_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
+                    speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                 
                 # Check if any collision constraints violated
-                if h_human_min < -0.01:
-                    self.h_min_human_count += 1
-                    self.get_logger().info(f"human violate: {self.h_min_human_count}")
+                if h_dyn_obs_min < -0.01:
+                    self.h_min_dyn_obs_count += 1
+                    self.get_logger().info(f"dynamic obstacle violate: {self.h_min_dyn_obs_count}")
                 if h_obs_min < -0.01:
                     self.h_min_obs_count = 0
                     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
@@ -358,15 +389,8 @@ class RobotController(Node):
     
 def main(args=None):
     rclpy.init(args=args)
-    # robot_controller = RobotController("robot1")
-    # robot_controller = RobotController('')
     robot_controller2 = RobotController("robot2")
     rclpy.spin(robot_controller2)
-    # rclpy.spin(robot_controller)
-    # executor = MultiThreadedExecutor()
-    # executor.add_node(robot_controller)
-    # executor.add_node(robot_controller2)
-    # executor.spin()
     rclpy.shutdown()
     
 if __name__ == '__main__':
