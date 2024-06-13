@@ -7,8 +7,10 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 from geometry_msgs.msg import PoseStamped, PoseArray
 
 import math
+import numpy as np
 
-DIST_THRES = 0.5
+DIST_THRES = 1
+GOAL_REGION_RADIUS = 0 #0.25 #0.5
 
 def dist(c1, c2):
     return math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)
@@ -60,8 +62,9 @@ class GoalSetter(Node):
                 msg.header.frame_id = "map"
                 msg.header.stamp = self.get_clock().now().to_msg()
                 # msg.header.stamp = self.navigator.get_clock().now().to_msg()
-                msg.pose.position.x = float(goal[0])
-                msg.pose.position.y = float(goal[1])
+                rng = np.random.default_rng()
+                msg.pose.position.x = float(goal[0]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
+                msg.pose.position.y = float(goal[1]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
                 msg.pose.position.z = 0.01
                 msg.pose.orientation.x = 0.0
                 msg.pose.orientation.y = 0.0
@@ -70,8 +73,8 @@ class GoalSetter(Node):
                 self.publisher_.publish(msg)
                 self.goal_reached = False
                 self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")
-            else:
-                self.get_logger().info(f"Waiting for goal {goal} to be reached...")
+            # else:
+                # self.get_logger().info(f"Waiting for goal {goal} to be reached...")
 
     def listen_location_callback(self, msg):
         cur_loc = (msg.pose.position.x, msg.pose.position.y)
