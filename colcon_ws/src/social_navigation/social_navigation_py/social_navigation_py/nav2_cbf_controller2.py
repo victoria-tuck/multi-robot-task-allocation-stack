@@ -63,7 +63,7 @@ class RobotController(Node):
         
         #Controller
         self.control_prev  = np.array([0.0,0.0])
-        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 0.05, 0.1)
+        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
 
         # Call once to initiate JAX JIT
         if self.controller_id == 0:
@@ -95,7 +95,7 @@ class RobotController(Node):
         self.goal_init = False
         self.planner_init = False
         self.error_count = 0
-        self.h_min_human_count = 0
+        self.h_min_dyn_obs_count = 0
         self.h_min_obs_count = 0
         self.state_plotting_data = [[0],[0],[0]]
         self.goal_plotting_data = [[0],[0]]
@@ -139,7 +139,7 @@ class RobotController(Node):
         # print(f"Started {self.name}")
 
     def human_state_callback(self, msg):
-        self.human_states_valid = False
+        # self.human_states_valid = False
         self.human_states_prev = np.copy(self.human_states)
         for i in range( len(msg.states) ):#:self.num_humans):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
@@ -149,7 +149,7 @@ class RobotController(Node):
 
     def other_robot_state_callback(self, msg):
         self.other_robot_states_prev = np.copy(self.other_robot_states)
-        self.other_robot_states_valid = False
+        # self.other_robot_states_valid = False
         # just handling one robot
         position = msg.pose.pose.position
         self.other_robot_states = np.array([[position.x], [position.y]])
@@ -247,10 +247,14 @@ class RobotController(Node):
                         if self.print_count > 10:
                             print(f"Should be initial pose: {path.poses[0].pose.position}")
                             print(f"Requested initial pose: {initial_pose.pose.position}")
+                        print(f"Should be goal pose: {path.poses[-1].pose.position}")
+                        print(f"Requested goal pose: {self.goal_pose.pose.position}")
                         assert path is not None
-                        close_x = abs(path.poses[0].pose.position.x - initial_pose.pose.position.x) < 0.05
-                        close_y = abs(path.poses[0].pose.position.y - initial_pose.pose.position.y) < 0.05
-                        assert close_x and close_y
+                        initial_pose_close_x = abs(path.poses[0].pose.position.x - initial_pose.pose.position.x) < 0.05
+                        initial_pose_close_y = abs(path.poses[0].pose.position.y - initial_pose.pose.position.y) < 0.05
+                        goal_pose_close_x = abs(path.poses[-1].pose.position.x - self.goal_pose.pose.position.x) < 0.05
+                        goal_pose_close_y = abs(path.poses[-1].pose.position.y - self.goal_pose.pose.position.y) < 0.05
+                        assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
                         print(f"Updated {self.name}'s path")
                         # if close_x and close_y:
                         self.path = path

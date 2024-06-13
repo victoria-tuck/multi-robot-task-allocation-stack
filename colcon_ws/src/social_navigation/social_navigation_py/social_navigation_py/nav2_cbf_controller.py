@@ -95,7 +95,7 @@ class RobotController(Node):
         self.goal_init = False
         self.planner_init = False
         self.error_count = 0
-        self.h_min_human_count = 0
+        self.h_min_dyn_obs_count = 0
         self.h_min_obs_count = 0
         self.state_plotting_data = [[0],[0],[0]]
         self.goal_plotting_data = [[0],[0]]
@@ -128,7 +128,7 @@ class RobotController(Node):
 
     def update_dynamic_obstacles(self):
         if self.human_states_valid and self.other_robot_states_valid and self.dynamic_obstacle_states_valid:
-            self.dynamic_obstacle_states_valid = False
+            # self.dynamic_obstacle_states_valid = False
             self.dynamic_obstacle_states = np.hstack((self.other_robot_states, self.human_states))
             self.dynamic_obstacle_states_prev = np.hstack((self.other_robot_states_prev, self.human_states_prev))
             self.dynamic_obstacle_states_dot = np.hstack((self.other_robot_states_dot, self.human_states_dot))
@@ -139,7 +139,7 @@ class RobotController(Node):
         # print(f"Started {self.name}")
 
     def human_state_callback(self, msg):
-        self.human_states_valid = False
+        # self.human_states_valid = False
         self.human_states_prev = np.copy(self.human_states)
         for i in range( len(msg.states) ):#:self.num_humans):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
@@ -248,9 +248,11 @@ class RobotController(Node):
                             print(f"Should be initial pose: {path.poses[0].pose.position}")
                             print(f"Requested initial pose: {initial_pose.pose.position}")
                         assert path is not None
-                        close_x = abs(path.poses[0].pose.position.x - initial_pose.pose.position.x) < 0.05
-                        close_y = abs(path.poses[0].pose.position.y - initial_pose.pose.position.y) < 0.05
-                        assert close_x and close_y
+                        initial_pose_close_x = abs(path.poses[0].pose.position.x - initial_pose.pose.position.x) < 0.05
+                        initial_pose_close_y = abs(path.poses[0].pose.position.y - initial_pose.pose.position.y) < 0.05
+                        goal_pose_close_x = abs(path.poses[-1].pose.position.x - self.goal_pose.pose.position.x) < 0.05
+                        goal_pose_close_y = abs(path.poses[-1].pose.position.y - self.goal_pose.pose.position.y) < 0.05
+                        assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
                         print(f"Updated {self.name}'s path")
                         # if close_x and close_y:
                         self.path = path
@@ -311,7 +313,7 @@ class RobotController(Node):
                     self.h_min_dyn_obs_count += 1
                     self.get_logger().info(f"dynamic obstacle violate: {self.h_min_dyn_obs_count}")
                 if h_obs_min < -0.01:
-                    self.h_min_obs_count = 0
+                    self.h_min_obs_count += 1
                     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
             except Exception as e:
                 speed = self.control_prev[0]  #0.0
