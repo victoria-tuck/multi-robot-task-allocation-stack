@@ -136,7 +136,7 @@ class RobotController(Node):
         
     def controller_plan_init_callback(self, msg):
         self.planner_init = msg.data
-        print(f"Started {self.name}")
+        # print(f"Started {self.name}")
 
     def human_state_callback(self, msg):
         self.human_states_valid = False
@@ -279,8 +279,8 @@ class RobotController(Node):
                 else:
                     break
             
-            # if self.print_count > 10:
-            #     print(f"{self.name}'s Current goal: {goal}")
+            if self.print_count > 10:
+                print(f"{self.name}'s Current goal: {goal}")
 
             # Publish path for visualization (no other use)
             # self.nav2_path_publisher.publish(self.path)
@@ -324,24 +324,8 @@ class RobotController(Node):
 
             ############## Publish Control Input ###################
             control = Twist()
-            if self.name == "robot2":
-                control.linear.x = speed
-                control.angular.z = omega
-                # control.linear.x = 0.0
-                # control.angular.z = -2.0
-                # control.linear.x = 0.0
-                # control.angular.z = 0.0
-            elif self.name == "robot1":
-                control.linear.x = speed
-                control.angular.z = omega
-                # control.linear.x = 0.2
-                # control.angular.z = 0.0
-            # control.linear.x = speed
-            # control.angular.z = omega
-            if self.print_count > 10:
-                print(f"Robot's name: {self.name}")
-                # print(f"{self.name}'s control: {control}")
-                # print(f"{self.name}'s intended control: {speed}, {omega}")
+            control.linear.x = speed
+            control.angular.z = omega
             self.robot_command_pub.publish(control)
             self.replan_count += 1
             # self.robot_state_valid = False

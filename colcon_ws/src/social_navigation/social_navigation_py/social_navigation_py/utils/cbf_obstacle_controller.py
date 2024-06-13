@@ -26,15 +26,16 @@ class cbf_controller:
     dt = 0.01
     controller2_base_layer = 0
     
-    def __init__(self, robot_init_state, num_people, num_obstacles):
+    def __init__(self, robot_init_state, num_people, num_obstacles, dynamic_alpha1=1.0, dynamic_alpha2=2.0):
 
         # Sim parameters
         self.t = 0
         cbf_controller.dt = 0.03
         cbf_controller.num_people = num_people
         cbf_controller.num_obstacles = num_obstacles
-        cbf_controller.alpha1_human = 1*np.ones(cbf_controller.num_people) #1 # v5:1, v6: 1
-        cbf_controller.alpha2_human = 2*np.ones(cbf_controller.num_people) #3 # v5:2, v6: 2
+        cbf_controller.alpha1_human = dynamic_alpha1*np.ones(cbf_controller.num_people)
+        # cbf_controller.alpha1_human = 1*np.ones(cbf_controller.num_people) #1 # v5:1, v6: 1
+        cbf_controller.alpha2_human = dynamic_alpha2*np.ones(cbf_controller.num_people) #3 # v5:2, v6: 2
         cbf_controller.alpha1_obstacle = 2*np.ones(cbf_controller.num_obstacles+1) #2 # v5:2, v6: 2
         cbf_controller.alpha2_obstacle = 6*np.ones(cbf_controller.num_obstacles+1) # 6 # v5:6, v6: 4
         cbf_controller.alpha_polytope = 2.0 #2.0

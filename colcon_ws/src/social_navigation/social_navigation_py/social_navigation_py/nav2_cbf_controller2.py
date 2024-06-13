@@ -63,7 +63,7 @@ class RobotController(Node):
         
         #Controller
         self.control_prev  = np.array([0.0,0.0])
-        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles)
+        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 0.05, 0.1)
 
         # Call once to initiate JAX JIT
         if self.controller_id == 0:
@@ -279,8 +279,8 @@ class RobotController(Node):
                 else:
                     break
             
-            # if self.print_count > 10:
-            #     print(f"{self.name}'s Current goal: {goal}")
+            if self.print_count > 10:
+                print(f"{self.name}'s Current goal: {goal}")
 
             # Publish path for visualization (no other use)
             # self.nav2_path_publisher.publish(self.path)
