@@ -130,14 +130,14 @@ class Dispatcher(Node):
                     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
                     pose_lists.append([self.coord(rid) for rid in room_ids])
                     # Test case that some times caused issues:
-                    if self.task_set_index == 0:
+                    # if self.task_set_index == 0:
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5),(-7.75, -7.5)]]
-                        pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
                         # pose_lists = [[(0, 2.2), (-7.75, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                    else:
+                    # else:
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
-                        pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
                 self.pose_lists = pose_lists
                 self.task_set_index += 1
@@ -152,7 +152,7 @@ class Dispatcher(Node):
                 msg.poses = [self.create_pose_from_point(pose) for pose in pose_list][1:]
                 publisher.publish(msg)
                 self.has_new_sequences = False
-                self.get_logger().info(f"New goal sequence sent to {name}: {msg}")
+                self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
 
 
 def main(args=None):

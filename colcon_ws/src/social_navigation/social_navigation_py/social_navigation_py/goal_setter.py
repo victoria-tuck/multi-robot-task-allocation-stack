@@ -10,7 +10,7 @@ import math
 import numpy as np
 
 DIST_THRES = 1
-GOAL_REGION_RADIUS = 0 #0.25 #0.5
+GOAL_REGION_RADIUS = 0.25 #0.25 #0.5
 
 def dist(c1, c2):
     return math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)
