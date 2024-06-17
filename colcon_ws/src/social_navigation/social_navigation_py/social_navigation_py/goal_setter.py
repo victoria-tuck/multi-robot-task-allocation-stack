@@ -5,6 +5,7 @@ from rclpy.executors import MultiThreadedExecutor
 from nav2_simple_commander.robot_navigator import BasicNavigator
 
 from geometry_msgs.msg import PoseStamped, PoseArray
+from social_navigation_msgs.msg import Feedback
 
 import math
 import numpy as np
@@ -33,9 +34,11 @@ class GoalSetter(Node):
         self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
         # self.publisher_ = self.create_publisher(PoseStamped, '/goal_location', 1)
         self.timer_period = 1.0
-        self.timer = self.create_timer(self.timer_period, self.publish_goal)
+        self.goal_timer = self.create_timer(self.timer_period, self.publish_goal)
+        self.feedback_timer = self.create_timer(self.timer_period, self.publish_feedback)
         self.name = name
         self.location_listener = self.create_subscription(PoseStamped, prefix + '/robot_location', self.listen_location_callback, 1)
+        self.feedback_publisher = self.create_publisher(Feedback, prefix + '/feedback', 1)
         # self.location_listener = self.create_subscription(PoseStamped, '/robot_location', self.listen_location_callback, 1)
 
         # self.navigator = BasicNavigator()
@@ -86,13 +89,19 @@ class GoalSetter(Node):
                 #     self.travel_time.append(current_time - self.start_time)
                 #     self.start_time = current_time
                 current_clock = self.clock.now()
-                self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
+                self.actual_arrival_times.append(math.ceil(current_clock.nanoseconds * 1e-9))
                 print(self.actual_arrival_times)
                 self.loc_idx += 1
                 # if self.loc_idx + 1 > len(self.locs):
                 #     self.start_time = None
                 # self.loc_idx = min(self.loc_idx + 1, len(self.locs) - 1)
                 self.goal_reached = True
+
+    def publish_feedback(self):
+        msg = Feedback()
+        msg.timing_feedback = self.actual_arrival_times
+        self.feedback_publisher.publish(msg)
+
 
 def main(args=None):
     rclpy.init(args=args)

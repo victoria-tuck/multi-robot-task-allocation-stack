@@ -5,6 +5,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 import pickle
 
 from geometry_msgs.msg import Pose, PoseArray
+from social_navigation_msgs.msg import Feedback
 
 import math
 
@@ -35,6 +36,9 @@ class Dispatcher(Node):
         self.get_logger().info("Dispatcher starts!")
 
         self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
+        # self.feedback_subscriber = self.create_subscription( Feedback,  f'/robot1/feedback', self.feedback_callback, 1)
+        self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) } 
+        # print(self.feedback_subscribers)
         self.timer_period = 1.0
         self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
         self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
@@ -43,6 +47,7 @@ class Dispatcher(Node):
         self.task_set_index = 0
 
         self.pose_lists = []
+        self.feedback = [None] * len(robot_list)
         # _, current_plan = self.plans[0]
         # for agt in current_plan['agt']:
         #     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
@@ -158,6 +163,13 @@ class Dispatcher(Node):
                 publisher.publish(msg)
                 self.has_new_sequences = False
                 self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
+
+    def make_feedback_callback(self, index):
+        def feedback_callback(msg):
+            timing_feedback = [sim_time - self.run_start_time_s for sim_time in msg.timing_feedback]
+            self.feedback[index] = timing_feedback
+            print(f"Feedback received so far: {self.feedback}")
+        return feedback_callback
 
 
 def main(args=None):
