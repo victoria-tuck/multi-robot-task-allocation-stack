@@ -48,7 +48,7 @@ class Dispatcher(Node):
         #     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
         #     self.pose_lists.append([self.coord(rid) for rid in room_ids])
 
-        # self.has_new_sequences = True
+        self.has_new_sequences = False
 
         self.generate_plans()
 
@@ -79,7 +79,9 @@ class Dispatcher(Node):
             room_count, room_graph = data
         
         self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
-        self.plans = self.solver.solutions
+        # self.solver.allocate_task_stream()
+        self.plans = []
+        self.has_new_sequences = True
 
     def coord(self, rid):
         coordinate_map = {0: (0, 2.2), 
@@ -121,10 +123,13 @@ class Dispatcher(Node):
 
     def update_plan_callback(self):
         current_time_s = self.clock.now().nanoseconds * 1e-9
-        if self.task_set_index < len(self.plans):
-            next_batch_arrives, next_plan = self.plans[self.task_set_index]
+        if self.task_set_index < len(self.tasks_stream):
+            next_tasks, next_batch_arrives = self.tasks_stream[self.task_set_index]
+            # next_batch_arrives, next_plan = self.plans[self.task_set_index]
             self.get_logger().info(f"Current time: {current_time_s - self.run_start_time_s}")
             if current_time_s - self.run_start_time_s > next_batch_arrives:
+                next_plan = self.solver.allocate_next_task_set()
+                self.plans.append(next_plan)
                 pose_lists = []
                 for agt in next_plan['agt']:
                     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
