@@ -47,7 +47,7 @@ class Dispatcher(Node):
         self.task_set_index = 0
 
         self.pose_lists = []
-        self.feedback = [None] * len(robot_list)
+        self.feedback = [[] for i in range(len(robot_list))]
         # _, current_plan = self.plans[0]
         # for agt in current_plan['agt']:
         #     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
@@ -119,6 +119,22 @@ class Dispatcher(Node):
             prev_ids += curr_count * 2
         assert False, f"Task id {task_id} does not exist"
 
+    def is_agent_id(self, id, num_agents):
+        return id >= 0 and id < num_agents
+
+    def get_plan(self, id_sequence, agents, tasks_stream):
+        num_agents = len(agents)
+        plan = []
+        started_plan = False
+        for i, task_id in enumerate(id_sequence):
+            print(task_id)
+            if self.is_agent_id(task_id, num_agents) and started_plan:
+                return plan
+            else:
+                started_plan = True
+            plan.append(self.room_id(task_id, agents, tasks_stream))
+        return plan
+
     def create_pose_from_point(self, point) -> Pose:
         msg = Pose()
         print(point)
@@ -133,11 +149,12 @@ class Dispatcher(Node):
             # next_batch_arrives, next_plan = self.plans[self.task_set_index]
             self.get_logger().info(f"Current time: {current_time_s - self.run_start_time_s}")
             if current_time_s - self.run_start_time_s > next_batch_arrives:
-                next_plan = self.solver.allocate_next_task_set()
+                next_plan = self.solver.allocate_next_task_set(self.feedback)
                 self.plans.append(next_plan)
                 pose_lists = []
                 for agt in next_plan['agt']:
-                    room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
+                    print(f"Agent's ids: {agt['id']}")
+                    room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
                     pose_lists.append([self.coord(rid) for rid in room_ids])
                     # Test case that some times caused issues:
                     # if self.task_set_index == 0:
@@ -168,7 +185,7 @@ class Dispatcher(Node):
         def feedback_callback(msg):
             timing_feedback = [sim_time - self.run_start_time_s for sim_time in msg.timing_feedback]
             self.feedback[index] = timing_feedback
-            print(f"Feedback received so far: {self.feedback}")
+            # print(f"Feedback received so far: {self.feedback}")
         return feedback_callback
 
 

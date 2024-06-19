@@ -89,7 +89,7 @@ class GoalSetter(Node):
                 #     self.travel_time.append(current_time - self.start_time)
                 #     self.start_time = current_time
                 current_clock = self.clock.now()
-                self.actual_arrival_times.append(math.ceil(current_clock.nanoseconds * 1e-9))
+                self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
                 print(self.actual_arrival_times)
                 self.loc_idx += 1
                 # if self.loc_idx + 1 > len(self.locs):
