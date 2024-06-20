@@ -326,8 +326,8 @@ class RobotController(Node):
     
 def main(args=None):
     rclpy.init(args=args)
-    other_robots = ['robot1', 'robot3', 'robot4'] #, 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
-    robot_controller1 = RobotController("robot2", other_robots)
+    other_robots = ['robot1', 'robot2', 'robot4'] #, 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
+    robot_controller1 = RobotController("robot3", other_robots)
     rclpy.spin(robot_controller1)
     rclpy.shutdown()
     

@@ -9,6 +9,8 @@ from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchD
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node, PushRosNamespace
 
+import time
+
 def generate_launch_description():
    
     # world_file_name = "waffle_aws_hospital.world"
@@ -26,31 +28,71 @@ def generate_launch_description():
 
     headless = LaunchConfiguration('headless')
 
-    # world = LaunchConfiguration('world')
-    base_pose = {'x': LaunchConfiguration('x_pose', default='1.2'),
-            'y': LaunchConfiguration('y_pose', default='15.6'),
+    positions = [(1.2, 15.6),
+                 (0.0, 2.2),
+                 (4.25, -27.5),
+                 (-7.75, -21.7),
+                 (7.85, -21.8)] #,
+                #  (7.9, -7.5),
+                #  (-7.75, -7.5),
+                #  (1.5, 2.2),
+                #  (-1.5, 2.2),
+                #  (7.9, -6.0),
+                #  (7.9, -4.5)]
+#   "agents": [
+#     0,
+#     1,
+#     2,
+#     3,
+#     4,
+#     5,
+#     0,
+#     0,
+#     5,
+#     5
+#   ]
+    robot_names = [f'robot{i}' for i in range(1, len(positions))]
+    poses = [{'x': LaunchConfiguration('x_pose', default=str(position[0])),
+            'y': LaunchConfiguration('y_pose', default=str(position[1])),
             'z': LaunchConfiguration('z_pose', default='0.01'),
             'R': LaunchConfiguration('roll', default='0.00'),
             'P': LaunchConfiguration('pitch', default='0.00'),
             'Y': LaunchConfiguration('yaw', default='0.00')}
-    # pose1 = {'x': LaunchConfiguration('x_pose', default='-4.9'),
-    #         'y': LaunchConfiguration('y_pose', default='13.8'),
+            for position in positions]
+    print(poses)
+
+    # world = LaunchConfiguration('world')
+    # base_pose = {'x': LaunchConfiguration('x_pose', default='1.2'),
+    #         'y': LaunchConfiguration('y_pose', default='15.6'),
     #         'z': LaunchConfiguration('z_pose', default='0.01'),
     #         'R': LaunchConfiguration('roll', default='0.00'),
     #         'P': LaunchConfiguration('pitch', default='0.00'),
     #         'Y': LaunchConfiguration('yaw', default='0.00')}
-    pose1 = {'x': LaunchConfiguration('x_pose', default='0.00'),
-            'y': LaunchConfiguration('y_pose', default='2.20'),
-            'z': LaunchConfiguration('z_pose', default='0.01'),
-            'R': LaunchConfiguration('roll', default='0.00'),
-            'P': LaunchConfiguration('pitch', default='0.00'),
-            'Y': LaunchConfiguration('yaw', default='0.00')}
-    pose2 = {'x': LaunchConfiguration('x_pose', default='4.25'),
-            'y': LaunchConfiguration('y_pose', default='-27.5'),
-            'z': LaunchConfiguration('z_pose', default='0.01'),
-            'R': LaunchConfiguration('roll', default='0.00'),
-            'P': LaunchConfiguration('pitch', default='0.00'),
-            'Y': LaunchConfiguration('yaw', default='0.00')}
+    # # pose1 = {'x': LaunchConfiguration('x_pose', default='-4.9'),
+    # #         'y': LaunchConfiguration('y_pose', default='13.8'),
+    # #         'z': LaunchConfiguration('z_pose', default='0.01'),
+    # #         'R': LaunchConfiguration('roll', default='0.00'),
+    # #         'P': LaunchConfiguration('pitch', default='0.00'),
+    # #         'Y': LaunchConfiguration('yaw', default='0.00')}
+    # pose1 = {'x': LaunchConfiguration('x_pose', default='0.00'),
+    #         'y': LaunchConfiguration('y_pose', default='2.20'),
+    #         'z': LaunchConfiguration('z_pose', default='0.01'),
+    #         'R': LaunchConfiguration('roll', default='0.00'),
+    #         'P': LaunchConfiguration('pitch', default='0.00'),
+    #         'Y': LaunchConfiguration('yaw', default='0.00')}
+    # pose2 = {'x': LaunchConfiguration('x_pose', default='4.25'),
+    #         'y': LaunchConfiguration('y_pose', default='-27.5'),
+    #         'z': LaunchConfiguration('z_pose', default='0.01'),
+    #         'R': LaunchConfiguration('roll', default='0.00'),
+    #         'P': LaunchConfiguration('pitch', default='0.00'),
+    #         'Y': LaunchConfiguration('yaw', default='0.00')}
+    # pose3 = {'x': LaunchConfiguration('x_pose', default='-7.75'),
+    #         'y': LaunchConfiguration('y_pose', default='-21.7'),
+    #         'z': LaunchConfiguration('z_pose', default='0.01'),
+    #         'R': LaunchConfiguration('roll', default='0.00'),
+    #         'P': LaunchConfiguration('pitch', default='0.00'),
+    #         'Y': LaunchConfiguration('yaw', default='0.00')}
+    
     robot_name = LaunchConfiguration('robot_name')
     robot_sdf = LaunchConfiguration('robot_sdf')
 
@@ -96,41 +138,20 @@ def generate_launch_description():
                                       'gui': 'true'}.items(),
             )
     #ros2 launch gazebo_ros gazebo.launch.py params_file:=params.yml
-    start_gazebo_spawner_cmd_base = Node(
+    names = [robot_name] + robot_names
+    namespaces = [namespace] + robot_names
+    gazebo_spawners = [ Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
         output='screen',
         arguments=[
-            '-entity', robot_name,
+            '-entity', name,
             '-file', robot_sdf,
             # '-robot_namespace', 'robot1',
-            '-robot_namespace', namespace,
-            '-x', base_pose['x'], '-y', base_pose['y'], '-z', base_pose['z'],
-            '-R', base_pose['R'], '-P', base_pose['P'], '-Y', base_pose['Y']])
-    
-    start_gazebo_spawner_cmd1 = Node(
-        package='gazebo_ros',
-        executable='spawn_entity.py',
-        output='screen',
-        arguments=[
-            '-entity', 'robot1',
-            '-file', robot_sdf,
-            '-robot_namespace', 'robot1',
-            # '-robot_namespace', namespace,
-            '-x', pose1['x'], '-y', pose1['y'], '-z', pose1['z'],
-            '-R', pose1['R'], '-P', pose1['P'], '-Y', pose1['Y']])
-
-    start_gazebo_spawner_cmd2 = Node(
-        package='gazebo_ros',
-        executable='spawn_entity.py',
-        output='screen',
-        arguments=[
-            '-entity', 'robot2',
-            '-file', robot_sdf,
-            '-robot_namespace', 'robot2',
-            # '-robot_namespace', namespace,
-            '-x', pose2['x'], '-y', pose2['y'], '-z', pose2['z'],
-            '-R', pose2['R'], '-P', pose2['P'], '-Y', pose2['Y']])
+            '-robot_namespace', robot_namespace,
+            '-x', pose['x'], '-y', pose['y'], '-z', pose['z'],
+            '-R', pose['R'], '-P', pose['P'], '-Y', pose['Y']]) 
+            for name, robot_namespace, pose in zip(names, namespaces, poses)]
     
     # start_gazebo_human_spawner_cmd = Node(
     #     package='gazebo_ros',
@@ -151,12 +172,13 @@ def generate_launch_description():
     ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(gazebo)
-    ld.add_action(start_gazebo_spawner_cmd_base)
-    PushRosNamespace('robot1')
-    ld.add_action(start_gazebo_spawner_cmd1)
-    # ld.add_action(start_gazebo_human_spawner_cmd)
-    PushRosNamespace('robot2')
-    ld.add_action(start_gazebo_spawner_cmd2)
+    base_init = False
+    for i, spawner in enumerate(gazebo_spawners):
+        if base_init:
+            PushRosNamespace(f'robot{i}')
+        ld.add_action(spawner)
+        time.sleep(1)
+        base_init = True
     return ld
 
 

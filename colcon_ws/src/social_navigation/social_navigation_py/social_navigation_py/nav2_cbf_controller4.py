@@ -212,8 +212,8 @@ class RobotController(Node):
         #     print(f"new_goal_pose: {self.new_goal_pose}")
         # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
         if not self.goal_init and self.new_goal_pose is not None:
-            print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
-            if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
+            print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid, self.all_other_robot_states_valid)
+            if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid and self.all_other_robot_states_valid):
                 # if self.print_count > 100:
                 #     print("Start planning...")
                 success = False
@@ -261,7 +261,7 @@ class RobotController(Node):
                         success = False
             
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
-        if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
+        if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid and self.all_other_robot_states_valid)):
             # Select closest waypoint from received path
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
@@ -326,8 +326,8 @@ class RobotController(Node):
     
 def main(args=None):
     rclpy.init(args=args)
-    other_robots = ['robot1', 'robot3', 'robot4'] #, 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
-    robot_controller1 = RobotController("robot2", other_robots)
+    other_robots = ['robot1', 'robot2', 'robot3'] #, 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
+    robot_controller1 = RobotController("robot4", other_robots)
     rclpy.spin(robot_controller1)
     rclpy.shutdown()
     

@@ -43,7 +43,7 @@ class RobotController(Node):
 
         # Dynamic Obstacles
         self.num_other_robots = len(other_robots) # exact
-        self.num_humans = 2 # upper bound
+        self.num_humans = 20 # upper bound
         self.num_dynamic_obstacles = self.num_other_robots + self.num_humans
         self.other_robot_states = 100*np.ones((2,self.num_other_robots))
         self.other_robot_states_prev = np.zeros((2,self.num_other_robots))
@@ -63,7 +63,7 @@ class RobotController(Node):
         
         #Controller
         self.control_prev  = np.array([0.0,0.0])
-        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 0.4, 0.8)
+        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles)
 
         # Call once to initiate JAX JIT
         if self.controller_id == 0:
@@ -277,18 +277,18 @@ class RobotController(Node):
                 print(f"{self.name}'s Current goal: {goal}")
 
             # Publish path for visualization (no other use)
-            self.nav2_path_publisher.publish(self.path)
-            goal_msg = PoseStamped()
-            goal_msg.pose.position.x = goal[0,0]
-            goal_msg.pose.position.y = goal[1,0]
-            goal_msg.pose.position.z = 0.0
-            if len(self.path.poses)>1:
-                theta = np.arctan2( self.path.poses[1].pose.position.y - self.path.poses[0].pose.position.y, self.path.poses[1].pose.position.x - self.path.poses[0].pose.position.x )
-                goal_msg.pose.orientation.z = np.sin( theta/2 )
-                goal_msg.pose.orientation.w = np.cos( theta/2 )
-            goal_msg.header.frame_id = "map"
-            goal_msg.header.stamp = self.navigator.get_clock().now().to_msg()
-            self.robot_local_goal_pub.publish( goal_msg )
+            # self.nav2_path_publisher.publish(self.path)
+            # goal_msg = PoseStamped()
+            # goal_msg.pose.position.x = goal[0,0]
+            # goal_msg.pose.position.y = goal[1,0]
+            # goal_msg.pose.position.z = 0.0
+            # if len(self.path.poses)>1:
+            #     theta = np.arctan2( self.path.poses[1].pose.position.y - self.path.poses[0].pose.position.y, self.path.poses[1].pose.position.x - self.path.poses[0].pose.position.x )
+            #     goal_msg.pose.orientation.z = np.sin( theta/2 )
+            #     goal_msg.pose.orientation.w = np.cos( theta/2 )
+            # goal_msg.header.frame_id = "map"
+            # goal_msg.header.stamp = self.navigator.get_clock().now().to_msg()
+            # self.robot_local_goal_pub.publish( goal_msg )
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
@@ -326,8 +326,8 @@ class RobotController(Node):
     
 def main(args=None):
     rclpy.init(args=args)
-    other_robots = ['robot1', 'robot3', 'robot4'] #, 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
-    robot_controller1 = RobotController("robot2", other_robots)
+    other_robots = ['robot1', 'robot2', 'robot3', 'robot4', 'robot5', 'robot7', 'robot8', 'robot9', 'robot10']
+    robot_controller1 = RobotController("robot6", other_robots)
     rclpy.spin(robot_controller1)
     rclpy.shutdown()
     

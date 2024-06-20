@@ -202,9 +202,16 @@ int main(int argc, char** argv){
     auto node1 = std::make_shared<RobotNearestObstacle>(map_, name1);
     std::string name2 = "robot2";
     auto node2 = std::make_shared<RobotNearestObstacle>(map_, name2);
+    std::string name3 = "robot3";
+    // std::string name1 = "";
+    auto node3 = std::make_shared<RobotNearestObstacle>(map_, name3);
+    std::string name4 = "robot4";
+    auto node4 = std::make_shared<RobotNearestObstacle>(map_, name4);
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node1);
     executor.add_node(node2);
+    executor.add_node(node3);
+    executor.add_node(node4);
 
     executor.spin();
 

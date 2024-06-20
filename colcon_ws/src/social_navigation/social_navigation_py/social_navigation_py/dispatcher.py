@@ -171,15 +171,15 @@ class Dispatcher(Node):
                 self.has_new_sequences = True
 
     def publish_goal_sequence_callback(self):
-        if self.has_new_sequences:
-            for (name, publisher), pose_list in zip(self.publishers_.items(), self.pose_lists):
-                msg = PoseArray()
-                msg.header.frame_id = "map"
-                msg.header.stamp = self.get_clock().now().to_msg()
-                msg.poses = [self.create_pose_from_point(pose) for pose in pose_list][1:]
-                publisher.publish(msg)
-                self.has_new_sequences = False
-                self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
+        # if self.has_new_sequences:
+        for (name, publisher), pose_list in zip(self.publishers_.items(), self.pose_lists):
+            msg = PoseArray()
+            msg.header.frame_id = "map"
+            msg.header.stamp = self.get_clock().now().to_msg()
+            msg.poses = [self.create_pose_from_point(pose) for pose in pose_list][1:]
+            publisher.publish(msg)
+            self.has_new_sequences = False
+            self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
 
     def make_feedback_callback(self, index):
         def feedback_callback(msg):
@@ -191,7 +191,7 @@ class Dispatcher(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    robot_list = ["robot1", "robot2"]
+    robot_list = ['robot1', 'robot2', 'robot3', 'robot4', 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
     dispatcher = Dispatcher(name='default', robot_list=robot_list)
     # executor = MultiThreadedExecutor()
     # executor.add_node(dispatcher)
