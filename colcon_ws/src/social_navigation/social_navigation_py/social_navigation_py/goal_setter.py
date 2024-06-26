@@ -9,6 +9,8 @@ from social_navigation_msgs.msg import Feedback
 
 import math
 import numpy as np
+import sys
+import argparse
 
 DIST_THRES = 1
 GOAL_REGION_RADIUS = 0.25 #0.25 #0.5
@@ -103,40 +105,29 @@ class GoalSetter(Node):
         self.feedback_publisher.publish(msg)
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    goal_publisher1 = GoalSetter(name="robot1")
-    goal_publisher2 = GoalSetter(name='robot2')
-    goal_publisher3 = GoalSetter(name='robot3')
-    goal_publisher4 = GoalSetter(name="robot4")
-    goal_publisher5 = GoalSetter(name='robot5')
-    goal_publisher6 = GoalSetter(name='robot6')
-    goal_publisher7 = GoalSetter(name="robot7")
-    goal_publisher8 = GoalSetter(name='robot8')
-    goal_publisher9 = GoalSetter(name='robot9')
-    goal_publisher10 = GoalSetter(name='robot10')
+def main(argv=None):
+    argv = rclpy.utilities.remove_ros_args()[1:]
+    print(f"Arguments: {argv}")
+    parser = argparse.ArgumentParser(
+        description='Start robot goal setters'
+    )
+    parser.add_argument('-robot_num', type=str, help='Number of robots')
+    args = parser.parse_args(argv)
+
+    # Initialize Nodes
+    rclpy.init()
     executor = MultiThreadedExecutor()
-    executor.add_node(goal_publisher1)
-    executor.add_node(goal_publisher2)
-    executor.add_node(goal_publisher3)
-    executor.add_node(goal_publisher4)
-    executor.add_node(goal_publisher5)
-    executor.add_node(goal_publisher6)
-    executor.add_node(goal_publisher7)
-    executor.add_node(goal_publisher8)
-    executor.add_node(goal_publisher9)
-    executor.add_node(goal_publisher10)
+    goal_publishers = []
+    for i in range(1, int(args.robot_num) + 1):
+        name = f"robot{i}"
+        goal_publisher = GoalSetter(name=name)
+        goal_publishers.append(goal_publisher)
+        executor.add_node(goal_publisher)
     executor.spin()
-    goal_publisher1.destroy_node()
-    goal_publisher2.destroy_node()
-    goal_publisher3.destroy_node()
-    goal_publisher4.destroy_node()
-    goal_publisher5.destroy_node()
-    goal_publisher6.destroy_node()
-    goal_publisher7.destroy_node()
-    goal_publisher8.destroy_node()
-    goal_publisher9.destroy_node()
-    goal_publisher10.destroy_node()
+
+    # Clean up
+    for node in goal_publishers:
+        node.destroy_node()
     rclpy.shutdown() 
 
 if __name__ == '__main__':
