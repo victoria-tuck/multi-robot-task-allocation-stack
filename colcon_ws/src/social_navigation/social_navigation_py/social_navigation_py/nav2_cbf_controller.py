@@ -21,7 +21,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 class RobotController(Node):
 
-    def __init__(self):#, name='default', other_robots=[]):
+    def __init__(self):
         super().__init__(f'robot_controller')
         self.declare_parameter('robot_name', rclpy.Parameter.Type.STRING)
         self.declare_parameter('robot_list', rclpy.Parameter.Type.STRING_ARRAY)
@@ -329,8 +329,6 @@ class RobotController(Node):
     
 def main(args=None):
     rclpy.init(args=args)
-    other_robots = ['robot2', 'robot3', 'robot4'] #, 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
-    # robot_controller1 = RobotController("robot1", other_robots)
     robot_controller = RobotController()
     rclpy.spin(robot_controller)
     rclpy.shutdown()
