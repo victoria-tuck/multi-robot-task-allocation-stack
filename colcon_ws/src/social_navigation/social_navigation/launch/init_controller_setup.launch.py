@@ -35,6 +35,7 @@ def generate_launch_description():
                      }]
     )
     
+    # With arguments
     robot_closest_obstacle_sector = Node(
         package='social_navigation',
         executable='robot_closest_obstacle_sector',
@@ -43,7 +44,8 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': use_sim_time,
             'num_humans': num_humans
-            }]
+            }],
+        arguments=["-num_robots", "2"]
     )   
 
     human_closest_obstacle_sector = Node(

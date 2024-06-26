@@ -1,5 +1,7 @@
 #include <iostream>
+#include <string>
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/utilities.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "nav_msgs/msg/map_meta_data.hpp"
 // #include "nav_msgs/srv/get_map.hpp"
@@ -180,13 +182,17 @@ class RobotNearestObstacle: public rclcpp::Node {
 
 int main(int argc, char** argv){
     rclcpp::init(argc, argv);
+    std::vector<std::string> argv_without_ros = rclcpp::remove_ros_arguments(argc, argv);
+    for (int i = 0; i < 2; i++) {
+        std::cout << argv_without_ros[i] << "\n";
+    }
+    int number_of_robots = std::stoi(argv_without_ros[2]);
+    std::cout << "Number of robots: " << number_of_robots << "\n";
 
     // Get the map and store it
     std::shared_ptr<rclcpp::Node> node = rclcpp::Node::make_shared("get_map_client");
     rclcpp::Client<nav_msgs::srv::GetMap>::SharedPtr client = node->create_client<nav_msgs::srv::GetMap>("/map_server/map");
     auto request = std::make_shared<nav_msgs::srv::GetMap::Request>();
-
-
 
     while (!client->wait_for_service(10s)) {
         if (!rclcpp::ok()) {
@@ -205,25 +211,17 @@ int main(int argc, char** argv){
         }
     nav_msgs::msg::OccupancyGrid map_ = result.get()->map;
 
-    std::string name1 = "robot1";
-    // std::string name1 = "";
-    auto node1 = std::make_shared<RobotNearestObstacle>(map_, name1);
-    std::string name2 = "robot2";
-    auto node2 = std::make_shared<RobotNearestObstacle>(map_, name2);
-    std::string name3 = "robot3";
-    // std::string name1 = "";
-    auto node3 = std::make_shared<RobotNearestObstacle>(map_, name3);
-    std::string name4 = "robot4";
-    auto node4 = std::make_shared<RobotNearestObstacle>(map_, name4);
     rclcpp::executors::MultiThreadedExecutor executor;
-    executor.add_node(node1);
-    executor.add_node(node2);
-    executor.add_node(node3);
-    executor.add_node(node4);
+    std::string name;
+    std::vector<std::shared_ptr<RobotNearestObstacle>> nodes; 
+    for (int i = 1; i <= number_of_robots; i++) {
+        std::string name = "robot" + std::to_string(i);
+        nodes.push_back(std::make_shared<RobotNearestObstacle>(map_, name)); 
+        executor.add_node(nodes[i-1]);
+    }
 
     executor.spin();
 
-    // rclcpp::spin( std::make_shared<RobotNearestObstacle>(map_) );
     rclcpp::shutdown();
     return 0;
 }
