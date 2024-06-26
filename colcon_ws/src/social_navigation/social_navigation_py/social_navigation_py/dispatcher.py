@@ -8,6 +8,7 @@ from geometry_msgs.msg import Pose, PoseArray
 from social_navigation_msgs.msg import Feedback
 
 import math
+import json
 
 from MRTASolver import MRTASolver
 from MRTASolver.run_realistic_setting import load_weighted_graph, dictionary_to_matrix
@@ -15,8 +16,16 @@ from MRTASolver.create_randomized_inputs import load_config
 
 
 class Dispatcher(Node):
-    def __init__(self, name='', robot_list=[]):
-        super().__init__(f'dispatcher_{name}')
+    def __init__(self):
+        super().__init__(f'dispatcher')
+
+        self.declare_parameter('input_file', rclpy.Parameter.Type.STRING)
+        input_file = self.get_parameter('input_file').value
+
+        with open(input_file, 'r') as f:
+            scenario_setup = json.load(f)
+
+        robot_list = list(scenario_setup["agents"].keys())
 
         self.clock = self.get_clock()
 
@@ -43,7 +52,6 @@ class Dispatcher(Node):
         self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
         self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
 
-        self.name = name
         self.task_set_index = 0
 
         self.pose_lists = []
@@ -191,11 +199,7 @@ class Dispatcher(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    robot_list = ['robot1', 'robot2', 'robot3', 'robot4', 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
-    dispatcher = Dispatcher(name='default', robot_list=robot_list)
-    # executor = MultiThreadedExecutor()
-    # executor.add_node(dispatcher)
-    # executor.spin()
+    dispatcher = Dispatcher()
     rclpy.spin(dispatcher)
     dispatcher.destroy_node()
     rclpy.shutdown() 
