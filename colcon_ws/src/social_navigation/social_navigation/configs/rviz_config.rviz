@@ -10,12 +10,7 @@ Panels:
         - /Global Planner1
         - /Global Planner1/Path1
         - /PointCloud1
-        - /Pose1
         - /Pose1/Topic1
-        - /MarkerArray5
-        - /PointCloud2
-        - /PointCloud3
-        - /Pose2
         - /Global Planner2
         - /Global Planner3
         - /Global Planner4
@@ -211,7 +206,7 @@ Visualization Manager:
           Class: rviz_default_plugins/Map
           Color Scheme: costmap
           Draw Behind: false
-          Enabled: false
+          Enabled: true
           Name: Global Costmap
           Topic:
             Depth: 1
@@ -227,7 +222,7 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /global_costmap/costmap_updates
           Use Timestamp: false
-          Value: false
+          Value: true
         - Alpha: 0.30000001192092896
           Class: rviz_default_plugins/Map
           Color Scheme: costmap
@@ -505,8 +500,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.008718905970454216
-        Min Value: 0.008718905970454216
+        Max Value: 0.008753418922424316
+        Min Value: 0.008753418922424316
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -1058,8 +1053,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.008725950494408607
-        Min Value: 0.008725950494408607
+        Max Value: 0.008722323924303055
+        Min Value: 0.008722323924303055
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -1092,8 +1087,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.008718915283679962
-        Min Value: 0.008718915283679962
+        Max Value: 0.008720782585442066
+        Min Value: 0.008720782585442066
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -1201,5 +1196,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1848
-  X: 72
-  Y: 361
+  X: 1920
+  Y: 112
