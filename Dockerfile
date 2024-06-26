@@ -72,7 +72,7 @@ RUN echo "alias rnav2='ros2 launch social_navigation nav2_tb3_aws_launch.py'" >>
 RUN echo "alias rcsetup='ros2 launch social_navigation init_controller_setup.launch.py'" >> ~/.bashrc
 RUN echo "alias rcpub='ros2 topic pub /planner_init std_msgs/msg/Bool data:\ true'" >> ~/.bashrc
 RUN echo "alias rcbf='/home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/multiagent_nav2_cbf.sh'" >> ~/.bashrc
-RUN echo "alias rcbf2r1='ros2 run social_navigation_py nav2_cbf --ros-args -p use_sim_time:=True'" >> ~/.bashrc
+RUN echo "alias rcbf2r1='ros2 run social_navigation_py nav2_cbf --ros-args -p use_sim_time:=True -r robot_controller:__node:=robot_controller_1 -r basic_navigator:__node:=basic_navigator -p "robot_name:='robot_1'" -p "robot_list:=['robot2']"'" >> ~/.bashrc
 RUN echo "alias rmppi='ros2 run social_navigation_py nav2_mppi --ros-args -p use_sim_time:=True'" >> ~/.bashrc
 RUN echo "alias rsfm='ros2 launch social_navigation human_sfm.launch.py'" >> ~/.bashrc
 RUN echo "alias rcset='ros2 run social_navigation_py goal_setter --ros-args -p use_sim_time:=True'" >> ~/.bashrc

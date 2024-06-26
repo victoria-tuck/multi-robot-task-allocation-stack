@@ -83,10 +83,16 @@ rcsetup
 rsfm
 ```
 
-5. To start the user controller
+5. To start the user controller for one robot:
 ```
-rcbf2
+rcbf2r1
 ```
+OR
+for many robots:
+```
+rcbf <number_of_robots>
+```
+When using the second option, nav2_cbf processes will need to be killed using `ps` to find the pid and then `kill <pid>` for each process.
 
 6. Finally, when the controller status is ONLINE, run the following command to set goal and run controller simulation
 ```
