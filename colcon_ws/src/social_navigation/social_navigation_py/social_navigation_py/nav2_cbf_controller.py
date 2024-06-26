@@ -21,19 +21,22 @@ from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
 class RobotController(Node):
 
-    def __init__(self, name='default', other_robots=[]):
-        super().__init__(f'robot_controller_{name}')
-        if name != "":
-            prefix = "/" + name
+    def __init__(self):#, name='default', other_robots=[]):
+        super().__init__(f'robot_controller')
+        self.declare_parameter('robot_name', rclpy.Parameter.Type.STRING)
+        self.declare_parameter('robot_list', rclpy.Parameter.Type.STRING_ARRAY)
+        robot_name_param, robot_list_param = self.get_parameter('robot_name'), self.get_parameter('robot_list')
+        self.name, self.other_robots = robot_name_param.value, robot_list_param.value
+        if self.name != "":
+            self.prefix = "/" + self.name
         else:
-            prefix = ""
-        print(f'Robot prefix: {prefix}')
+            self.prefix = ""
+        print(f'Robot prefix: {self.prefix}')
+        # print(f"Robot list is {self.robot_list}")
 
         # 0: cbf controller
         # 1: nominal controller
         self.controller_id = 0#1
-        self.name = name
-        self.prefix = prefix
 
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
 
@@ -42,7 +45,7 @@ class RobotController(Node):
         self.obstacle_states = np.zeros((2,self.num_obstacles))
 
         # Dynamic Obstacles
-        self.num_other_robots = len(other_robots) # exact
+        self.num_other_robots = len(self.other_robots) # exact
         self.num_humans = 2 # upper bound
         self.num_dynamic_obstacles = self.num_other_robots + self.num_humans
         self.other_robot_states = 100*np.ones((2,self.num_other_robots))
@@ -75,7 +78,7 @@ class RobotController(Node):
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
-        self.other_robot_state_sub = { robot: self.create_subscription( Odometry,  f'/{robot}/odom', self.make_other_robot_state_callback(i), 10) for i, robot in enumerate(other_robots) } 
+        self.other_robot_state_sub = { robot: self.create_subscription( Odometry,  f'/{robot}/odom', self.make_other_robot_state_callback(i), 10) for i, robot in enumerate(self.other_robots) } 
         self.robot_state_subscriber = self.create_subscription( Odometry, self.prefix + '/odom', self.robot_state_callback, 10 )
         # self.goal_pose_subscriber = self.create_subscription( PoseStamped, '/goal_pose_custom', self.robot_goal_callback, 10 )
         self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, self.prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
@@ -327,8 +330,9 @@ class RobotController(Node):
 def main(args=None):
     rclpy.init(args=args)
     other_robots = ['robot2', 'robot3', 'robot4'] #, 'robot5', 'robot6', 'robot7', 'robot8', 'robot9', 'robot10']
-    robot_controller1 = RobotController("robot1", other_robots)
-    rclpy.spin(robot_controller1)
+    # robot_controller1 = RobotController("robot1", other_robots)
+    robot_controller = RobotController()
+    rclpy.spin(robot_controller)
     rclpy.shutdown()
     
 if __name__ == '__main__':
