@@ -45,7 +45,7 @@ def generate_launch_description():
             'use_sim_time': use_sim_time,
             'num_humans': num_humans
             }],
-        arguments=["-num_robots", "2"]
+        arguments=["-num_robots", "4"]
     )   
 
     human_closest_obstacle_sector = Node(

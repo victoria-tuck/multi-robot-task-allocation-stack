@@ -4,13 +4,14 @@ from rclpy.executors import MultiThreadedExecutor
 
 from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle
 from geometry_msgs.msg import Twist
-from geometry_msgs.msg import PoseStamped, Pose
+from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
 import matplotlib.pyplot as plt
 import pickle
 # from geometry_msgs.msg import Point
+from tf2_ros.transform_broadcaster import TransformBroadcaster
 
 # from cbf_controller import cbf_controller
 from .utils.cbf_obstacle_controller import cbf_controller
@@ -33,6 +34,8 @@ class RobotController(Node):
             self.prefix = ""
         print(f'Robot prefix: {self.prefix}')
         # print(f"Robot list is {self.robot_list}")
+
+        self.new_odom_name = f"{self.name}_new_odom"
 
         # 0: cbf controller
         # 1: nominal controller
@@ -115,7 +118,11 @@ class RobotController(Node):
         self.nav2_path_publisher = self.create_publisher( Path, self.prefix + '/plan', 1)
         self.robot_local_goal_pub = self.create_publisher( PoseStamped, self.prefix + '/local_goal', 1)
         self.robot_location_pub = self.create_publisher( PoseStamped, self.prefix + '/robot_location', 1)
+        self.robot_new_odom_pub = self.create_publisher(Odometry, f"{self.prefix}/new_odom", 10)
         
+        # Frame broadcaster
+        self.robot_tf_broadcaster = TransformBroadcaster(self)
+
         # Planner
         self.navigator = BasicNavigator()
         self.path = Path() 
@@ -171,6 +178,29 @@ class RobotController(Node):
         else:
             self.print_count += 1
         self.robot_state_valid = True
+
+        # Publish new odometry
+        # print("Sending odometry")
+        new_msg = Odometry()
+        new_msg = msg
+        # new_msg.header.frame_id = self.new_odom_name
+        new_msg.header.frame_id = 'map'
+        new_msg.child_frame_id = self.new_odom_name
+        # new_msg.child_frame_id = 'map'
+        self.robot_new_odom_pub.publish(new_msg)
+
+        # Publish pose as transform for new odometry as well
+        tf = TransformStamped()
+        tf.header.frame_id = 'map'
+        # tf.header.frame_id = self.new_odom_name
+        tf.header.stamp = self.get_clock().now().to_msg()
+        tf.child_frame_id = self.new_odom_name
+        # tf.child_frame_id = 'map'
+        tf.transform.translation.x = msg.pose.pose.position.x
+        tf.transform.translation.y = msg.pose.pose.position.y
+        tf.transform.translation.z = msg.pose.pose.position.z
+        tf.transform.rotation = msg.pose.pose.orientation
+        self.robot_tf_broadcaster.sendTransform(tf)
         
     def obstacle_callback(self, msg):
         # self.num_obstacles = msg.num_obstacles
@@ -205,6 +235,7 @@ class RobotController(Node):
         current_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
         current_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
         self.robot_location_pub.publish(current_pose)
+
         # if self.print_count > 10:
         #     self.navigator.setInitialPose(current_pose)
 
@@ -268,7 +299,7 @@ class RobotController(Node):
             # Select closest waypoint from received path
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
-            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<1.0):#0.8
+            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.2):#0.8
                 if len(self.path.poses)>1:
                     self.path.poses = self.path.poses[1:]
                     assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
