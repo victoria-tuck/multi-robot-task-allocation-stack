@@ -7,6 +7,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 from geometry_msgs.msg import PoseStamped, PoseArray
 from social_navigation_msgs.msg import Feedback
 
+import json
 import math
 import numpy as np
 import sys
@@ -31,32 +32,22 @@ class GoalSetter(Node):
         self.actual_arrival_times = []
 
         self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
-        # self.subscriber = self.create_subscription( PoseArray, '/goal_sequence', self.goal_sequence_callback, 10 )
 
         self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
-        # self.publisher_ = self.create_publisher(PoseStamped, '/goal_location', 1)
         self.timer_period = 1.0
         self.goal_timer = self.create_timer(self.timer_period, self.publish_goal)
         self.feedback_timer = self.create_timer(self.timer_period, self.publish_feedback)
         self.name = name
         self.location_listener = self.create_subscription(PoseStamped, prefix + '/robot_location', self.listen_location_callback, 1)
         self.feedback_publisher = self.create_publisher(Feedback, prefix + '/feedback', 1)
-        # self.location_listener = self.create_subscription(PoseStamped, '/robot_location', self.listen_location_callback, 1)
 
-        # self.navigator = BasicNavigator()
-        # self.delivery_locations = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
-        # self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
         self.locs = []
-        # self.travel_time = []
-        # self.pull_travel_time = False
-        # self.start_time = None
         self.loc_idx = 0
 
         self.goal_reached = True
 
     def goal_sequence_callback(self, msg):
         self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
-        # self.loc_idx = 0
         print(f"{self.name} updated its goals: {self.locs}")
 
     def publish_goal(self):
@@ -66,7 +57,6 @@ class GoalSetter(Node):
                 msg = PoseStamped()
                 msg.header.frame_id = "map"
                 msg.header.stamp = self.get_clock().now().to_msg()
-                # msg.header.stamp = self.navigator.get_clock().now().to_msg()
                 rng = np.random.default_rng()
                 msg.pose.position.x = float(goal[0]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
                 msg.pose.position.y = float(goal[1]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
@@ -83,20 +73,12 @@ class GoalSetter(Node):
 
     def listen_location_callback(self, msg):
         cur_loc = (msg.pose.position.x, msg.pose.position.y)
-        # print(f"Received {self.name}'s current location: {cur_loc}")
         if self.loc_idx < len(self.locs):
             if dist(self.locs[self.loc_idx], cur_loc) < DIST_THRES:
-                # if self.start_time is not None:
-                #     current_time = Clock().now()
-                #     self.travel_time.append(current_time - self.start_time)
-                #     self.start_time = current_time
                 current_clock = self.clock.now()
                 self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
                 print(self.actual_arrival_times)
                 self.loc_idx += 1
-                # if self.loc_idx + 1 > len(self.locs):
-                #     self.start_time = None
-                # self.loc_idx = min(self.loc_idx + 1, len(self.locs) - 1)
                 self.goal_reached = True
 
     def publish_feedback(self):
@@ -106,19 +88,25 @@ class GoalSetter(Node):
 
 
 def main(argv=None):
+    # Get input file
     argv = rclpy.utilities.remove_ros_args()[1:]
     print(f"Arguments: {argv}")
     parser = argparse.ArgumentParser(
         description='Start robot goal setters'
     )
-    parser.add_argument('-robot_num', type=str, help='Number of robots')
+    parser.add_argument('-input_file', type=str, help='Number of robots')
     args = parser.parse_args(argv)
+
+    # Pull number of robots
+    with open(args.input_file, 'r') as f:
+        scenario_setup = json.load(f)
+    num_robots = len(list(scenario_setup["agents"].keys()))
 
     # Initialize Nodes
     rclpy.init()
     executor = MultiThreadedExecutor()
     goal_publishers = []
-    for i in range(1, int(args.robot_num) + 1):
+    for i in range(1, num_robots + 1):
         name = f"robot{i}"
         goal_publisher = GoalSetter(name=name)
         goal_publishers.append(goal_publisher)

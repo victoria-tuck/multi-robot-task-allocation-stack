@@ -94,9 +94,19 @@ rcbf <number_of_robots>
 ```
 When using the second option, nav2_cbf processes will need to be killed using `ps` to find the pid and then `kill <pid>` for each process.
 
-6. Finally, when the controller status is ONLINE, run the following command to set goal and run controller simulation
+6. When the controller status is ONLINE, run the following command to set goal and run controller simulation
 ```
 rcpub
+```
+
+7. To manage the task assignment for each agent:
+```
+rcset input_file:=<scenario_file>
+```
+
+8. For task allocation and high-level path planning for a set of agents:
+```
+rcdis -p input_file:=<scenario_file>
 ```
 
 Now you can use `rviz` to give the robot a goal. You can use `Nav2 Goal` button to send let ROS2 Navigation2 package plan the path and also control the robot, or you can publish to `2D Goal` button to send the goal location to the nav2_cbf_controller node that we ran in the last line. (Note: u need to add the 2D Goal button on rviz. See the attached video on how to do that).

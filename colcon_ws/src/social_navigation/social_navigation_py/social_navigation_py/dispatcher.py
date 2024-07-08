@@ -1,17 +1,15 @@
-import rclpy
-from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
-from nav2_simple_commander.robot_navigator import BasicNavigator
+import json
+import math
 import pickle
+import rclpy
+
+from rclpy.node import Node
 
 from geometry_msgs.msg import Pose, PoseArray
 from social_navigation_msgs.msg import Feedback
 
-import math
-import json
-
 from MRTASolver import MRTASolver
-from MRTASolver.run_realistic_setting import load_weighted_graph, dictionary_to_matrix
+# ToDo: Put load_config in run_realistic_setting instead of create_randomized_inputs
 from MRTASolver.create_randomized_inputs import load_config
 
 
@@ -19,16 +17,16 @@ class Dispatcher(Node):
     def __init__(self):
         super().__init__(f'dispatcher')
 
+        # Pull agent information from file
         self.declare_parameter('input_file', rclpy.Parameter.Type.STRING)
         input_file = self.get_parameter('input_file').value
 
         with open(input_file, 'r') as f:
             scenario_setup = json.load(f)
-
         robot_list = list(scenario_setup["agents"].keys())
 
+        # Wait until start time is valid
         self.clock = self.get_clock()
-
         def wait_for_non_zero_clock_time():
             self.get_logger().info("Waiting for non-zero clock time...")
             while rclpy.ok():
@@ -39,33 +37,26 @@ class Dispatcher(Node):
                     self.run_start_time_s = current_time_s
                     self.get_logger().info(f"Non-zero clock time received: {self.run_start_time_s} s")
                     break
-
         wait_for_non_zero_clock_time()
 
         self.get_logger().info("Dispatcher starts!")
 
-        self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
-        # self.feedback_subscriber = self.create_subscription( Feedback,  f'/robot1/feedback', self.feedback_callback, 1)
-        self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) } 
-        # print(self.feedback_subscribers)
+        # Initialize variables
         self.timer_period = 1.0
+        self.task_set_index = 0
+        self.pose_lists = []
+        self.feedback = [[] for i in range(len(robot_list))]
+        self.has_new_sequences = False
+
+        # Initialize subscribers, publishers, and callbacks
+        self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) }
+        self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
         self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
         self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
 
-        self.task_set_index = 0
+        self.initialize_solver()
 
-        self.pose_lists = []
-        self.feedback = [[] for i in range(len(robot_list))]
-        # _, current_plan = self.plans[0]
-        # for agt in current_plan['agt']:
-        #     room_ids = [self.room_id(rid, self.agents, self.tasks_stream) for rid in agt['id']]
-        #     self.pose_lists.append([self.coord(rid) for rid in room_ids])
-
-        self.has_new_sequences = False
-
-        self.generate_plans()
-
-    def generate_plans(self):
+    def initialize_solver(self):
         # MRTASolver arguments
         file = 'simulation/testcase.json'
         solver = 'bitwuzla'
@@ -92,7 +83,6 @@ class Dispatcher(Node):
             room_count, room_graph = data
         
         self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
-        # self.solver.allocate_task_stream()
         self.plans = []
         self.has_new_sequences = True
 
@@ -103,8 +93,6 @@ class Dispatcher(Node):
                           3: (7.85, -21.8), 
                           4: (7.9, -7.5), 
                           5: (-7.75, -7.5)}
-        # TODO: get x, y coordinates from room id
-        # return rid, rid + 1
         return coordinate_map.get(rid, None)
 
     def room_id(self, task_id, agents, tasks_stream):
