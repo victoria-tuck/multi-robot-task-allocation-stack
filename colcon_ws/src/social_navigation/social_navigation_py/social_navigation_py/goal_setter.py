@@ -94,7 +94,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description='Start robot goal setters'
     )
-    parser.add_argument('-input_file', type=str, help='Number of robots')
+    parser.add_argument('-input_file', type=str, help='Scenario file')
     args = parser.parse_args(argv)
 
     # Pull number of robots
