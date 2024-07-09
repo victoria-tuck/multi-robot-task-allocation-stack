@@ -47,6 +47,7 @@ class Dispatcher(Node):
         self.pose_lists = []
         self.feedback = [[] for i in range(len(robot_list))]
         self.has_new_sequences = False
+        self.num_locations = 6
 
         # Initialize subscribers, publishers, and callbacks
         self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) }
@@ -58,7 +59,7 @@ class Dispatcher(Node):
 
     def initialize_solver(self):
         # MRTASolver arguments
-        file = 'simulation/testcase.json'
+        file = 'simulation/testcase_for_extended.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
         capacity = 2
@@ -73,21 +74,34 @@ class Dispatcher(Node):
         self.agents, self.tasks_stream = load_config(file)
         num_agents = len(self.agents)
         tot_tasks = sum([len(tasks) for tasks, _ in self.tasks_stream])
-        num_aps = math.ceil(tot_tasks / num_agents) * 2 + 1
-        aps_list = list(range(3, num_aps+1, 2))
+        num_aps = math.ceil(tot_tasks / num_agents) * 6 + 1
+        aps_list = list(range(7, num_aps+1, 6))
+        num_locations = 6
 
         # room_dictionary = load_weighted_graph()
         # room_count, room_graph = dictionary_to_matrix(room_dictionary)
-        with open('weighted_graph_hospital.pkl', 'rb') as file:
+        with open('extended_weighted_graph_hospital.pkl', 'rb') as file:
             data = pickle.load(file)
             room_count, room_graph = data
         
-        self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
+        self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, num_locations, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
         self.plans = []
         self.has_new_sequences = True
 
     def coord(self, rid):
-        coordinate_map = {0: (0, 2.2), 
+        coordinate_map = {0: (4, -3.3),
+                          1: (5.0, -18.1),
+                          2: (3.3, -24.5),
+                          3: (-3.3, -24.9),
+                          4: (-5, -12.6),
+                          5: (-4.1, -3.4),
+                          6: (0, 2.2),
+                          7: (7.9, -7.5),
+                          8: (7.85, -21.8),
+                          9: (4.25, -27.5),
+                          10: (-7.75, -21.7),
+                          11: (-7.75, -7.5)}
+        old_coordinate_map = {0: (0, 2.2), 
                           1: (4.25, -27.5), # updated to (4.5, -27.75), # was (4.25, -27.5)
                           2: (-7.75, -21.7), 
                           3: (7.85, -21.8), 
@@ -98,10 +112,12 @@ class Dispatcher(Node):
     def room_id(self, task_id, agents, tasks_stream):
         task_counts = [len(tasks) for tasks, _ in tasks_stream]
         num_agents = len(agents)
-        prev_ids = num_agents
+        prev_ids = num_agents + self.num_locations
         ind = 0
         if task_id >= 0 and task_id < num_agents:
             return agents[task_id].start
+        if task_id >= num_agents and task_id < num_agents + self.num_locations:
+            return task_id - self.num_locations
         while ind < len(task_counts):
             curr_count = task_counts[ind]
             if task_id >= prev_ids and task_id < 2*curr_count + prev_ids:
