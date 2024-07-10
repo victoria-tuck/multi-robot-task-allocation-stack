@@ -64,7 +64,7 @@ Then run the codes in the following sequence. To aid in implementation, several 
 1. To launch the gazebo environment with the robot inside it
 
 ```
-rgazebo
+rgazebo input_file:=<scenario_file>
 ```
 
 2. To launch the ROS2 navigation stack (to use its planners)
@@ -74,7 +74,7 @@ rnav2
 
 3. To get human states from gazebo and to find closest obstacle points to robot
 ```
-rcsetup
+rcsetup input_file:=<scenario_file>
 
 ```
 
