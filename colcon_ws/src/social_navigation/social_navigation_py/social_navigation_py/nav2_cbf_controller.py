@@ -16,6 +16,7 @@ from tf2_ros.transform_broadcaster import TransformBroadcaster
 # from cbf_controller import cbf_controller
 from .utils.cbf_obstacle_controller import cbf_controller
 import numpy as np
+import random
 # import jax.numpy as jnp
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -59,7 +60,9 @@ class RobotController(Node):
         self.human_states_dot = np.zeros((2,self.num_humans))
 
         # Parameters
-        self.robot_radius = 0.18 #0.2 #0.18
+        # self.robot_radius = 0.18 #0.2 #0.18
+        self.robot_radius = 0.12
+        # self.robot_radius = 0.25
         self.replan_count = 0
         self.print_count = 0
 
@@ -69,7 +72,7 @@ class RobotController(Node):
         
         #Controller
         self.control_prev  = np.array([0.0,0.0])
-        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 0.4, 0.8)
+        self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
 
         # Call once to initiate JAX JIT
         if self.controller_id == 0:
@@ -299,7 +302,7 @@ class RobotController(Node):
             # Select closest waypoint from received path
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
-            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.2):#0.8
+            while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):#0.8
                 if len(self.path.poses)>1:
                     self.path.poses = self.path.poses[1:]
                     assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
@@ -353,7 +356,7 @@ class RobotController(Node):
             ############## Publish Control Input ###################
             control = Twist()
             control.linear.x = speed
-            control.angular.z = omega
+            control.angular.z = omega #+ random.random()/5 - 0.1
             self.robot_command_pub.publish(control)
             self.replan_count += 1
         

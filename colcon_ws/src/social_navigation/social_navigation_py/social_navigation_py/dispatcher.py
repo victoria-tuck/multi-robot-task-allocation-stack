@@ -58,7 +58,7 @@ class Dispatcher(Node):
 
     def initialize_solver(self):
         # MRTASolver arguments
-        file = 'simulation/testcase.json'
+        file = 'simulation/testcase_4agents_duplicate_tasks.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
         capacity = 2
@@ -87,7 +87,13 @@ class Dispatcher(Node):
         self.has_new_sequences = True
 
     def coord(self, rid):
-        coordinate_map = {0: (0, 2.2), 
+        coordinate_map = {0: (0, 2.2),
+                          1: (7.9, -7.5),
+                          2: (7.85, -21.8),
+                          3: (4.25, -27.5),
+                          4: (-7.75, -21.7),
+                          5: (-7.75, -7.5)}
+        old_coordinate_map = {0: (0, 2.2), 
                           1: (4.25, -27.5), # updated to (4.5, -27.75), # was (4.25, -27.5)
                           2: (-7.75, -21.7), 
                           3: (7.85, -21.8), 
@@ -123,7 +129,7 @@ class Dispatcher(Node):
         plan = []
         started_plan = False
         for i, task_id in enumerate(id_sequence):
-            print(task_id)
+            # print(task_id)
             if self.is_agent_id(task_id, num_agents) and started_plan:
                 return plan
             else:
@@ -133,7 +139,7 @@ class Dispatcher(Node):
 
     def create_pose_from_point(self, point) -> Pose:
         msg = Pose()
-        print(point)
+        # print(point)
         msg.position.x = float(point[0])
         msg.position.y = float(point[1])
         return msg
@@ -143,13 +149,14 @@ class Dispatcher(Node):
         if self.task_set_index < len(self.tasks_stream):
             next_tasks, next_batch_arrives = self.tasks_stream[self.task_set_index]
             # next_batch_arrives, next_plan = self.plans[self.task_set_index]
-            self.get_logger().info(f"Current time: {current_time_s - self.run_start_time_s}")
+            # self.get_logger().info(f"Current time: {current_time_s - self.run_start_time_s}")
             if current_time_s - self.run_start_time_s > next_batch_arrives:
+                self.get_logger().info(f"New tasks arrived at {next_batch_arrives}s")
                 next_plan = self.solver.allocate_next_task_set(self.feedback)
                 self.plans.append(next_plan)
                 pose_lists = []
                 for agt in next_plan['agt']:
-                    print(f"Agent's ids: {agt['id']}")
+                    # print(f"Agent's ids: {agt['id']}")
                     room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
                     pose_lists.append([self.coord(rid) for rid in room_ids])
                     # Test case that some times caused issues:
@@ -167,15 +174,16 @@ class Dispatcher(Node):
                 self.has_new_sequences = True
 
     def publish_goal_sequence_callback(self):
-        # if self.has_new_sequences:
+        # ToDo: Add intermediate nodes and times in here
         for (name, publisher), pose_list in zip(self.publishers_.items(), self.pose_lists):
             msg = PoseArray()
             msg.header.frame_id = "map"
             msg.header.stamp = self.get_clock().now().to_msg()
             msg.poses = [self.create_pose_from_point(pose) for pose in pose_list][1:]
             publisher.publish(msg)
-            self.has_new_sequences = False
-            self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
+            if self.has_new_sequences:
+                self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
+        self.has_new_sequences = False
 
     def make_feedback_callback(self, index):
         def feedback_callback(msg):

@@ -36,17 +36,16 @@ class GoalSetter(Node):
 
         # self.navigator = BasicNavigator()
         # self.delivery_locations = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
-        self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
+        # self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)] # Old locations in weird order
+        self.locs = [(0, 2.2), (7.9, -7.5), (7.85, -21.8), (4.25, -27.5), (-7.75, -21.7), (-7.75, -7.5)]
         # self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7)]
         self.starting_idx = 0
         self.ending_idx = 1
         self.goal_idx = 1
         self.iteration = 1
-        self.max_iterations = 40
+        self.max_iterations = 5
         self.traveling_to_start = False
         self.finished = False
-        # self.locs = [(0, 2.2), (4.25, -27.5)]
-        # self.locs = []
         location_indices = list(range(len(self.locs)))
         self.travel_times = {key1: {key2: [] for key2 in location_indices if key1 != key2} for key1 in location_indices}
         self.arrived_at_start = False
@@ -85,7 +84,7 @@ class GoalSetter(Node):
                 self.get_logger().info(f"Waiting for goal {goal} to be reached...")
         elif not self.data_saved:
             self.get_logger().info("All goals reached. Saving...")
-            with open("travel_time2.csv", "w") as f:
+            with open("travel_time_07_10_24.csv", "w") as f:
                 write = csv.writer(f)
                 for key1, sub_dict in self.travel_times.items():
                     for key2, travel_time_list in sub_dict.items():
@@ -139,13 +138,10 @@ class GoalSetter(Node):
 def main(args=None):
     rclpy.init(args=args)
     goal_publisher1 = GoalSetter(name="robot1")
-    goal_publisher2 = GoalSetter(name='robot2')
     executor = MultiThreadedExecutor()
     executor.add_node(goal_publisher1)
-    executor.add_node(goal_publisher2)
     executor.spin()
     goal_publisher1.destroy_node()
-    goal_publisher2.destroy_node()
     rclpy.shutdown() 
 
 if __name__ == '__main__':

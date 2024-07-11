@@ -64,7 +64,7 @@ Then run the codes in the following sequence. To aid in implementation, several 
 1. To launch the gazebo environment with the robot inside it
 
 ```
-rgazebo input_file:=<scenario_file>
+rgazebo input_file:=<setup_file>
 ```
 
 2. To launch the ROS2 navigation stack (to use its planners)
@@ -74,7 +74,7 @@ rnav2
 
 3. To get human states from gazebo and to find closest obstacle points to robot
 ```
-rcsetup input_file:=<scenario_file>
+rcsetup input_file:=<setup_file>
 
 ```
 
@@ -101,12 +101,12 @@ rcpub
 
 7. To manage the task assignment for each agent:
 ```
-rcset input_file:=<scenario_file>
+rcset input_file:=<setup_file>
 ```
 
 8. For task allocation and high-level path planning for a set of agents:
 ```
-rcdis -p input_file:=<scenario_file>
+rcdis -p input_file:=<setup_file>
 ```
 
 Now you can use `rviz` to give the robot a goal. You can use `Nav2 Goal` button to send let ROS2 Navigation2 package plan the path and also control the robot, or you can publish to `2D Goal` button to send the goal location to the nav2_cbf_controller node that we ran in the last line. (Note: u need to add the 2D Goal button on rviz. See the attached video on how to do that).
