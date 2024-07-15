@@ -6,7 +6,7 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Pose, PoseArray
-from social_navigation_msgs.msg import Feedback
+from social_navigation_msgs.msg import Feedback, TimedPose, TimedPoseList
 from builtin_interfaces.msg import Time
 
 from MRTASolver import MRTASolver
@@ -46,13 +46,14 @@ class Dispatcher(Node):
         # Initialize variables
         self.timer_period = 1.0
         self.task_set_index = 0
-        self.timed_pose_lists = []
+        self.timed_position_lists = []
         self.feedback = [[] for i in range(len(robot_list))]
         self.has_new_sequences = False
+        self.lock_hold_time = 15
 
         # Initialize subscribers, publishers, and callbacks
         self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) }
-        self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
+        self.publishers_ = { robot: self.create_publisher(TimedPoseList, f'/{robot}/goal_sequence', 1) for robot in robot_list }
         self.start_time_publisher = self.create_publisher(Time, '/start_time', 10)
         self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
         self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
@@ -87,6 +88,7 @@ class Dispatcher(Node):
             data = pickle.load(file)
             room_count, room_graph = data
         
+        self.room_graph = room_graph
         self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
         self.plans = []
         self.has_new_sequences = True
@@ -203,14 +205,25 @@ class Dispatcher(Node):
             plan.append((arr_time, self.room_id(task_id, agents, tasks_stream)))
         return plan
 
-    def create_pose_from_point(self, point) -> Pose:
-        msg = Pose()
-        # print(point)
-        msg.position.x = float(point[0])
-        msg.position.y = float(point[1])
-        return msg
-
     def update_plan_callback(self):
+        def timed_positions_with_locks(action1, action2):
+            arrival_time1, rid1 = action1
+            arrival_time2, rid2 = action2
+            nominal_timed_position = (arrival_time2, self.coord(rid2))
+
+            # Check if a hold needs to be invoked
+            if self.room_graph[rid1][rid2] < arrival_time2 - arrival_time1:
+                hold_timed_position = (arrival_time2 - self.lock_hold_time, self.get_hold_coord(rid1, rid2))
+                return [hold_timed_position, nominal_timed_position]
+            
+            return [nominal_timed_position]
+            
+        def plan_to_positions(plan):
+            timed_positions = []
+            for previous_action, current_action in zip(plan[:-1], plan[1:]):
+                timed_positions += timed_positions_with_locks(previous_action, current_action)
+            return timed_positions
+
         current_time_s = self.clock.now().nanoseconds * 1e-9
         if self.task_set_index < len(self.tasks_stream):
             next_tasks, next_batch_arrives = self.tasks_stream[self.task_set_index]
@@ -220,41 +233,36 @@ class Dispatcher(Node):
                 self.get_logger().info(f"New tasks arrived at {next_batch_arrives}s")
                 next_plan = self.solver.allocate_next_task_set(self.feedback)
                 self.plans.append(next_plan)
-                timed_pose_lists = []
+                timed_position_lists = []
                 for agt in next_plan['agt']:
                     # print(f"Agent's ids: {agt['id']}")
                     plan = self.get_timed_plan(agt['id'], agt['t'], self.agents, self.tasks_stream)
-                    timed_pose_lists.append([(arr_time, self.coord(rid)) for arr_time, rid in plan])
-                    # Test case that some times caused issues:
-                    # if self.task_set_index == 0:
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5),(-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                    # else:
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
-                self.timed_pose_lists = timed_pose_lists
+                    timed_position_lists.append(plan_to_positions(plan))
+
+                self.timed_position_lists = timed_position_lists
                 self.task_set_index += 1
                 self.has_new_sequences = True
 
     def publish_goal_sequence_callback(self):
-        # ToDo: Add intermediate nodes and times in here
-        for (name, publisher), pose_list in zip(self.publishers_.items(), self.timed_pose_lists):
-            msg = PoseArray()
-            msg.header.frame_id = "map"
-            msg.header.stamp = self.get_clock().now().to_msg()
-            msg.poses = [self.create_pose_from_point(pose) for arr_time, pose in pose_list][1:]
+        def position_to_timed_pose(arr_time, point) -> TimedPose:
+            msg = TimedPose()
+            msg.time = arr_time
+            msg.pose.position.x = float(point[0])
+            msg.pose.position.y = float(point[1])
+            return msg
+    
+        for (name, publisher), timed_position_list in zip(self.publishers_.items(), self.timed_position_lists):
+            msg = TimedPoseList()
+            msg.poses_with_time = [position_to_timed_pose(arr_time, position) for arr_time, position in timed_position_list]
             publisher.publish(msg)
             if self.has_new_sequences:
-                self.get_logger().info(f"New goal sequence sent to {name}: {[pose for _, pose in pose_list[1:]]}")
+                self.get_logger().info(f"New goal sequence sent to {name}: {[pose for _, pose in timed_position_list]}")
         self.has_new_sequences = False
 
     def start_time_callback(self):
         msg = Time()
-        msg.sec = self.run_start_time.seconds
-        msg.nanosec = self.run_start_time.nanoseconds
+        msg.sec = math.floor(self.run_start_time.nanoseconds * 1e-9)
+        msg.nanosec = round(self.run_start_time.nanoseconds % 1e9)
         self.start_time_publisher.publish(msg)
 
     def make_feedback_callback(self, index):

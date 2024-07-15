@@ -27,6 +27,8 @@ set (msg_files
   "msg/RobotClosestObstacle.msg"
   "msg/RobotClosestObstacles.msg"
   "msg/Feedback.msg"
+  "msg/TimedPose.msg"
+  "msg/TimedPoseList.msg"
 )
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}
