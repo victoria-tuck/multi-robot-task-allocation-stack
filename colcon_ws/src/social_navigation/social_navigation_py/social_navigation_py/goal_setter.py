@@ -6,6 +6,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 
 from geometry_msgs.msg import PoseStamped, PoseArray
 from social_navigation_msgs.msg import Feedback
+from builtin_interfaces.msg import Time
 
 import json
 import math
@@ -32,6 +33,7 @@ class GoalSetter(Node):
         self.actual_arrival_times = []
 
         self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
+        self.start_time_subscriber = self.create_subscription(Time, '/start_time', self.start_time_callback, 10)
 
         self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
         self.timer_period = 1.0
@@ -43,12 +45,18 @@ class GoalSetter(Node):
 
         self.locs = []
         self.loc_idx = 0
+        self.start_time_s = None
 
         self.goal_reached = True
 
     def goal_sequence_callback(self, msg):
         self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
         print(f"{self.name} updated its goals: {self.locs}")
+
+    def start_time_callback(self, msg):
+        self.start_time_s = msg.nanosec * 1e-9
+        if self.start_time_s is None:
+            self.get_logger().info(f"Start time received: {self.start_time_s} s")
 
     def publish_goal(self):
         if self.loc_idx < len(self.locs):

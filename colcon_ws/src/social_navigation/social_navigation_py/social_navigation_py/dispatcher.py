@@ -7,6 +7,7 @@ from rclpy.node import Node
 
 from geometry_msgs.msg import Pose, PoseArray
 from social_navigation_msgs.msg import Feedback
+from builtin_interfaces.msg import Time
 
 from MRTASolver import MRTASolver
 # ToDo: Put load_config in run_realistic_setting instead of create_randomized_inputs
@@ -34,6 +35,7 @@ class Dispatcher(Node):
                 current_clock = self.clock.now()
                 current_time_s = current_clock.nanoseconds * 1e-9
                 if current_time_s > 0:
+                    self.run_start_time = current_clock
                     self.run_start_time_s = current_time_s
                     self.get_logger().info(f"Non-zero clock time received: {self.run_start_time_s} s")
                     break
@@ -44,15 +46,17 @@ class Dispatcher(Node):
         # Initialize variables
         self.timer_period = 1.0
         self.task_set_index = 0
-        self.pose_lists = []
+        self.timed_pose_lists = []
         self.feedback = [[] for i in range(len(robot_list))]
         self.has_new_sequences = False
 
         # Initialize subscribers, publishers, and callbacks
         self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) }
         self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
+        self.start_time_publisher = self.create_publisher(Time, '/start_time', 10)
         self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
         self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
+        self.start_time_timer = self.create_timer(self.timer_period, self.start_time_callback)
 
         self.initialize_solver()
 
@@ -88,7 +92,7 @@ class Dispatcher(Node):
         self.has_new_sequences = True
 
     def coord(self, rid):
-        coordinate_map = {0: (0, 2.2),
+        room_coordinate_map = {0: (0, 2.2),
                           1: (7.9, -7.5),
                           2: (7.85, -21.8),
                           3: (4.25, -27.5),
@@ -100,7 +104,55 @@ class Dispatcher(Node):
                           3: (7.85, -21.8), 
                           4: (7.9, -7.5), 
                           5: (-7.75, -7.5)}
-        return coordinate_map.get(rid, None)
+        return room_coordinate_map.get(rid, None)
+    
+    def get_hold_coord(self, prev_rid, rid):
+        """
+        Gets the coordinate that an agent should hold at.
+
+        Args:
+        - prev_rid: room id agent is coming from
+        -      rid: room id agent is going to
+        """
+        # ToDo: CHANGE TO CORRECT VALUES
+        hold_coord_map = {0: {0: (0, 2.2),
+                              1: (7.9, -7.5),
+                              2: (7.85, -21.8),
+                              3: (4.25, -27.5),
+                              4: (-7.75, -21.7),
+                              5: (-7.75, -7.5)},
+                          1: {0: (0, 2.2),
+                              1: (7.9, -7.5),
+                              2: (7.85, -21.8),
+                              3: (4.25, -27.5),
+                              4: (-7.75, -21.7),
+                              5: (-7.75, -7.5)},
+                          2: {0: (0, 2.2),
+                              1: (7.9, -7.5),
+                              2: (7.85, -21.8),
+                              3: (4.25, -27.5),
+                              4: (-7.75, -21.7),
+                              5: (-7.75, -7.5)},
+                          3: {0: (0, 2.2),
+                              1: (7.9, -7.5),
+                              2: (7.85, -21.8),
+                              3: (4.25, -27.5),
+                              4: (-7.75, -21.7),
+                              5: (-7.75, -7.5)},
+                          4: {0: (0, 2.2),
+                              1: (7.9, -7.5),
+                              2: (7.85, -21.8),
+                              3: (4.25, -27.5),
+                              4: (-7.75, -21.7),
+                              5: (-7.75, -7.5)},
+                          5: {0: (0, 2.2),
+                              1: (7.9, -7.5),
+                              2: (7.85, -21.8),
+                              3: (4.25, -27.5),
+                              4: (-7.75, -21.7),
+                              5: (-7.75, -7.5)}}
+        prev_map = hold_coord_map.get(prev_rid, None)
+        return prev_map.get(rid, None)
 
     def room_id(self, task_id, agents, tasks_stream):
         task_counts = [len(tasks) for tasks, _ in tasks_stream]
@@ -137,6 +189,19 @@ class Dispatcher(Node):
                 started_plan = True
             plan.append(self.room_id(task_id, agents, tasks_stream))
         return plan
+    
+    def get_timed_plan(self, id_sequence, time_sequence, agents, tasks_stream):
+        num_agents = len(agents)
+        plan = []
+        started_plan = False
+        for task_id, arr_time in zip(id_sequence, time_sequence):
+            # print(task_id)
+            if self.is_agent_id(task_id, num_agents) and started_plan:
+                return plan
+            else:
+                started_plan = True
+            plan.append((arr_time, self.room_id(task_id, agents, tasks_stream)))
+        return plan
 
     def create_pose_from_point(self, point) -> Pose:
         msg = Pose()
@@ -155,11 +220,11 @@ class Dispatcher(Node):
                 self.get_logger().info(f"New tasks arrived at {next_batch_arrives}s")
                 next_plan = self.solver.allocate_next_task_set(self.feedback)
                 self.plans.append(next_plan)
-                pose_lists = []
+                timed_pose_lists = []
                 for agt in next_plan['agt']:
                     # print(f"Agent's ids: {agt['id']}")
-                    room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
-                    pose_lists.append([self.coord(rid) for rid in room_ids])
+                    plan = self.get_timed_plan(agt['id'], agt['t'], self.agents, self.tasks_stream)
+                    timed_pose_lists.append([(arr_time, self.coord(rid)) for arr_time, rid in plan])
                     # Test case that some times caused issues:
                     # if self.task_set_index == 0:
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
@@ -170,21 +235,27 @@ class Dispatcher(Node):
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
                         # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
-                self.pose_lists = pose_lists
+                self.timed_pose_lists = timed_pose_lists
                 self.task_set_index += 1
                 self.has_new_sequences = True
 
     def publish_goal_sequence_callback(self):
         # ToDo: Add intermediate nodes and times in here
-        for (name, publisher), pose_list in zip(self.publishers_.items(), self.pose_lists):
+        for (name, publisher), pose_list in zip(self.publishers_.items(), self.timed_pose_lists):
             msg = PoseArray()
             msg.header.frame_id = "map"
             msg.header.stamp = self.get_clock().now().to_msg()
-            msg.poses = [self.create_pose_from_point(pose) for pose in pose_list][1:]
+            msg.poses = [self.create_pose_from_point(pose) for arr_time, pose in pose_list][1:]
             publisher.publish(msg)
             if self.has_new_sequences:
-                self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
+                self.get_logger().info(f"New goal sequence sent to {name}: {[pose for _, pose in pose_list[1:]]}")
         self.has_new_sequences = False
+
+    def start_time_callback(self):
+        msg = Time()
+        msg.sec = self.run_start_time.seconds
+        msg.nanosec = self.run_start_time.nanoseconds
+        self.start_time_publisher.publish(msg)
 
     def make_feedback_callback(self, index):
         def feedback_callback(msg):
