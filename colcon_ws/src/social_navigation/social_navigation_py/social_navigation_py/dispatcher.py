@@ -64,7 +64,7 @@ class Dispatcher(Node):
     def initialize_solver(self):
         # MRTASolver arguments
         # file = 'simulation/testcase_4agents_duplicate_tasks.json'
-        file = 'simulation/testcase_2agents_3_3.json'
+        file = 'simulation/testcase_4agents_duplicate_tasks.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
         capacity = 2
@@ -117,42 +117,42 @@ class Dispatcher(Node):
         -      rid: room id agent is going to
         """
         # ToDo: CHANGE TO CORRECT VALUES
-        hold_coord_map = {0: {0: (1.7, 2.6),
+        hold_coord_map = {0: {0: (0, 2.2), # (1.7, 2.6),
                               1: (5.6, -6.5),
                               2: (5.6, -20.8),
                               3: (3.6, -25.2),
                               4: (-5.3, -20.4),
                               5: (-5.4, -6.8)},
                           1: {0: (1.7, 2.6),
-                              1: (5.6, -6.5),
+                              1: (7.9, -7.5), # (5.6, -6.5),
                               2: (5.6, -20.8),
                               3: (3.6, -25.2),
                               4: (-5.3, -20.4),
                               5: (-5.4, -6.8)},
                           2: {0: (1.7, 2.6),
                               1: (5.4, -11.4),
-                              2: (5.6, -20.8),
+                              2: (7.85, -21.8), # (5.6, -20.8),
                               3: (3.6, -25.2),
                               4: (-5.7, -25.9),
                               5: (5.5, -11.4)},
                           3: {0: (1.7, 2.6),
                               1: (5.4, -11.4),
                               2: (5.6, -20.8),
-                              3: (3.6, -25.2),
+                              3: (4.25, -27.5), # (3.6, -25.2),
                               4: (-5.7, -25.9),
                               5: (5.5, -11.4)},
                           4: {0: (-1.8, 2.3),
                               1: (5.4, -11.4),
                               2: (3.6, -25.2),
                               3: (3.6, -25.2),
-                              4: (-5.3, -20.4),
+                              4: (-7.75, -21.7), # (-5.3, -20.4),
                               5: (5.5, -11.4)},
                           5: {0: (-1.8, 2.3),
                               1: (5.6, -6.5),
                               2: (5.6, -20.8),
                               3: (3.6, -25.2),
                               4: (-5.3, -20.4),
-                              5: (-5.4, -6.8)}}
+                              5: (-7.75, -7.5)}} #(-5.4, -6.8)}}
         prev_map = hold_coord_map.get(prev_rid, None)
         return prev_map.get(rid, None)
 
