@@ -49,7 +49,7 @@ class Dispatcher(Node):
         self.timed_position_lists = []
         self.feedback = [[] for i in range(len(robot_list))]
         self.has_new_sequences = False
-        self.lock_hold_time = 15
+        self.lock_hold_time = 45
 
         # Initialize subscribers, publishers, and callbacks
         self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) }
@@ -63,8 +63,7 @@ class Dispatcher(Node):
 
     def initialize_solver(self):
         # MRTASolver arguments
-        # file = 'simulation/testcase_4agents_duplicate_tasks.json'
-        file = 'simulation/testcase_2agents_3_3.json'
+        file = 'simulation/testcase_4agents_duplicate_tasks_6_6_V3.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
         capacity = 2
@@ -155,6 +154,60 @@ class Dispatcher(Node):
                               5: (-7.75, -7.5)}} #(-5.4, -6.8)}}
         prev_map = hold_coord_map.get(prev_rid, None)
         return prev_map.get(rid, None)
+    
+    def get_post_act_coord(self, rid, next_rid):
+        """
+        Gets the coordinate that an agent should hold at after completing an action.
+
+        Args:
+        - prev_rid: room id agent is coming from
+        -      rid: room id agent is going to
+        """
+        # ToDo: CHANGE TO CORRECT VALUES
+        post_coord_map = {0: {0: (0, 2.2),
+                              1: (1.7, 2.6),
+                              2: (1.7, 2.6),
+                              3: (1.7, 2.6),
+                              4: (-1.8, 2.3),
+                              5: (-1.8, 2.3),
+                              None: (1.7, 2.6)},
+                          1: {0: (5.6, -6.5),
+                              1: (5.6, -6.5),
+                              2: (5.4, -11.4),
+                              3: (5.4, -11.4),
+                              4: (5.4, -11.4),
+                              5: (5.6, -6.5),
+                              None: (5.6, -6.5)},
+                          2: {0: (5.6, -20.8),
+                              1: (5.6, -20.8),
+                              2: (5.6, -20.8),
+                              3: (5.6, -20.8),
+                              4: (3.6, -25.2),
+                              5: (3.6, -25.2),
+                              None: (3.6, -25.2)},
+                          3: {0: (5.6, -20.8),
+                              1: (5.6, -20.8),
+                              2: (5.6, -20.8),
+                              3: (3.6, -25.2),
+                              4: (3.6, -25.2),
+                              5: (3.6, -25.2),
+                              None: (3.6, -25.2)},
+                          4: {0: (-5.3, -20.4),
+                              1: (-5.3, -20.4),
+                              2: (-5.7, -25.9),
+                              3: (-5.7, -25.9),
+                              4: (-5.7, -25.9), 
+                              5: (-5.3, -20.4),
+                              None: (-5.3, -20.4)},
+                          5: {0: (-5.4, -6.8),
+                              1: (-5.4, -6.8),
+                              2: (-5.5, -11.4),
+                              3: (-5.5, -11.4),
+                              4: (-5.5, -11.4),
+                              5: (-5.4, -6.8),
+                              None: (-5.4, -6.8)}} 
+        curr_map = post_coord_map.get(rid, None)
+        return curr_map.get(next_rid, None)
 
     def room_id(self, task_id, agents, tasks_stream):
         task_counts = [len(tasks) for tasks, _ in tasks_stream]
@@ -206,22 +259,32 @@ class Dispatcher(Node):
         return plan
 
     def update_plan_callback(self):
-        def timed_positions_with_locks(action1, action2):
+        def timed_positions_with_locks(action1, action2, action3):
             arrival_time1, rid1 = action1
             arrival_time2, rid2 = action2
+            _, rid3 = action3
             nominal_timed_position = (arrival_time2, self.coord(rid2))
+
+            # Always leave the room after dropping off
+            post_act_timed_position = (arrival_time2 + 60 - self.lock_hold_time, self.get_post_act_coord(rid2, rid3))
 
             # Check if a hold needs to be invoked
             if self.room_graph[rid1][rid2] < arrival_time2 - arrival_time1:
                 hold_timed_position = (arrival_time2 - self.lock_hold_time, self.get_hold_coord(rid1, rid2))
-                return [hold_timed_position, nominal_timed_position]
+                return [hold_timed_position, nominal_timed_position, post_act_timed_position]
             
-            return [nominal_timed_position]
+            return [nominal_timed_position, post_act_timed_position]
             
         def plan_to_positions(plan):
             timed_positions = []
+            index = 2
             for previous_action, current_action in zip(plan[:-1], plan[1:]):
-                timed_positions += timed_positions_with_locks(previous_action, current_action)
+                if len(plan) > index:
+                    next_action = plan[index]
+                else:
+                    next_action = None
+                timed_positions += timed_positions_with_locks(previous_action, current_action, next_action)
+                index += 1
             return timed_positions
 
         current_time_s = self.clock.now().nanoseconds * 1e-9
