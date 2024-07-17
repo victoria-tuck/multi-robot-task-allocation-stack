@@ -266,7 +266,7 @@ class Dispatcher(Node):
             nominal_timed_position = (arrival_time2, self.coord(rid2))
 
             # Always leave the room after dropping off
-            post_act_timed_position = (arrival_time2 + 60 - self.lock_hold_time, self.get_post_act_coord(rid2, rid3))
+            post_act_timed_position = (arrival_time2 - self.lock_hold_time, self.get_post_act_coord(rid2, rid3))
 
             # Check if a hold needs to be invoked
             if self.room_graph[rid1][rid2] < arrival_time2 - arrival_time1:
@@ -282,7 +282,7 @@ class Dispatcher(Node):
                 if len(plan) > index:
                     next_action = plan[index]
                 else:
-                    next_action = None
+                    next_action = (None, None)
                 timed_positions += timed_positions_with_locks(previous_action, current_action, next_action)
                 index += 1
             return timed_positions
