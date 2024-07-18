@@ -2,6 +2,10 @@ import json
 import math
 import pickle
 import rclpy
+import numpy as np
+import random
+
+from typing import Dict, List, Optional, Tuple
 
 from rclpy.node import Node
 
@@ -11,6 +15,10 @@ from social_navigation_msgs.msg import Feedback
 from MRTASolver import MRTASolver
 # ToDo: Put load_config in run_realistic_setting instead of create_randomized_inputs
 from MRTASolver.create_randomized_inputs import load_config
+import specless as sl
+
+Location = Tuple[float, float]
+TimeBound = Tuple[float, float]
 
 
 class Dispatcher(Node):
@@ -47,44 +55,49 @@ class Dispatcher(Node):
         self.pose_lists = []
         self.feedback = [[] for i in range(len(robot_list))]
         self.has_new_sequences = False
+        self.created_plan = False
 
         # Initialize subscribers, publishers, and callbacks
         self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) }
         self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
         self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
         self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
+        self.planner_type = 'specless'
 
         self.initialize_solver()
 
     def initialize_solver(self):
-        # MRTASolver arguments
-        file = 'simulation/testcase_4agents_duplicate_tasks.json'
-        solver = 'bitwuzla'
-        theory = 'QF_UFBV'
-        capacity = 2
-        fidelity = 1
-        free_action_points = False
-        timeout = 3600
-        basename = None
-        default_deadline = 100
-        incremental = True
-        verbose = False
-        
-        self.agents, self.tasks_stream = load_config(file)
-        num_agents = len(self.agents)
-        tot_tasks = sum([len(tasks) for tasks, _ in self.tasks_stream])
-        num_aps = math.ceil(tot_tasks / num_agents) * 2 + 1
-        aps_list = list(range(3, num_aps+1, 2))
+        if self.planner_type == 'SMT':
+            # MRTASolver arguments
+            file = 'simulation/testcase_4agents_duplicate_tasks.json'
+            solver = 'bitwuzla'
+            theory = 'QF_UFBV'
+            capacity = 2
+            fidelity = 1
+            free_action_points = False
+            timeout = 3600
+            basename = None
+            default_deadline = 100
+            incremental = True
+            verbose = False
+            
+            self.agents, self.tasks_stream = load_config(file)
+            num_agents = len(self.agents)
+            tot_tasks = sum([len(tasks) for tasks, _ in self.tasks_stream])
+            num_aps = math.ceil(tot_tasks / num_agents) * 2 + 1
+            aps_list = list(range(3, num_aps+1, 2))
 
-        # room_dictionary = load_weighted_graph()
-        # room_count, room_graph = dictionary_to_matrix(room_dictionary)
-        with open('weighted_graph_hospital.pkl', 'rb') as file:
-            data = pickle.load(file)
-            room_count, room_graph = data
-        
-        self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
+            # room_dictionary = load_weighted_graph()
+            # room_count, room_graph = dictionary_to_matrix(room_dictionary)
+            with open('weighted_graph_hospital.pkl', 'rb') as file:
+                data = pickle.load(file)
+                room_count, room_graph = data
+            
+            self.solver = MRTASolver(solver, theory, self.agents, self.tasks_stream, room_graph, capacity, num_aps, fidelity, free_action_points, timeout, basename, default_deadline, aps_list, incremental, verbose)
         self.plans = []
         self.has_new_sequences = True
+        
+        
 
     def coord(self, rid):
         coordinate_map = {0: (0, 2.2),
@@ -145,33 +158,55 @@ class Dispatcher(Node):
         return msg
 
     def update_plan_callback(self):
-        current_time_s = self.clock.now().nanoseconds * 1e-9
-        if self.task_set_index < len(self.tasks_stream):
-            next_tasks, next_batch_arrives = self.tasks_stream[self.task_set_index]
-            # next_batch_arrives, next_plan = self.plans[self.task_set_index]
-            # self.get_logger().info(f"Current time: {current_time_s - self.run_start_time_s}")
-            if current_time_s - self.run_start_time_s > next_batch_arrives:
-                self.get_logger().info(f"New tasks arrived at {next_batch_arrives}s")
-                next_plan = self.solver.allocate_next_task_set(self.feedback)
-                self.plans.append(next_plan)
-                pose_lists = []
-                for agt in next_plan['agt']:
-                    # print(f"Agent's ids: {agt['id']}")
-                    room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
-                    pose_lists.append([self.coord(rid) for rid in room_ids])
-                    # Test case that some times caused issues:
-                    # if self.task_set_index == 0:
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5),(-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                    # else:
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
-                self.pose_lists = pose_lists
-                self.task_set_index += 1
-                self.has_new_sequences = True
+        if self.planner_type == 'SMT':
+            current_time_s = self.clock.now().nanoseconds * 1e-9
+            if self.task_set_index < len(self.tasks_stream):
+                next_tasks, next_batch_arrives = self.tasks_stream[self.task_set_index]
+                # next_batch_arrives, next_plan = self.plans[self.task_set_index]
+                # self.get_logger().info(f"Current time: {current_time_s - self.run_start_time_s}")
+                if current_time_s - self.run_start_time_s > next_batch_arrives:
+                    self.get_logger().info(f"New tasks arrived at {next_batch_arrives}s")
+                    next_plan = self.solver.allocate_next_task_set(self.feedback)
+                    self.plans.append(next_plan)
+                    pose_lists = []
+                    for agt in next_plan['agt']:
+                        # print(f"Agent's ids: {agt['id']}")
+                        room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
+                        pose_lists.append([self.coord(rid) for rid in room_ids])
+                        # Test case that some times caused issues:
+                        # if self.task_set_index == 0:
+                            # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
+                            # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5),(-7.75, -7.5)]]
+                            # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                            # pose_lists = [[(0, 2.2), (-7.75, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                        # else:
+                            # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
+                            # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                            # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
+                    self.pose_lists = pose_lists
+                    self.task_set_index += 1
+                    self.has_new_sequences = True
+        elif self.planner_type == 'specless':
+            if not self.created_plan:
+                # ids = list(range(30))
+                ids = [5] + [random.randint(0,5) for i in range(9)]
+                print(ids)
+                locations = [self.coord(id % 6) for id in ids]
+                def edit_tuple(coordinate):
+                    epsilon = random.random()/100.0
+                    return (coordinate[0] + epsilon, coordinate[1] + epsilon)
+                adjusted_locations = [edit_tuple(coordinate) for coordinate in locations]
+                initial_nodes = [0]
+                global_constraints: Dict[Location, TimeBound] = {}
+                local_constraints: Dict[Tuple[Location, Location], TimeBound] = {}
+                self.pose_lists, _, _ = self.get_location_assignments(
+                                adjusted_locations,
+                                initial_nodes,
+                                global_constraints=global_constraints,
+                                local_constraints=local_constraints,
+                            )
+                print(self.pose_lists)
+                self.created_plan = True
 
     def publish_goal_sequence_callback(self):
         # ToDo: Add intermediate nodes and times in here
@@ -191,6 +226,60 @@ class Dispatcher(Node):
             self.feedback[index] = timing_feedback
             # print(f"Feedback received so far: {self.feedback}")
         return feedback_callback
+    
+    def get_node_assignments(
+        self,
+        nodes: List[int],
+        costs: List[List[float]],
+        initial_nodes: List[int],
+        global_constraints: Dict[int, Tuple[float, float]] = {},
+        local_constraints: Dict[Tuple[int, int], Tuple[float, float]] = {},
+    ):
+        num_agent: int = len(initial_nodes)
+
+        # Define Time Specification
+        tpo: sl.TimedPartialOrder = sl.TimedPartialOrder.from_constraints(
+            global_constraints, local_constraints
+        )
+
+        # Construct a TSP instance
+        tsp_with_tpo = sl.TSPWithTPO(nodes, costs, tpo)
+        # Instantiate a solver
+        tspsolver = sl.MILPTSPWithTPOSolver()
+        # Solve TSP -> Tours
+        tours, cost, timestamps = tspsolver.solve(
+            tsp_with_tpo, num_agent=num_agent, init_nodes=initial_nodes
+        )
+
+        return tours, cost, timestamps
+    
+    def get_location_assignments(
+        self,
+        locations: List[Location],
+        initial_nodes: List[int],
+        costs: Optional[List[List[float]]] = None,
+        global_constraints: Dict[int, TimeBound] = {},
+        local_constraints: Dict[Tuple[int, int], TimeBound] = {},
+    ):
+        # Convert locations to nodes
+        n: int = len(locations)
+        nodes: List[int] = list(range(n))
+        node_to_loc = {i: l for i, l in enumerate(locations)}
+
+        if costs is None:
+            costs = [
+                [np.linalg.norm(np.array(l2) - np.array(l1)) for l1 in locations]
+                for l2 in locations
+            ]
+
+        # Compute node assignments
+        tours, cost, timestamps = self.get_node_assignments(
+            nodes, costs, initial_nodes, global_constraints, local_constraints
+        )
+        print(f"Tours: {tours}")
+        # Convert node assignments to location assignments
+        location_assignments = [list(map(lambda n: node_to_loc[n], tour)) for tour in tours]
+        return location_assignments, cost, timestamps
 
 
 def main(args=None):
