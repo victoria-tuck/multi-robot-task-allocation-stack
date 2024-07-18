@@ -39,10 +39,11 @@ WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_naviga
 RUN pip3 install .
 RUN echo "export PYTHONPATH=\$PYTHONPATH:$(pwd)/build/src/api/python" >> ~/.bashrc
 
-WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py
+WORKDIR /home/
 RUN git clone https://github.com/watakandai/specless.git
-WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/specless
+WORKDIR /home/specless
 RUN pip3 install -r requirements.txt
+RUN echo "export PYTHONPATH=\$PYTHONPATH:/home/specless" >> ~/.bashrc
 
 WORKDIR /home/colcon_ws
 #RUN add-apt-repository ppa:deadsnakes/ppa
