@@ -112,3 +112,9 @@ rcdis -p input_file:=<setup_file>
 Now you can use `rviz` to give the robot a goal. You can use `Nav2 Goal` button to send let ROS2 Navigation2 package plan the path and also control the robot, or you can publish to `2D Goal` button to send the goal location to the nav2_cbf_controller node that we ran in the last line. (Note: u need to add the 2D Goal button on rviz. See the attached video on how to do that).
 
 Note: ROS2 Navigation Stack requires that you set the initial pose first so that it can start robot localization. This is done in the video too before sending goal waypoint.
+
+The TravelTimeCollector node in travel_time_collector.py has been provided in order to collect travel time data. This can be run with:
+```
+rcdatacollect -p locations_file:=<locations_file> -p save_file:=<save_file>
+```
+where <locations_file> is the name of a json file containing a list of the map locations and <save_file> is where the travel time information should be saved.

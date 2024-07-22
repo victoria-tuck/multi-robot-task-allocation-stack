@@ -4,6 +4,7 @@ from rclpy.clock import Clock
 from rclpy.executors import MultiThreadedExecutor
 from nav2_simple_commander.robot_navigator import BasicNavigator
 import csv
+import json
 
 from geometry_msgs.msg import PoseStamped, PoseArray
 
@@ -14,7 +15,7 @@ DIST_THRES = 0.5
 def dist(c1, c2):
     return math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)
 
-class GoalSetter(Node):
+class TravelTimeCollector(Node):
     def __init__(self, name=''):
         super().__init__(f'goal_setter_{name}')
         self.get_logger().info(f"goal_setter_{name} started!")
@@ -22,6 +23,15 @@ class GoalSetter(Node):
             prefix = '/' + name
         else:
             prefix = ""
+
+        self.declare_parameter('locations_file', rclpy.Parameter.Type.STRING)
+        self.declare_parameter('save_file', rclpy.Parameter.Type.STRING)
+        locations_file = self.get_parameter('locations_file').value
+
+        with open(locations_file, 'r') as f:
+            map_locations = json.load(f)['map_locations']
+        self.locs = [(loc[0], loc[1]) for loc in map_locations]
+        self.save_file = self.get_parameter('save_file').value
 
         self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
         # self.subscriber = self.create_subscription( PoseArray, '/goal_sequence', self.goal_sequence_callback, 10 )
@@ -37,13 +47,13 @@ class GoalSetter(Node):
         # self.navigator = BasicNavigator()
         # self.delivery_locations = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)]
         # self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7), (7.85, -21.8), (7.9, -7.5), (-7.75, -7.5)] # Old locations in weird order
-        self.locs = [(0, 2.2), (7.9, -7.5), (7.85, -21.8), (4.25, -27.5), (-7.75, -21.7), (-7.75, -7.5)]
+        # self.locs = [(0, 2.2), (7.9, -7.5), (7.85, -21.8), (4.25, -27.5), (-7.75, -21.7), (-7.75, -7.5)]
         # self.locs = [(0, 2.2), (4.25, -27.5), (-7.75, -21.7)]
         self.starting_idx = 0
         self.ending_idx = 1
         self.goal_idx = 1
         self.iteration = 1
-        self.max_iterations = 5
+        self.max_iterations = 1
         self.traveling_to_start = False
         self.finished = False
         location_indices = list(range(len(self.locs)))
@@ -52,7 +62,7 @@ class GoalSetter(Node):
         self.pull_travel_time = False
         self.start_time = None
         self.loc_idx = 0
-        self.data_saved = True
+        self.data_saved = False
 
         self.goal_reached = True
 
@@ -84,7 +94,7 @@ class GoalSetter(Node):
                 self.get_logger().info(f"Waiting for goal {goal} to be reached...")
         elif not self.data_saved:
             self.get_logger().info("All goals reached. Saving...")
-            with open("travel_time_07_22_24.csv", "w") as f:
+            with open(self.save_file, "w") as f:
                 write = csv.writer(f)
                 for key1, sub_dict in self.travel_times.items():
                     for key2, travel_time_list in sub_dict.items():
