@@ -1,12 +1,12 @@
+import csv
+import json
+import math
+import numpy as np
+import pickle
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
-import csv
-import json
-
-from geometry_msgs.msg import PoseStamped, PoseArray
-
-import math
+from geometry_msgs.msg import PoseStamped
 
 DIST_THRES = 0.5
 
@@ -15,8 +15,8 @@ def dist(c1, c2):
 
 class TravelTimeCollector(Node):
     def __init__(self, name=''):
-        super().__init__(f'goal_setter_{name}')
-        self.get_logger().info(f"goal_setter_{name} started!")
+        super().__init__(f'travel_time_collector')
+        self.get_logger().info(f"travel_time_collector started!")
         if name != "":
             prefix = '/' + name
         else:
@@ -28,15 +28,15 @@ class TravelTimeCollector(Node):
 
         with open(time_collection_params, 'r') as f:
             params = json.load(f)
-        self.max_iterations, self.save_mode = params["iterations"], params["save_mode"]
+        self.max_iterations, self.save_mode, self.format = params["iterations"], params["save_mode"], params["format"]
         self.locs = [(loc[0], loc[1]) for loc in params["map_locations"]]
         self.save_file = self.get_parameter('save_file').value
 
-        self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
-
         self.timer_period = 1.0
         self.timer = self.create_timer(self.timer_period, self.publish_goal)
-        self.location_listener = self.create_subscription(PoseStamped, prefix + '/robot_location', self.listen_location_callback, 1)
+        self.location_subscriber = self.create_subscription(PoseStamped, prefix + '/robot_location', self.location_callback, 1)
+
+        self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
 
         location_indices = list(range(len(self.locs)))
         assert len(location_indices) > 1
@@ -54,7 +54,65 @@ class TravelTimeCollector(Node):
         self.data_saved = False
         self.goal_reached = True
 
+    def location_callback(self, msg):
+        """
+        Save travel time and update the goal parameters if the current goal has been reached.
+
+        Args:
+        - msg (PoseStamped): Position message received from controller
+        """
+        cur_loc = (msg.pose.position.x, msg.pose.position.y)
+        assert self.goal_idx < len(self.locs)
+        if dist(self.locs[self.goal_idx], cur_loc) < DIST_THRES:
+
+            # Save travel time
+            if self.start_time is not None:
+                current_time = self.get_clock().now().nanoseconds * 1.0e-9
+                travel_time = current_time - self.start_time
+                self.get_logger().info(f"Travel time: {travel_time}")
+                if not self.traveling_to_start:
+                    if self.goal_idx == self.ending_idx:
+                        self.travel_times[self.starting_idx][self.ending_idx].append(travel_time)
+                    elif self.goal_idx == self.starting_idx:
+                        self.travel_times[self.ending_idx][self.starting_idx].append(travel_time)
+                    else:
+                        self.get_logger().info("Goal index value invalid")
+                self.start_time = None
+
+            # Update goal idx
+            if self.goal_idx == self.starting_idx:
+
+                # Update to the next data collection pair if the max iterations have been reached
+                if self.iteration >= self.max_iterations:
+                    if self.ending_idx + 1 >= len(self.locs):
+                        if self.starting_idx + 2 >= len(self.locs):
+                            self.finished = True
+                        else:
+                            self.starting_idx += 1
+                            self.ending_idx = self.starting_idx + 1
+                            self.goal_idx = self.starting_idx
+                            self.traveling_to_start = True
+                            self.iteration = 0
+                    else:
+                        self.ending_idx += 1
+                        self.goal_idx = self.ending_idx
+                        self.iteration = 1
+                else:
+                    # Check if the starting point has just been reached and set goal idx to end of pair
+                    if self.iteration == 0:
+                        self.traveling_to_start = False
+                    self.iteration += 1
+                    self.goal_idx = self.ending_idx
+            else:
+                # Set goal idx to start of pair (return trip)
+                self.goal_idx = self.starting_idx
+            self.goal_reached = True
+
     def publish_goal(self):
+        """
+        Publish next location to visit if current goal has been reached and there is still data to collect.
+        Otherwise, save the data.
+        """
         if self.goal_idx < len(self.locs) and not self.finished:
             goal = self.locs[self.goal_idx]
             if self.goal_reached:
@@ -75,61 +133,49 @@ class TravelTimeCollector(Node):
             else:
                 self.get_logger().info(f"Waiting for goal {goal} to be reached...")
         elif not self.data_saved:
-            self.get_logger().info("All goals reached. Saving...")
+            self.data_saved = self.save_data()
+    
+    def save_data(self):
+        """
+        Save data if collection procedure has finished.
+        """
+        self.get_logger().info("All goals reached. Saving...")
+        processed_data = self.process_data()
+        if self.format == "CSV":
             with open(self.save_file, "w") as f:
                 write = csv.writer(f)
-                for key1, sub_dict in self.travel_times.items():
-                    for key2, travel_time_list in sub_dict.items():
+                for key1, subdict in processed_data.items():
+                    for key2, data in subdict.items():
                         header = [key1, key2]
-                        if self.save_mode == "MAX_CEIL":
-                            write.writerow(header + [math.ceil(max(travel_time_list))])
-                        elif self.save_mode == "MAX":
-                            write.writerow(header + [max(travel_time_list)])
-                        elif self.save_mode == "AVG":
-                            write.writerow(header + [sum(travel_time_list)/len(travel_time_list)])
-                        elif self.save_mode == "ALL":
-                            write.writerow([key1, key2] + travel_time_list)
-            self.data_saved = True
+                        write.writerow(header + data)
+        elif self.format == "GRAPH":
+            assert self.save_mode != "ALL"
+            room_count = len(self.locs)
+            travel_time_graph = np.zeros((room_count, room_count))
+            for key1, subdict in processed_data.items():
+                for key2, data in subdict.items():
+                    travel_time_graph[key1][key2] = data[0]
+            with open(self.save_file, 'wb') as handle:
+                pickle.dump((room_count, travel_time_graph), handle)
+        return True
 
-    def listen_location_callback(self, msg):
-        cur_loc = (msg.pose.position.x, msg.pose.position.y)
-        if self.goal_idx < len(self.locs):
-            if dist(self.locs[self.goal_idx], cur_loc) < DIST_THRES:
-                if self.start_time is not None:
-                    current_time = self.get_clock().now().nanoseconds * 1.0e-9
-                    travel_time = current_time - self.start_time
-                    print(f"Travel time: {travel_time}")
-                    if not self.traveling_to_start:
-                        if self.goal_idx == self.ending_idx:
-                            self.travel_times[self.starting_idx][self.ending_idx].append(travel_time)
-                        elif self.goal_idx == self.starting_idx:
-                            self.travel_times[self.ending_idx][self.starting_idx].append(travel_time)
-                        else:
-                            self.get_logger().info("Goal index value invalid")
-                    self.start_time = None  
-                if self.goal_idx == self.starting_idx:
-                    if self.iteration >= self.max_iterations:
-                        if self.ending_idx + 1 >= len(self.locs):
-                            if self.starting_idx + 2 >= len(self.locs):
-                                self.finished = True
-                            else:
-                                self.starting_idx += 1
-                                self.ending_idx = self.starting_idx + 1
-                                self.goal_idx = self.starting_idx
-                                self.traveling_to_start = True
-                                self.iteration = 0
-                        else:
-                            self.ending_idx += 1
-                            self.goal_idx = self.ending_idx
-                            self.iteration = 1
-                    else:
-                        if self.iteration == 0:
-                            self.traveling_to_start = False
-                        self.iteration += 1
-                        self.goal_idx = self.ending_idx
-                else:
-                    self.goal_idx = self.starting_idx
-                self.goal_reached = True
+    def process_data(self):
+        all_processed_data = {}
+        for key1, subdict in self.travel_times.items():
+            processed_subdict = {}
+            for key2, travel_time_list in subdict.items():
+                if self.save_mode == "MAX_CEIL":
+                    processed_data = [math.ceil(max(travel_time_list))]
+                elif self.save_mode == "MAX":
+                    processed_data = [max(travel_time_list)]
+                elif self.save_mode == "AVG":
+                    processed_data = [sum(travel_time_list)/len(travel_time_list)]
+                elif self.save_mode == "ALL":
+                    processed_data = travel_time_list
+                processed_subdict[key2] = processed_data
+            all_processed_data[key1] = processed_subdict   
+        return all_processed_data
+                
 
 def main(args=None):
     rclpy.init(args=args)
