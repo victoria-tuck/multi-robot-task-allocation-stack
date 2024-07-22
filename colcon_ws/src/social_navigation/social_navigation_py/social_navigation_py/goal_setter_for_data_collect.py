@@ -84,7 +84,7 @@ class GoalSetter(Node):
                 self.get_logger().info(f"Waiting for goal {goal} to be reached...")
         elif not self.data_saved:
             self.get_logger().info("All goals reached. Saving...")
-            with open("travel_time_07_10_24.csv", "w") as f:
+            with open("travel_time_07_22_24.csv", "w") as f:
                 write = csv.writer(f)
                 for key1, sub_dict in self.travel_times.items():
                     for key2, travel_time_list in sub_dict.items():

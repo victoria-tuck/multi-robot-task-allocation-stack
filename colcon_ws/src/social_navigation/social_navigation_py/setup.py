@@ -23,15 +23,6 @@ setup(
     entry_points={
         'console_scripts': [
             'nav2_cbf = social_navigation_py.nav2_cbf_controller:main',
-            'nav2_cbf2 = social_navigation_py.nav2_cbf_controller2:main',
-            'nav2_cbf3 = social_navigation_py.nav2_cbf_controller3:main',
-            'nav2_cbf4 = social_navigation_py.nav2_cbf_controller4:main',
-            'nav2_cbf5 = social_navigation_py.nav2_cbf_controller5:main',
-            'nav2_cbf6 = social_navigation_py.nav2_cbf_controller6:main',
-            'nav2_cbf7 = social_navigation_py.nav2_cbf_controller7:main',
-            'nav2_cbf8 = social_navigation_py.nav2_cbf_controller8:main',
-            'nav2_cbf9 = social_navigation_py.nav2_cbf_controller9:main',
-            'nav2_cbf10 = social_navigation_py.nav2_cbf_controller10:main',
             'nav2_mppi = social_navigation_py.nav2_mppi_controller:main',
             'human_sfm = social_navigation_py.human_control_node:main',
             'human_stop = social_navigation_py.human_stop_node:main',
