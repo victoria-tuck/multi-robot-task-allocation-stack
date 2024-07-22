@@ -1,4 +1,6 @@
 {
+  "iterations": 1,
+  "save_mode": "MAX_CEIL",
   "map_locations":
     [
       [0, 2.2],
