@@ -100,6 +100,53 @@ class Dispatcher(Node):
                           4: (7.9, -7.5), 
                           5: (-7.75, -7.5)}
         return coordinate_map.get(rid, None)
+    
+    def road_coord(self, prev_rid, next_rid):
+        coordinate_map = {0: {0: [(0, 2.2)],
+                              1: [(0, 1.4), (4.45, 0.7), (4.45, -7.75), (5.4, -8.9), (9, -8.7), (9, -7.5), (7.9, -7.5)],
+                              2: [(0, 1.4), (4.45, 0.7), (4.45, -14), (5.4, -15), (8.6, -22.9), (8.6, -21.8), (7.85, -21.8)],
+                              3: [()],
+                              4: [],
+                              5: []
+                          },
+                          1: {0: [],
+                              1: [],
+                              2: [],
+                              3: [],
+                              4: [],
+                              5: []
+                          },
+                          2: {0: [],
+                              1: [],
+                              2: [],
+                              3: [],
+                              4: [],
+                              5: []
+                          },
+                          3: {0: [],
+                              1: [],
+                              2: [],
+                              3: [],
+                              4: [],
+                              5: []
+                          },
+                          4: {0: [],
+                              1: [],
+                              2: [],
+                              3: [],
+                              4: [],
+                              5: []
+                          },
+                          5: {0: [],
+                              1: [],
+                              2: [],
+                              3: [],
+                              4: [],
+                              5: []
+                          }
+                         }
+        prev_rid_map = coordinate_map.get(prev_rid)
+        return prev_rid_map.get(next_rid)
 
     def room_id(self, task_id, agents, tasks_stream):
         task_counts = [len(tasks) for tasks, _ in tasks_stream]
