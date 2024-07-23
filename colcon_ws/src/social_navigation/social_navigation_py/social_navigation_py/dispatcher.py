@@ -44,7 +44,7 @@ class Dispatcher(Node):
         # Initialize variables
         self.timer_period = 1.0
         self.task_set_index = 0
-        self.pose_lists = []
+        self.positions_lists = []
         self.feedback = [[] for i in range(len(robot_list))]
         self.has_new_sequences = False
 
@@ -58,7 +58,7 @@ class Dispatcher(Node):
 
     def initialize_solver(self):
         # MRTASolver arguments
-        file = 'simulation/testcase_4agents_duplicate_tasks.json'
+        file = 'simulation/testcase_4agents_duplicate_tasks_6_6_V3.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
         capacity = 2
@@ -78,7 +78,7 @@ class Dispatcher(Node):
 
         # room_dictionary = load_weighted_graph()
         # room_count, room_graph = dictionary_to_matrix(room_dictionary)
-        with open('weighted_graph_hospital.pkl', 'rb') as file:
+        with open('travel_time_07_22_24_full.pkl', 'rb') as file:
             data = pickle.load(file)
             room_count, room_graph = data
         
@@ -117,7 +117,7 @@ class Dispatcher(Node):
                               5: [(7.9, -8.5), (5.4, -7.75), (4.45, -7.75), (-5.25, -7.8), (-7.75, -8.2), (-7.75, -7.5)]
                           },
                           2: {0: [(7.85, -22.3), (5.4, -22), (5.4, 2.0), (0, 2.2)],
-                              1: [(7.85, -22.3), (5.4, -22), (5.4, -8.9), (9, -8.7), (0, -7.5), (7.9, -7.5)],
+                              1: [(7.85, -22.3), (5.4, -22), (5.4, -8.9), (9, -8.7), (9, -7.5), (7.9, -7.5)],
                               2: [(7.85, -21.8)],
                               3: [(7.85, -22.3), (5.4, 4.45, -23.8), (4.45, -25.2), (5.35, -27.2), (4.25, -27.2)],
                               4: [(7.85, -22.3), (4.45, -23.8), (-4.5, -23.8), (-7.75, -22.5), (-7.75, -21.7)],
@@ -192,6 +192,13 @@ class Dispatcher(Node):
         return msg
 
     def update_plan_callback(self):
+        def plan_to_positions(plan):
+            positions_list = []
+            for prev_id, next_id in zip(plan[:-1], plan[1:]):
+                positions = self.road_coord(prev_id, next_id)
+                positions_list += positions
+            return positions_list
+
         current_time_s = self.clock.now().nanoseconds * 1e-9
         if self.task_set_index < len(self.tasks_stream):
             next_tasks, next_batch_arrives = self.tasks_stream[self.task_set_index]
@@ -201,11 +208,12 @@ class Dispatcher(Node):
                 self.get_logger().info(f"New tasks arrived at {next_batch_arrives}s")
                 next_plan = self.solver.allocate_next_task_set(self.feedback)
                 self.plans.append(next_plan)
-                pose_lists = []
+                positions_lists = []
                 for agt in next_plan['agt']:
                     # print(f"Agent's ids: {agt['id']}")
                     room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
-                    pose_lists.append([self.coord(rid) for rid in room_ids])
+                    positions_lists.append(plan_to_positions(room_ids))
+                    # pose_lists.append([self.coord(rid) for rid in room_ids])
                     # Test case that some times caused issues:
                     # if self.task_set_index == 0:
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
@@ -216,20 +224,20 @@ class Dispatcher(Node):
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
                         # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
                         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
-                self.pose_lists = pose_lists
+                self.positions_lists = positions_lists
                 self.task_set_index += 1
                 self.has_new_sequences = True
 
     def publish_goal_sequence_callback(self):
         # ToDo: Add intermediate nodes and times in here
-        for (name, publisher), pose_list in zip(self.publishers_.items(), self.pose_lists):
+        for (name, publisher), position_list in zip(self.publishers_.items(), self.positions_lists):
             msg = PoseArray()
             msg.header.frame_id = "map"
             msg.header.stamp = self.get_clock().now().to_msg()
-            msg.poses = [self.create_pose_from_point(pose) for pose in pose_list][1:]
+            msg.poses = [self.create_pose_from_point(pos) for pos in position_list][1:]
             publisher.publish(msg)
             if self.has_new_sequences:
-                self.get_logger().info(f"New goal sequence sent to {name}: {pose_list[1:]}")
+                self.get_logger().info(f"New goal sequence sent to {name}: {position_list[1:]}")
         self.has_new_sequences = False
 
     def make_feedback_callback(self, index):
