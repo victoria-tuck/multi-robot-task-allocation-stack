@@ -1,6 +1,5 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
 
 from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle
 from geometry_msgs.msg import Twist
@@ -8,15 +7,12 @@ from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
-import matplotlib.pyplot as plt
-import pickle
 # from geometry_msgs.msg import Point
 from tf2_ros.transform_broadcaster import TransformBroadcaster
 
 # from cbf_controller import cbf_controller
 from .utils.cbf_obstacle_controller import cbf_controller
 import numpy as np
-import random
 # import jax.numpy as jnp
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -25,22 +21,20 @@ class RobotController(Node):
 
     def __init__(self):
         super().__init__(f'robot_controller')
+        # Get inputs
         self.declare_parameter('robot_name', rclpy.Parameter.Type.STRING)
         self.declare_parameter('robot_list', rclpy.Parameter.Type.STRING_ARRAY)
         robot_name_param, robot_list_param = self.get_parameter('robot_name'), self.get_parameter('robot_list')
         self.name, self.other_robots = robot_name_param.value, robot_list_param.value
+
+        # Define topic prefix
         if self.name != "":
             self.prefix = "/" + self.name
         else:
             self.prefix = ""
-        print(f'Robot prefix: {self.prefix}')
-        # print(f"Robot list is {self.robot_list}")
+        self.get_logger().info(f'Robot prefix: {self.prefix}')
 
         self.new_odom_name = f"{self.name}_new_odom"
-
-        # 0: cbf controller
-        # 1: nominal controller
-        self.controller_id = 0#1
 
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
 
@@ -60,14 +54,11 @@ class RobotController(Node):
         self.human_states_dot = np.zeros((2,self.num_humans))
 
         # Parameters
-        # self.robot_radius = 0.18 #0.2 #0.18
-        self.robot_radius = 0.12
-        # self.robot_radius = 0.25
+        self.robot_radius = 0.12 # Previous values have been 0.2 and 0.18
         self.replan_count = 0
         self.print_count = 0
 
-        self.timer_period = 0.05#0.05 # seconds
-        self.time_step = self.timer_period
+        self.timer_period_s = 0.05
         self.goal = np.array([0,0]).reshape(-1,1)
         
         #Controller
@@ -75,25 +66,23 @@ class RobotController(Node):
         self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
 
         # Call once to initiate JAX JIT
+        self.controller_id = 0
+        dummy_time_step = self.timer_period_s
         if self.controller_id == 0:
             self.dynamic_obstacle_states_valid, self.human_states_valid, self.all_other_robot_states_valid = True, True, True
             self.update_dynamic_obstacles()
-            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, self.time_step)
+            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
         elif self.controller_id == 1:
-            self.controller.policy_nominal(self.robot_state, self.goal, self.time_step)
+            self.controller.policy_nominal(self.robot_state, self.goal, dummy_time_step)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
         self.other_robot_state_sub = { robot: self.create_subscription( Odometry,  f'/{robot}/odom', self.make_other_robot_state_callback(i), 10) for i, robot in enumerate(self.other_robots) } 
         self.robot_state_subscriber = self.create_subscription( Odometry, self.prefix + '/odom', self.robot_state_callback, 10 )
-        # self.goal_pose_subscriber = self.create_subscription( PoseStamped, '/goal_pose_custom', self.robot_goal_callback, 10 )
         self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, self.prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
-        # self.robot_state_subscriber = self.create_subscription( Odometry, prefix + '/odom', self.robot_state_callback, 10 )        
-        # self.goal_pose_subscriber = self.create_subscription( PoseStamped, prefix + '/goal_pose_custom', self.robot_goal_callback, 10 )
-        # self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
         self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
         self.goal_listener = self.create_subscription( PoseStamped, self.prefix + '/goal_location', self.new_goal_callback, 1 )
-        # self.goal_listener = self.create_subscription( PoseStamped, prefix + '/goal_location', self.new_goal_callback, 1 )
+
         self.new_goal_pose = None
         self.human_states_valid = False
         self.all_other_robot_states_valid = False
@@ -107,16 +96,8 @@ class RobotController(Node):
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
         self.h_min_obs_count = 0
-        self.state_plotting_data = [[0],[0],[0]]
-        self.goal_plotting_data = [[0],[0]]
-        self.command_plotting_data = [[0],[0]]
-        # self.robot_nearest_obstacle_sub = self.create_sunscription(  )
 
         # Publishers
-        # self.robot_command_pub = self.create_publisher( Twist, prefix + '/cmd_vel', 10 )
-        # self.nav2_path_publisher = self.create_publisher( Path, prefix + '/plan', 1)
-        # self.robot_local_goal_pub = self.create_publisher( PoseStamped, prefix + '/local_goal', 1)
-        # self.robot_location_pub = self.create_publisher( PoseStamped, prefix + '/robot_location', 1)
         self.robot_command_pub = self.create_publisher( Twist, self.prefix + '/cmd_vel', 10 )
         self.nav2_path_publisher = self.create_publisher( Path, self.prefix + '/plan', 1)
         self.robot_local_goal_pub = self.create_publisher( PoseStamped, self.prefix + '/local_goal', 1)
@@ -126,23 +107,19 @@ class RobotController(Node):
         # Frame broadcaster
         self.robot_tf_broadcaster = TransformBroadcaster(self)
 
-        # Planner
+        # Connect to planner
         self.navigator = BasicNavigator()
         self.path = Path() 
         self.path_waypoint_index = 0
         
-        self.get_logger().info("User Controller is ONLINE")
-        self.timer = self.create_timer(self.timer_period, self.controller_callback)
-        
+        # Start controller
         self.time_prev = self.get_clock().now().nanoseconds
-        
-        print(f"time: {self.time_prev}")
-
-        self.robot_goal = np.array([1,1]).reshape(-1,1)
+        self.get_logger().info(f"Current time: {self.time_prev}")
+        self.timer = self.create_timer(self.timer_period_s, self.controller_callback)
+        self.get_logger().info("User Controller is ONLINE")
 
     def update_dynamic_obstacles(self):
         if self.human_states_valid and self.all_other_robot_states_valid and self.dynamic_obstacle_states_valid:
-            # self.dynamic_obstacle_states_valid = False
             self.dynamic_obstacle_states = np.hstack((self.other_robot_states, self.human_states))
             self.dynamic_obstacle_states_prev = np.hstack((self.other_robot_states_prev, self.human_states_prev))
             self.dynamic_obstacle_states_dot = np.hstack((self.other_robot_states_dot, self.human_states_dot))
@@ -150,12 +127,10 @@ class RobotController(Node):
         
     def controller_plan_init_callback(self, msg):
         self.planner_init = msg.data
-        # print(f"Started {self.name}")
 
     def human_state_callback(self, msg):
-        # self.human_states_valid = False
         self.human_states_prev = np.copy(self.human_states)
-        for i in range( len(msg.states) ):#:self.num_humans):
+        for i in range( len(msg.states) ):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
             self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
         self.human_states_valid = True
@@ -182,23 +157,18 @@ class RobotController(Node):
             self.print_count += 1
         self.robot_state_valid = True
 
-        # Publish new odometry
-        # print("Sending odometry")
+        # Publish secondary odometry that will be transformed to current robot position
         new_msg = Odometry()
         new_msg = msg
-        # new_msg.header.frame_id = self.new_odom_name
         new_msg.header.frame_id = 'map'
         new_msg.child_frame_id = self.new_odom_name
-        # new_msg.child_frame_id = 'map'
         self.robot_new_odom_pub.publish(new_msg)
 
-        # Publish pose as transform for new odometry as well
+        # Publish pose as transform for new odometry
         tf = TransformStamped()
         tf.header.frame_id = 'map'
-        # tf.header.frame_id = self.new_odom_name
         tf.header.stamp = self.get_clock().now().to_msg()
         tf.child_frame_id = self.new_odom_name
-        # tf.child_frame_id = 'map'
         tf.transform.translation.x = msg.pose.pose.position.x
         tf.transform.translation.y = msg.pose.pose.position.y
         tf.transform.translation.z = msg.pose.pose.position.z
@@ -206,16 +176,11 @@ class RobotController(Node):
         self.robot_tf_broadcaster.sendTransform(tf)
         
     def obstacle_callback(self, msg):
-        # self.num_obstacles = msg.num_obstacles
         self.obstacle_states_temp = 100*np.ones((2,self.num_obstacles))
         for i in range(min(msg.num_obstacles, self.num_obstacles)):
-            self.obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ]) 
-        # print(f"Obstacles for {self.name}: {self.obstacle_states}")
+            self.obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ])
         self.obstacle_states = np.copy(self.obstacle_states_temp)
         self.obstacles_valid = True
-        
-    def wrap_angle(self,theta):
-        return np.arctan2( np.sin(theta), np.cos(theta) )
 
     def new_goal_callback(self, msg):
         msg.header.stamp = self.navigator.get_clock().now().to_msg()
@@ -333,7 +298,6 @@ class RobotController(Node):
             try:                
                 if self.controller_id == 0:
                     speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
-                    # speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
                 elif self.controller_id == 1:
                     speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                 
@@ -345,18 +309,17 @@ class RobotController(Node):
                     self.h_min_obs_count += 1
                     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
             except Exception as e:
-                speed = self.control_prev[0]  #0.0
-                omega = self.control_prev[1]  #0.0
+                speed = self.control_prev[0]
+                omega = self.control_prev[1]
                 self.error_count = self.error_count + 1
                 print(f"ERROR ******************************** count: {self.error_count} {e}")
                 
             self.time_prev = t_new
-            # print(f"CBF speed: {speed}, omega: {omega}, dt:{dt}")
 
             ############## Publish Control Input ###################
             control = Twist()
             control.linear.x = speed
-            control.angular.z = omega #+ random.random()/5 - 0.1
+            control.angular.z = omega
             self.robot_command_pub.publish(control)
             self.replan_count += 1
         
