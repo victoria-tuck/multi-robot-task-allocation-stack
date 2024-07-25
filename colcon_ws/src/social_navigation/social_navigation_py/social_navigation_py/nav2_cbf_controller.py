@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 
-from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle
+from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
@@ -26,6 +26,7 @@ class RobotController(Node):
         self.declare_parameter('robot_list', rclpy.Parameter.Type.STRING_ARRAY)
         robot_name_param, robot_list_param = self.get_parameter('robot_name'), self.get_parameter('robot_list')
         self.name, self.other_robots = robot_name_param.value, robot_list_param.value
+        self.get_logger().info(f"Other robots: {self.other_robots}")
 
         # Define topic prefix
         if self.name != "":
@@ -37,6 +38,7 @@ class RobotController(Node):
         self.new_odom_name = f"{self.name}_new_odom"
 
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
+        self.robot_pos = np.array([self.robot_state[0], self.robot_state[1]])
 
         # Obstacles
         self.num_obstacles = 12 # exact
@@ -49,12 +51,15 @@ class RobotController(Node):
         self.other_robot_states = 100*np.ones((2,self.num_other_robots))
         self.other_robot_states_prev = np.zeros((2,self.num_other_robots))
         self.other_robot_states_dot = np.zeros((2,self.num_other_robots))
+        self.distance_to_other_robots = 100*np.ones((self.num_other_robots,1))
+        self.connected_robots = []
         self.human_states = 100*np.ones((2,self.num_humans))
         self.human_states_prev = np.zeros((2,self.num_humans))
         self.human_states_dot = np.zeros((2,self.num_humans))
 
         # Parameters
         self.robot_radius = 0.12 # Previous values have been 0.2 and 0.18
+        self.min_robot_to_robot = 10
         self.replan_count = 0
         self.print_count = 0
 
@@ -103,6 +108,7 @@ class RobotController(Node):
         self.robot_local_goal_pub = self.create_publisher( PoseStamped, self.prefix + '/local_goal', 1)
         self.robot_location_pub = self.create_publisher( PoseStamped, self.prefix + '/robot_location', 1)
         self.robot_new_odom_pub = self.create_publisher(Odometry, f"{self.prefix}/new_odom", 10)
+        self.robot_cluster_pub = self.create_publisher(RobotCluster, f"{self.prefix}/cluster", 10)
         
         # Frame broadcaster
         self.robot_tf_broadcaster = TransformBroadcaster(self)
@@ -115,7 +121,8 @@ class RobotController(Node):
         # Start controller
         self.time_prev = self.get_clock().now().nanoseconds
         self.get_logger().info(f"Current time: {self.time_prev}")
-        self.timer = self.create_timer(self.timer_period_s, self.controller_callback)
+        self.controller_timer = self.create_timer(self.timer_period_s, self.run_controller)
+        self.nearby_robots_timer = self.create_timer(self.timer_period_s * 20, self.nearby_robots)
         self.get_logger().info("User Controller is ONLINE")
 
     def update_dynamic_obstacles(self):
@@ -140,7 +147,15 @@ class RobotController(Node):
         def other_robot_state_callback(msg):
             self.other_robot_states_prev = np.copy(self.other_robot_states)
             position = msg.pose.pose.position
-            self.other_robot_states[:,index] = np.array([position.x, position.y])
+            other_robot_pos = np.array([position.x, position.y])
+            self.other_robot_states[:,index] = other_robot_pos
+            # self.get_logger().info(f"Calculated distance between {self.name} and {self.other_robots[index]}: {np.linalg.norm(other_robot_pos - self.robot_pos)}")
+            if self.print_count > 10:
+                self.get_logger().info(f"Current robot position: {self.robot_pos}")
+                self.get_logger().info(f"Difference between robots: {other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1))}")
+            self.distance_to_other_robots[index] = np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))
+            if self.print_count > 10:
+                self.get_logger().info(f"Distance to other robot: {np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))}")
             velocity = msg.twist.twist.linear
             self.other_robot_states_dot[:, index] = np.array([velocity.x, velocity.y])
             self.other_robot_states_valid[index] = True
@@ -150,6 +165,7 @@ class RobotController(Node):
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
+        self.robot_pos = np.array([self.robot_state[0], self.robot_state[1]])
         if self.print_count > 10:
             # print(f"Current robot state: {self.robot_state}")
             self.print_count = 0
@@ -188,7 +204,7 @@ class RobotController(Node):
         self.goal_init = False
         print(f"{self.name} received new goal: {msg}")
     
-    def controller_callback(self):
+    def run_controller(self):
         if self.print_count > 100:
             print(f"Planner init: {self.planner_init}")  
         if not self.planner_init:
@@ -322,13 +338,33 @@ class RobotController(Node):
             control.angular.z = omega
             self.robot_command_pub.publish(control)
             self.replan_count += 1
-        
+
+    def nearby_robots(self):
+        # nearby = lambda i: True if self.distance_to_other_robots[i] < self.min_robot_to_robot else False
+        connected_robots = []
+        for i, robot in enumerate(self.other_robots):
+            # self.get_logger().info(f"Distance to other robot: {self.distance_to_other_robots[i]}")
+            if self.distance_to_other_robots[i] < self.min_robot_to_robot:
+                connected_robots.append(robot)
+        # self.get_logger().info(f"Positions of other robots: {self.other_robot_states}")
+        # self.connected_robots = [robot for i, robot in enumerate(self.other_robots) if nearby(i)]
+        self.get_logger().info(f"Robot {self.name} close to {connected_robots}")
+        # new_msg = Odometry()
+        # new_msg = msg
+        # new_msg.header.frame_id = 'map'
+        # new_msg.child_frame_id = self.new_odom_name
+        # self.robot_new_odom_pub.publish(new_msg)
+        msg = RobotCluster()
+        msg.cluster = 
+        msg.leader = 
     
+
 def main(args=None):
     rclpy.init(args=args)
     robot_controller = RobotController()
     rclpy.spin(robot_controller)
     rclpy.shutdown()
     
+
 if __name__ == '__main__':
     main()
