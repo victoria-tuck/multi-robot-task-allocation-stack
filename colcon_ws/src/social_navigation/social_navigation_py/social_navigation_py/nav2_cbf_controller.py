@@ -31,8 +31,12 @@ class RobotController(Node):
         # Define topic prefix
         if self.name != "":
             self.prefix = "/" + self.name
+            self.priority = int(self.name[-1])
         else:
             self.prefix = ""
+            self.priority = 1
+        all_robots = [self.name] + self.other_robots
+        self.robot_priorities = dict(zip(all_robots, [int(name[-1]) for name in all_robots])) # THIS WILL BREAK WITH MORE THAN 9 ROBOTS
         self.get_logger().info(f'Robot prefix: {self.prefix}')
 
         self.new_odom_name = f"{self.name}_new_odom"
@@ -59,7 +63,7 @@ class RobotController(Node):
 
         # Parameters
         self.robot_radius = 0.12 # Previous values have been 0.2 and 0.18
-        self.min_robot_to_robot = 10
+        self.min_robot_to_robot = 4
         self.replan_count = 0
         self.print_count = 0
 
@@ -87,6 +91,7 @@ class RobotController(Node):
         self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, self.prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
         self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
         self.goal_listener = self.create_subscription( PoseStamped, self.prefix + '/goal_location', self.new_goal_callback, 1 )
+        self.cluster_sub = { robot : self.create_subscription(RobotCluster, f'{robot}/cluster', self.make_cluster_callback(i), 10) for i, robot in enumerate(self.other_robots)}
 
         self.new_goal_pose = None
         self.human_states_valid = False
@@ -101,6 +106,10 @@ class RobotController(Node):
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
         self.h_min_obs_count = 0
+        self.finalized_each_cluster = [False] * self.num_other_robots
+        self.finalized_cluster = False
+        self.robot_cluster = (self.name, [self.name])
+        self.other_robots_clusters = [(robot, [robot]) for robot in self.other_robots]
 
         # Publishers
         self.robot_command_pub = self.create_publisher( Twist, self.prefix + '/cmd_vel', 10 )
@@ -150,18 +159,32 @@ class RobotController(Node):
             other_robot_pos = np.array([position.x, position.y])
             self.other_robot_states[:,index] = other_robot_pos
             # self.get_logger().info(f"Calculated distance between {self.name} and {self.other_robots[index]}: {np.linalg.norm(other_robot_pos - self.robot_pos)}")
-            if self.print_count > 10:
-                self.get_logger().info(f"Current robot position: {self.robot_pos}")
-                self.get_logger().info(f"Difference between robots: {other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1))}")
+            # if self.print_count > 10:
+            #     self.get_logger().info(f"Current robot position: {self.robot_pos}")
+            #     self.get_logger().info(f"Difference between robots: {other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1))}")
             self.distance_to_other_robots[index] = np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))
-            if self.print_count > 10:
-                self.get_logger().info(f"Distance to other robot: {np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))}")
+            # if self.print_count > 10:
+            #     self.get_logger().info(f"Distance to other robot: {np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))}")
             velocity = msg.twist.twist.linear
             self.other_robot_states_dot[:, index] = np.array([velocity.x, velocity.y])
             self.other_robot_states_valid[index] = True
             self.all_other_robot_states_valid = all(self.other_robot_states_valid)
             self.update_dynamic_obstacles()
         return other_robot_state_callback
+    
+    def make_cluster_callback(self, index):
+        def cluster_callback(msg):
+            if self.name in msg.cluster and sorted(msg.cluster) == sorted(self.robot_cluster[1]) and self.robot_cluster[0] == msg.leader:
+                self.finalized_each_cluster[index] = True
+            elif self.name in msg.cluster:
+                self.finalized_each_cluster[index] = False
+            elif self.name not in msg.cluster and self.other_robots[index] in self.robot_cluster[1]:
+                self.finalized_each_cluster[index] = False
+            else:
+                self.finalized_each_cluster[index] = True
+            self.other_robots_clusters[index] = (msg.leader, msg.cluster)
+            self.finalized_cluster = all(self.finalized_each_cluster)
+        return cluster_callback
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
@@ -334,29 +357,39 @@ class RobotController(Node):
 
             ############## Publish Control Input ###################
             control = Twist()
-            control.linear.x = speed
-            control.angular.z = omega
+            if not self.finalized_cluster or (self.finalized_cluster and self.name != self.robot_cluster[0]):
+                control.linear.x = 0.0
+                control.angular.z = 0.0
+            else:
+                control.linear.x = speed
+                control.angular.z = omega
             self.robot_command_pub.publish(control)
             self.replan_count += 1
 
     def nearby_robots(self):
         # nearby = lambda i: True if self.distance_to_other_robots[i] < self.min_robot_to_robot else False
-        connected_robots = []
-        for i, robot in enumerate(self.other_robots):
+        neighbors = []
+        for i in range(len(self.other_robots)):
             # self.get_logger().info(f"Distance to other robot: {self.distance_to_other_robots[i]}")
             if self.distance_to_other_robots[i] < self.min_robot_to_robot:
-                connected_robots.append(robot)
+                neighbors.append(i)
         # self.get_logger().info(f"Positions of other robots: {self.other_robot_states}")
         # self.connected_robots = [robot for i, robot in enumerate(self.other_robots) if nearby(i)]
-        self.get_logger().info(f"Robot {self.name} close to {connected_robots}")
-        # new_msg = Odometry()
-        # new_msg = msg
-        # new_msg.header.frame_id = 'map'
-        # new_msg.child_frame_id = self.new_odom_name
-        # self.robot_new_odom_pub.publish(new_msg)
+        # self.get_logger().info(f"Robot {self.name} close to {connected_robots}")
+        cluster_set = set()
+        for i in neighbors:
+            cluster_set.update(self.other_robots_clusters[i][1])
+        cluster_set.update([self.name])
+        cluster = list(cluster_set)
+        cluster_priorities = [self.robot_priorities[robot] for robot in cluster]
+        leader = cluster[np.argmax(cluster_priorities)]
+        self.robot_cluster = (leader, cluster)
+
         msg = RobotCluster()
-        msg.cluster = 
-        msg.leader = 
+        msg.leader = leader
+        msg.cluster = cluster
+        self.robot_cluster_pub.publish(msg)
+        self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
     
 
 def main(args=None):
