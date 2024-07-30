@@ -30,33 +30,41 @@ class TravelTimeCollector(Node):
             params = json.load(f)
         self.max_iterations, self.save_mode, self.format = params["iterations"], params["save_mode"], params["format"]
         self.locs = [(loc[0], loc[1]) for loc in params["map_locations"]]
+        self.location_ids = params["map_location_ids"]
+        with open('roadmap.pkl', 'rb') as file:
+            self.roadmap = pickle.load(file)
         self.save_file = self.get_parameter('save_file').value
 
         self.timer_period = 1.0
-        self.timer = self.create_timer(self.timer_period, self.publish_goal)
+        self.timer = self.create_timer(self.timer_period, self.publish_waypoint)
         self.location_subscriber = self.create_subscription(PoseStamped, prefix + '/robot_location', self.location_callback, 1)
 
         self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
 
-        location_indices = list(range(len(self.locs)))
-        assert len(location_indices) > 1
-        self.travel_times = {key1: {key2: [] for key2 in location_indices if key1 != key2} for key1 in location_indices}
+        # location_indices = list(range(len(self.locs)))
+        assert len(self.location_ids) > 1
+        self.travel_times = {key1: {key2: [] for key2 in self.location_ids if key1 != key2} for key1 in self.location_ids}
 
         self.starting_idx = 0
         self.ending_idx = 1
         self.goal_idx = 1
         self.iteration = 1
         self.loc_idx = 0
+        self.path_idx = 0
+        self.waypoint_iter = iter(self.roadmap.get(self.starting_idx).get(self.ending_idx))
+        self.waypoint = next(self.waypoint_iter)
 
         self.traveling_to_start = False
         self.finished = False
         self.start_time = None
         self.data_saved = False
-        self.goal_reached = True
+        self.waypoint_reached = True
+        self.finishing_path = False
 
     def location_callback(self, msg):
         """
         Save travel time and update the goal parameters if the current goal has been reached.
+        Update waypoint if the current one has been reached.
 
         Args:
         - msg (PoseStamped): Position message received from controller
@@ -66,7 +74,7 @@ class TravelTimeCollector(Node):
         if dist(self.locs[self.goal_idx], cur_loc) < DIST_THRES:
 
             # Save travel time
-            if self.start_time is not None:
+            if self.start_time is not None and self.finishing_path:
                 current_time = self.get_clock().now().nanoseconds * 1.0e-9
                 travel_time = current_time - self.start_time
                 self.get_logger().info(f"Travel time: {travel_time}")
@@ -89,38 +97,45 @@ class TravelTimeCollector(Node):
                             self.finished = True
                         else:
                             self.starting_idx += 1
+                            curr_idx = self.ending_idx
                             self.ending_idx = self.starting_idx + 1
                             self.goal_idx = self.starting_idx
                             self.traveling_to_start = True
                             self.iteration = 0
+                            self.waypoint_iter = iter(self.roadmap.get(curr_idx).get(self.starting_idx))
                     else:
                         self.ending_idx += 1
                         self.goal_idx = self.ending_idx
                         self.iteration = 1
+                        self.waypoint_iter = iter(self.roadmap.get(self.starting_idx).get(self.ending_idx))
                 else:
                     # Check if the starting point has just been reached and set goal idx to end of pair
                     if self.iteration == 0:
                         self.traveling_to_start = False
                     self.iteration += 1
                     self.goal_idx = self.ending_idx
+                    self.waypoint_iter = iter(self.roadmap.get(self.starting_idx).get(self.ending_idx))
             else:
                 # Set goal idx to start of pair (return trip)
                 self.goal_idx = self.starting_idx
-            self.goal_reached = True
+                self.waypoint_iter = iter(self.roadmap.get(self.ending_idx).get(self.starting_idx))
+            self.waypoint_reached = True
+        elif dist(self.waypoint, cur_loc) < DIST_THRES:
+            self.waypoint = next(self.waypoint_iter)
+            self.waypoint_reached = True
 
-    def publish_goal(self):
+    def publish_waypoint(self):
         """
         Publish next location to visit if current goal has been reached and there is still data to collect.
         Otherwise, save the data.
         """
-        if self.goal_idx < len(self.locs) and not self.finished:
-            goal = self.locs[self.goal_idx]
-            if self.goal_reached:
+        if self.goal_idx < len(self.location_ids) and not self.finished:
+            if self.waypoint_reached:
                 msg = PoseStamped()
                 msg.header.frame_id = "map"
                 msg.header.stamp = self.get_clock().now().to_msg()
-                msg.pose.position.x = float(goal[0])
-                msg.pose.position.y = float(goal[1])
+                msg.pose.position.x = float(self.waypoint[0])
+                msg.pose.position.y = float(self.waypoint[1])
                 msg.pose.position.z = 0.01
                 msg.pose.orientation.x = 0.0
                 msg.pose.orientation.y = 0.0
@@ -128,10 +143,10 @@ class TravelTimeCollector(Node):
                 msg.pose.orientation.w = 1.0
                 self.publisher_.publish(msg)
                 self.start_time = self.get_clock().now().nanoseconds * 1.0e-9
-                self.goal_reached = False
+                self.waypoint_reached = False
                 self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")
             else:
-                self.get_logger().info(f"Waiting for goal {goal} to be reached...")
+                self.get_logger().info(f"Waiting for goal {self.waypoint} to be reached...")
         elif not self.data_saved:
             self.data_saved = self.save_data()
     
@@ -157,6 +172,7 @@ class TravelTimeCollector(Node):
                     travel_time_graph[key1][key2] = data[0]
             with open(self.save_file, 'wb') as handle:
                 pickle.dump((room_count, travel_time_graph), handle)
+        self.get_logger().info(f"Data saved: {processed_data}")
         return True
 
     def process_data(self):
