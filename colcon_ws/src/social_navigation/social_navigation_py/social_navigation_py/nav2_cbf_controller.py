@@ -92,6 +92,7 @@ class RobotController(Node):
         self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
         self.goal_listener = self.create_subscription( PoseStamped, self.prefix + '/goal_location', self.new_goal_callback, 1 )
         self.cluster_sub = { robot : self.create_subscription(RobotCluster, f'{robot}/cluster', self.make_cluster_callback(i), 10) for i, robot in enumerate(self.other_robots)}
+        self.activity_sub = self.create_subscrption(Bool, f'{self.prefix}/active', self.status_callback, 10)
 
         self.new_goal_pose = None
         self.human_states_valid = False
@@ -177,8 +178,10 @@ class RobotController(Node):
             if self.name in msg.cluster and sorted(msg.cluster) == sorted(self.robot_cluster[1]) and self.robot_cluster[0] == msg.leader:
                 self.finalized_each_cluster[index] = True
             elif self.name in msg.cluster:
+                self.get_logger().info(f"{self.name} has a mis-matched cluster or is not the leader.")
                 self.finalized_each_cluster[index] = False
             elif self.name not in msg.cluster and self.other_robots[index] in self.robot_cluster[1]:
+                self.get_logger().info(f"{self.name}' cluster has not finalized")
                 self.finalized_each_cluster[index] = False
             else:
                 self.finalized_each_cluster[index] = True
@@ -226,6 +229,9 @@ class RobotController(Node):
         self.new_goal_pose = msg
         self.goal_init = False
         print(f"{self.name} received new goal: {msg}")
+
+    def status_callback(self, msg):
+        self.active = msg.data
     
     def run_controller(self):
         if self.print_count > 100:
@@ -314,8 +320,8 @@ class RobotController(Node):
                 else:
                     break
             
-            if self.print_count > 10:
-                print(f"{self.name}'s Current goal: {goal}")
+            # if self.print_count > 10:
+            #     print(f"{self.name}'s Current goal: {goal}")
 
             # Publish path for visualization (no other use)
             self.nav2_path_publisher.publish(self.path)
@@ -350,6 +356,8 @@ class RobotController(Node):
             except Exception as e:
                 speed = self.control_prev[0]
                 omega = self.control_prev[1]
+                speed = 0.0 ##
+                omega = 0.0 ##
                 self.error_count = self.error_count + 1
                 print(f"ERROR ******************************** count: {self.error_count} {e}")
                 
@@ -357,7 +365,12 @@ class RobotController(Node):
 
             ############## Publish Control Input ###################
             control = Twist()
-            if not self.finalized_cluster or (self.finalized_cluster and self.name != self.robot_cluster[0]):
+            if not self.finalized_cluster:
+                self.get_logger().info(f"{self.name}'s cluster has not been finalized")
+                control.linear.x = 0.0
+                control.angular.z = 0.0
+            elif (self.finalized_cluster and self.name != self.robot_cluster[0]):
+                self.get_logger().info(f"{self.name} is not the leader.")
                 control.linear.x = 0.0
                 control.angular.z = 0.0
             else:
@@ -377,16 +390,22 @@ class RobotController(Node):
         # self.connected_robots = [robot for i, robot in enumerate(self.other_robots) if nearby(i)]
         # self.get_logger().info(f"Robot {self.name} close to {connected_robots}")
         cluster_set = set()
+        self.get_logger().info(f"{self.name}'s neighborhood: {[self.other_robots[i] for i in neighbors]}")
         for i in neighbors:
             cluster_set.update(self.other_robots_clusters[i][1])
         cluster_set.update([self.name])
         cluster = list(cluster_set)
-        cluster_priorities = [self.robot_priorities[robot] for robot in cluster]
-        leader = cluster[np.argmax(cluster_priorities)]
+        active_cluster = [robot for robot in cluster if self.robot_status[robot]]
+        cluster_priorities = [self.robot_priorities[robot] for robot in active_cluster]
+        if len(cluster) > 1:
+            leader = cluster[np.argmax(cluster_priorities)]
+        else:
+            leader = cluster[np.argmax]
         self.robot_cluster = (leader, cluster)
 
         msg = RobotCluster()
         msg.leader = leader
+        msg.active = self.active
         msg.cluster = cluster
         self.robot_cluster_pub.publish(msg)
         self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
