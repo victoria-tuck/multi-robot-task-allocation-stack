@@ -6,6 +6,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 
 from geometry_msgs.msg import PoseStamped, PoseArray
 from social_navigation_msgs.msg import Feedback, PoseStampedPair
+from std_msgs.msg import Bool
 
 import json
 import math
@@ -14,7 +15,7 @@ import sys
 import argparse
 
 DIST_THRES = 1
-GOAL_REGION_RADIUS = 0.25 #0.25 #0.5
+GOAL_REGION_RADIUS = 0.4 #0.25 #0.25 #0.5
 
 def dist(c1, c2):
     return math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)
@@ -33,7 +34,7 @@ class GoalSetter(Node):
 
         self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
 
-        # self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
+        self.activity_publisher = self.create_publisher(Bool, f"{prefix}/active', 10")
         self.publisher_ = self.create_publisher(PoseStampedPair, f'{prefix}/goal_location', 1)
         self.timer_period = 1.0
         self.goal_timer = self.create_timer(self.timer_period, self.publish_goal)
@@ -45,6 +46,7 @@ class GoalSetter(Node):
         self.locs = []
         self.loc_idx = 0
 
+        self.inactive = True
         self.goal_reached = True
 
     def goal_sequence_callback(self, msg):
@@ -92,7 +94,10 @@ class GoalSetter(Node):
                 msg.next_waypoint = next_waypoint
                 self.publisher_.publish(msg)
                 self.goal_reached = False
+                self.inactive = False
                 self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")
+        else:
+            self.inactive = True
             # else:
                 # self.get_logger().info(f"Waiting for goal {goal} to be reached...")
 

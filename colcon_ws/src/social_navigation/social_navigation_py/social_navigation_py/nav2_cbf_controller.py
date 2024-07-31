@@ -1,22 +1,18 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
 
-from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, PoseStampedPair
+from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster, PoseStampedPair
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from std_msgs.msg import Bool
-import matplotlib.pyplot as plt
-import pickle
 # from geometry_msgs.msg import Point
 from tf2_ros.transform_broadcaster import TransformBroadcaster
 
 # from cbf_controller import cbf_controller
 from .utils.cbf_obstacle_controller import cbf_controller
 import numpy as np
-import random
 # import jax.numpy as jnp
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -25,24 +21,28 @@ class RobotController(Node):
 
     def __init__(self):
         super().__init__(f'robot_controller')
+        # Get inputs
         self.declare_parameter('robot_name', rclpy.Parameter.Type.STRING)
         self.declare_parameter('robot_list', rclpy.Parameter.Type.STRING_ARRAY)
         robot_name_param, robot_list_param = self.get_parameter('robot_name'), self.get_parameter('robot_list')
         self.name, self.other_robots = robot_name_param.value, robot_list_param.value
+        self.get_logger().info(f"Other robots: {self.other_robots}")
+
+        # Define topic prefix
         if self.name != "":
             self.prefix = "/" + self.name
+            self.priority = int(self.name[-1])
         else:
             self.prefix = ""
-        print(f'Robot prefix: {self.prefix}')
-        # print(f"Robot list is {self.robot_list}")
+            self.priority = 1
+        all_robots = [self.name] + self.other_robots
+        self.robot_priorities = dict(zip(all_robots, [int(name[-1]) for name in all_robots])) # THIS WILL BREAK WITH MORE THAN 9 ROBOTS
+        self.get_logger().info(f'Robot prefix: {self.prefix}')
 
         self.new_odom_name = f"{self.name}_new_odom"
 
-        # 0: cbf controller
-        # 1: nominal controller
-        self.controller_id = 0#1
-
         self.robot_state = np.array([10,10,0.0, 0.1]).reshape(-1,1)
+        self.robot_pos = np.array([self.robot_state[0], self.robot_state[1]])
 
         # Obstacles
         self.num_obstacles = 12 # exact
@@ -55,19 +55,18 @@ class RobotController(Node):
         self.other_robot_states = 100*np.ones((2,self.num_other_robots))
         self.other_robot_states_prev = np.zeros((2,self.num_other_robots))
         self.other_robot_states_dot = np.zeros((2,self.num_other_robots))
+        self.distance_to_other_robots = 100*np.ones((self.num_other_robots,1))
+        self.connected_robots = []
         self.human_states = 100*np.ones((2,self.num_humans))
         self.human_states_prev = np.zeros((2,self.num_humans))
         self.human_states_dot = np.zeros((2,self.num_humans))
 
         # Parameters
-        # self.robot_radius = 0.18 #0.2 #0.18
-        self.robot_radius = 0.12
-        # self.robot_radius = 0.25
+        self.robot_radius = 0.12 # Previous values have been 0.2 and 0.18
+        self.min_robot_to_robot = 4
+        self.replan_count = 0
         self.print_count = 0
-
-        # self.timer_period = 0.05#0.05 # seconds
-        self.timer_period = 0.1
-        self.time_step = self.timer_period
+        self.timer_period_s = 0.05
         self.goal = np.array([0,0]).reshape(-1,1)
         
         #Controller
@@ -75,26 +74,25 @@ class RobotController(Node):
         self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
 
         # Call once to initiate JAX JIT
+        self.controller_id = 0
+        dummy_time_step = self.timer_period_s
         if self.controller_id == 0:
             self.dynamic_obstacle_states_valid, self.human_states_valid, self.all_other_robot_states_valid = True, True, True
             self.update_dynamic_obstacles()
-            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, self.time_step)
+            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
         elif self.controller_id == 1:
-            self.controller.policy_nominal(self.robot_state, self.goal, self.time_step)
+            self.controller.policy_nominal(self.robot_state, self.goal, dummy_time_step)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
         self.other_robot_state_sub = { robot: self.create_subscription( Odometry,  f'/{robot}/odom', self.make_other_robot_state_callback(i), 10) for i, robot in enumerate(self.other_robots) } 
         self.robot_state_subscriber = self.create_subscription( Odometry, self.prefix + '/odom', self.robot_state_callback, 10 )
-        # self.goal_pose_subscriber = self.create_subscription( PoseStamped, '/goal_pose_custom', self.robot_goal_callback, 10 )
         self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, self.prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
-        # self.robot_state_subscriber = self.create_subscription( Odometry, prefix + '/odom', self.robot_state_callback, 10 )        
-        # self.goal_pose_subscriber = self.create_subscription( PoseStamped, prefix + '/goal_pose_custom', self.robot_goal_callback, 10 )
-        # self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
         self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
-        # self.goal_listener = self.create_subscription( PoseStamped, self.prefix + '/goal_location', self.new_goal_callback, 1 )
         self.goal_subscriber = self.create_subscription(PoseStampedPair, f'{self.prefix}/goal_location', self.new_goal_callback, 1)
-        # self.goal_listener = self.create_subscription( PoseStamped, prefix + '/goal_location', self.new_goal_callback, 1 )
+        self.cluster_sub = { robot : self.create_subscription(RobotCluster, f'{robot}/cluster', self.make_cluster_callback(i), 10) for i, robot in enumerate(self.other_robots)}
+        self.activity_sub = self.create_subscrption(Bool, f'{self.prefix}/active', self.status_callback, 10)
+
         self.new_goal_poses = None
         self.human_states_valid = False
         self.all_other_robot_states_valid = False
@@ -109,41 +107,35 @@ class RobotController(Node):
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
         self.h_min_obs_count = 0
-        self.state_plotting_data = [[0],[0],[0]]
-        self.goal_plotting_data = [[0],[0]]
-        self.command_plotting_data = [[0],[0]]
-        # self.robot_nearest_obstacle_sub = self.create_sunscription(  )
+        self.finalized_each_cluster = [False] * self.num_other_robots
+        self.finalized_cluster = False
+        self.robot_cluster = (self.name, [self.name])
+        self.other_robots_clusters = [(robot, [robot]) for robot in self.other_robots]
 
         # Publishers
-        # self.robot_command_pub = self.create_publisher( Twist, prefix + '/cmd_vel', 10 )
-        # self.nav2_path_publisher = self.create_publisher( Path, prefix + '/plan', 1)
-        # self.robot_local_goal_pub = self.create_publisher( PoseStamped, prefix + '/local_goal', 1)
-        # self.robot_location_pub = self.create_publisher( PoseStamped, prefix + '/robot_location', 1)
         self.robot_command_pub = self.create_publisher( Twist, self.prefix + '/cmd_vel', 10 )
         self.nav2_path_publisher = self.create_publisher( Path, self.prefix + '/plan', 1)
         self.robot_local_goal_pub = self.create_publisher( PoseStamped, self.prefix + '/local_goal', 1)
         self.robot_location_pub = self.create_publisher( PoseStamped, self.prefix + '/robot_location', 1)
         self.robot_new_odom_pub = self.create_publisher(Odometry, f"{self.prefix}/new_odom", 10)
+        self.robot_cluster_pub = self.create_publisher(RobotCluster, f"{self.prefix}/cluster", 10)
         
         # Frame broadcaster
         self.robot_tf_broadcaster = TransformBroadcaster(self)
 
-        # Planner
+        # Connect to planner
         self.navigator = BasicNavigator()
         self.path = Path()
         
-        self.get_logger().info("User Controller is ONLINE")
-        self.timer = self.create_timer(self.timer_period, self.controller_callback)
-        
+        # Start controller
         self.time_prev = self.get_clock().now().nanoseconds
-        
-        print(f"time: {self.time_prev}")
-
-        self.robot_goal = np.array([1,1]).reshape(-1,1)
+        self.get_logger().info(f"Current time: {self.time_prev}")
+        self.controller_timer = self.create_timer(self.timer_period_s, self.run_controller)
+        self.nearby_robots_timer = self.create_timer(self.timer_period_s * 20, self.nearby_robots)
+        self.get_logger().info("User Controller is ONLINE")
 
     def update_dynamic_obstacles(self):
         if self.human_states_valid and self.all_other_robot_states_valid and self.dynamic_obstacle_states_valid:
-            # self.dynamic_obstacle_states_valid = False
             self.dynamic_obstacle_states = np.hstack((self.other_robot_states, self.human_states))
             self.dynamic_obstacle_states_prev = np.hstack((self.other_robot_states_prev, self.human_states_prev))
             self.dynamic_obstacle_states_dot = np.hstack((self.other_robot_states_dot, self.human_states_dot))
@@ -151,12 +143,10 @@ class RobotController(Node):
         
     def controller_plan_init_callback(self, msg):
         self.planner_init = msg.data
-        # print(f"Started {self.name}")
 
     def human_state_callback(self, msg):
-        # self.human_states_valid = False
         self.human_states_prev = np.copy(self.human_states)
-        for i in range( len(msg.states) ):#:self.num_humans):
+        for i in range( len(msg.states) ):
             self.human_states[:,i] = np.array([ msg.states[i].position.x, msg.states[i].position.y ])
             self.human_states_dot[:,i] = np.array([ msg.velocities[i].linear.x, msg.velocities[i].linear.y ])
         self.human_states_valid = True
@@ -166,16 +156,41 @@ class RobotController(Node):
         def other_robot_state_callback(msg):
             self.other_robot_states_prev = np.copy(self.other_robot_states)
             position = msg.pose.pose.position
-            self.other_robot_states[:,index] = np.array([position.x, position.y])
+            other_robot_pos = np.array([position.x, position.y])
+            self.other_robot_states[:,index] = other_robot_pos
+            # self.get_logger().info(f"Calculated distance between {self.name} and {self.other_robots[index]}: {np.linalg.norm(other_robot_pos - self.robot_pos)}")
+            # if self.print_count > 10:
+            #     self.get_logger().info(f"Current robot position: {self.robot_pos}")
+            #     self.get_logger().info(f"Difference between robots: {other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1))}")
+            self.distance_to_other_robots[index] = np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))
+            # if self.print_count > 10:
+            #     self.get_logger().info(f"Distance to other robot: {np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))}")
             velocity = msg.twist.twist.linear
             self.other_robot_states_dot[:, index] = np.array([velocity.x, velocity.y])
             self.other_robot_states_valid[index] = True
             self.all_other_robot_states_valid = all(self.other_robot_states_valid)
             self.update_dynamic_obstacles()
         return other_robot_state_callback
+    
+    def make_cluster_callback(self, index):
+        def cluster_callback(msg):
+            if self.name in msg.cluster and sorted(msg.cluster) == sorted(self.robot_cluster[1]) and self.robot_cluster[0] == msg.leader:
+                self.finalized_each_cluster[index] = True
+            elif self.name in msg.cluster:
+                self.get_logger().info(f"{self.name} has a mis-matched cluster or is not the leader.")
+                self.finalized_each_cluster[index] = False
+            elif self.name not in msg.cluster and self.other_robots[index] in self.robot_cluster[1]:
+                self.get_logger().info(f"{self.name}' cluster has not finalized")
+                self.finalized_each_cluster[index] = False
+            else:
+                self.finalized_each_cluster[index] = True
+            self.other_robots_clusters[index] = (msg.leader, msg.cluster)
+            self.finalized_cluster = all(self.finalized_each_cluster)
+        return cluster_callback
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
+        self.robot_pos = np.array([self.robot_state[0], self.robot_state[1]])
         if self.print_count > 10:
             # print(f"Current robot state: {self.robot_state}")
             self.print_count = 0
@@ -183,23 +198,18 @@ class RobotController(Node):
             self.print_count += 1
         self.robot_state_valid = True
 
-        # Publish new odometry
-        # print("Sending odometry")
+        # Publish secondary odometry that will be transformed to current robot position
         new_msg = Odometry()
         new_msg = msg
-        # new_msg.header.frame_id = self.new_odom_name
         new_msg.header.frame_id = 'map'
         new_msg.child_frame_id = self.new_odom_name
-        # new_msg.child_frame_id = 'map'
         self.robot_new_odom_pub.publish(new_msg)
 
-        # Publish pose as transform for new odometry as well
+        # Publish pose as transform for new odometry
         tf = TransformStamped()
         tf.header.frame_id = 'map'
-        # tf.header.frame_id = self.new_odom_name
         tf.header.stamp = self.get_clock().now().to_msg()
         tf.child_frame_id = self.new_odom_name
-        # tf.child_frame_id = 'map'
         tf.transform.translation.x = msg.pose.pose.position.x
         tf.transform.translation.y = msg.pose.pose.position.y
         tf.transform.translation.z = msg.pose.pose.position.z
@@ -207,16 +217,11 @@ class RobotController(Node):
         self.robot_tf_broadcaster.sendTransform(tf)
         
     def obstacle_callback(self, msg):
-        # self.num_obstacles = msg.num_obstacles
         self.obstacle_states_temp = 100*np.ones((2,self.num_obstacles))
         for i in range(min(msg.num_obstacles, self.num_obstacles)):
-            self.obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ]) 
-        # print(f"Obstacles for {self.name}: {self.obstacle_states}")
+            self.obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ])
         self.obstacle_states = np.copy(self.obstacle_states_temp)
         self.obstacles_valid = True
-        
-    def wrap_angle(self,theta):
-        return np.arctan2( np.sin(theta), np.cos(theta) )
 
     def new_goal_callback(self, msg):
         msg.current_waypoint.header.stamp = self.navigator.get_clock().now().to_msg()
@@ -225,8 +230,11 @@ class RobotController(Node):
             self.goal_init = False
             self.path_active = False
         print(f"{self.name} received new goals: {msg}")
+
+    def status_callback(self, msg):
+        self.active = msg.data
     
-    def controller_callback(self):
+    def run_controller(self):
         if self.print_count > 100:
             print(f"Planner init: {self.planner_init}")  
         if not self.planner_init:
@@ -362,9 +370,6 @@ class RobotController(Node):
                     goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
                 else:
                     break
-            
-            # if self.print_count > 10:
-            #     print(f"{self.name}'s Current goal: {goal}")
 
             # Publish path for visualization (no other use)
             self.nav2_path_publisher.publish(self.path)
@@ -386,7 +391,6 @@ class RobotController(Node):
             try:                
                 if self.controller_id == 0:
                     speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
-                    # speed, omega, h_human_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.human_states, self.human_states_dot, self.obstacle_states, dt )
                 elif self.controller_id == 1:
                     speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                 
@@ -398,31 +402,71 @@ class RobotController(Node):
                     self.h_min_obs_count += 1
                     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
             except Exception as e:
-                speed = 0.0 %self.control_prev[0]  #0.0
-                omega = 0.0 %self.control_prev[1]  #0.0
+                speed = 0.0
+                omega = 0.0
                 self.error_count = self.error_count + 1
                 print(f"ERROR ******************************** count: {self.error_count} {e}")
                 
             self.time_prev = t_new
-            # print(f"CBF speed: {speed}, omega: {omega}, dt:{dt}")
 
             ############## Publish Control Input ###################
             control = Twist()
-            control.linear.x = speed
-            control.angular.z = omega #+ random.random()/5 - 0.1
+            if not self.finalized_cluster:
+                self.get_logger().info(f"{self.name}'s cluster has not been finalized")
+                control.linear.x = 0.0
+                control.angular.z = 0.0
+            elif (self.finalized_cluster and self.name != self.robot_cluster[0]):
+                self.get_logger().info(f"{self.name} is not the leader.")
+                control.linear.x = 0.0
+                control.angular.z = 0.0
+            else:
+                control.linear.x = speed
+                control.angular.z = omega
             self.robot_command_pub.publish(control)
         else:
             control = Twist()
             control.linear.x = 0.0
             control.angular.z = 0.0
             self.robot_command_pub.publish(control)
-        
+
+    def nearby_robots(self):
+        # nearby = lambda i: True if self.distance_to_other_robots[i] < self.min_robot_to_robot else False
+        neighbors = []
+        for i in range(len(self.other_robots)):
+            # self.get_logger().info(f"Distance to other robot: {self.distance_to_other_robots[i]}")
+            if self.distance_to_other_robots[i] < self.min_robot_to_robot:
+                neighbors.append(i)
+        # self.get_logger().info(f"Positions of other robots: {self.other_robot_states}")
+        # self.connected_robots = [robot for i, robot in enumerate(self.other_robots) if nearby(i)]
+        # self.get_logger().info(f"Robot {self.name} close to {connected_robots}")
+        cluster_set = set()
+        self.get_logger().info(f"{self.name}'s neighborhood: {[self.other_robots[i] for i in neighbors]}")
+        for i in neighbors:
+            cluster_set.update(self.other_robots_clusters[i][1])
+        cluster_set.update([self.name])
+        cluster = list(cluster_set)
+        active_cluster = [robot for robot in cluster if self.robot_status[robot]]
+        cluster_priorities = [self.robot_priorities[robot] for robot in active_cluster]
+        if len(cluster) > 1:
+            leader = cluster[np.argmax(cluster_priorities)]
+        else:
+            leader = cluster[np.argmax]
+        self.robot_cluster = (leader, cluster)
+
+        msg = RobotCluster()
+        msg.leader = leader
+        msg.active = self.active
+        msg.cluster = cluster
+        self.robot_cluster_pub.publish(msg)
+        self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
     
+
 def main(args=None):
     rclpy.init(args=args)
     robot_controller = RobotController()
     rclpy.spin(robot_controller)
     rclpy.shutdown()
     
+
 if __name__ == '__main__':
     main()
