@@ -34,11 +34,12 @@ class GoalSetter(Node):
 
         self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
 
-        self.activity_publisher = self.create_publisher(Bool, f"{prefix}/active', 10")
+        self.activity_publisher = self.create_publisher(Bool, f'{prefix}/active', 10)
         self.publisher_ = self.create_publisher(PoseStampedPair, f'{prefix}/goal_location', 1)
         self.timer_period = 1.0
         self.goal_timer = self.create_timer(self.timer_period, self.publish_goal)
         self.feedback_timer = self.create_timer(self.timer_period, self.publish_feedback)
+        self.status_timer = self.create_timer(self.timer_period, self.publish_status)
         self.name = name
         self.location_listener = self.create_subscription(PoseStamped, prefix + '/robot_location', self.listen_location_callback, 1)
         self.feedback_publisher = self.create_publisher(Feedback, prefix + '/feedback', 1)
@@ -46,7 +47,7 @@ class GoalSetter(Node):
         self.locs = []
         self.loc_idx = 0
 
-        self.inactive = True
+        self.active = False
         self.goal_reached = True
 
     def goal_sequence_callback(self, msg):
@@ -94,12 +95,17 @@ class GoalSetter(Node):
                 msg.next_waypoint = next_waypoint
                 self.publisher_.publish(msg)
                 self.goal_reached = False
-                self.inactive = False
+                self.active = True
                 self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")
         else:
-            self.inactive = True
+            self.active = False
             # else:
                 # self.get_logger().info(f"Waiting for goal {goal} to be reached...")
+
+    def publish_status(self):
+        msg = Bool()
+        msg.data = self.active
+        self.activity_publisher.publish(msg)
 
     def listen_location_callback(self, msg):
         cur_loc = (msg.pose.position.x, msg.pose.position.y)
