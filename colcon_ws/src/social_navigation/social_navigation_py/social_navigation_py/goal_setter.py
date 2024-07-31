@@ -5,7 +5,7 @@ from rclpy.executors import MultiThreadedExecutor
 from nav2_simple_commander.robot_navigator import BasicNavigator
 
 from geometry_msgs.msg import PoseStamped, PoseArray
-from social_navigation_msgs.msg import Feedback
+from social_navigation_msgs.msg import Feedback, PoseStampedPair
 
 import json
 import math
@@ -33,7 +33,8 @@ class GoalSetter(Node):
 
         self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
 
-        self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
+        # self.publisher_ = self.create_publisher(PoseStamped, prefix + '/goal_location', 1)
+        self.publisher_ = self.create_publisher(PoseStampedPair, f'{prefix}/goal_location', 1)
         self.timer_period = 1.0
         self.goal_timer = self.create_timer(self.timer_period, self.publish_goal)
         self.feedback_timer = self.create_timer(self.timer_period, self.publish_feedback)
@@ -53,18 +54,42 @@ class GoalSetter(Node):
     def publish_goal(self):
         if self.loc_idx < len(self.locs):
             goal = self.locs[self.loc_idx]
+            if self.loc_idx + 1 < len(self.locs):
+                next_goal = self.locs[self.loc_idx + 1]
+            else:
+                next_goal = goal
             if self.goal_reached:
-                msg = PoseStamped()
-                msg.header.frame_id = "map"
-                msg.header.stamp = self.get_clock().now().to_msg()
+                msg = PoseStampedPair()
+                current_waypoint = PoseStamped()
+                current_waypoint.header.frame_id = "map"
+                current_waypoint.header.stamp = self.get_clock().now().to_msg()
                 rng = np.random.default_rng()
-                msg.pose.position.x = float(goal[0]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
-                msg.pose.position.y = float(goal[1]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
-                msg.pose.position.z = 0.01
-                msg.pose.orientation.x = 0.0
-                msg.pose.orientation.y = 0.0
-                msg.pose.orientation.z = 0.0
-                msg.pose.orientation.w = 1.0
+                current_waypoint.pose.position.x = float(goal[0]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
+                current_waypoint.pose.position.y = float(goal[1]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
+                current_waypoint.pose.position.z = 0.01
+                current_waypoint.pose.orientation.x = 0.0
+                current_waypoint.pose.orientation.y = 0.0
+                current_waypoint.pose.orientation.z = 0.0
+                current_waypoint.pose.orientation.w = 1.0
+                
+                next_waypoint = PoseStamped()
+                next_waypoint.header.frame_id = "map"
+                next_waypoint.header.stamp = self.get_clock().now().to_msg()
+                rng = np.random.default_rng()
+                if goal == next_goal:
+                    next_waypoint.pose.position.x = current_waypoint.pose.position.x
+                    next_waypoint.pose.position.y = current_waypoint.pose.position.y
+                else:
+                    next_waypoint.pose.position.x = float(next_goal[0]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
+                    next_waypoint.pose.position.y = float(next_goal[1]) + 2* GOAL_REGION_RADIUS * rng.random() - GOAL_REGION_RADIUS
+                next_waypoint.pose.position.z = 0.01
+                next_waypoint.pose.orientation.x = 0.0
+                next_waypoint.pose.orientation.y = 0.0
+                next_waypoint.pose.orientation.z = 0.0
+                next_waypoint.pose.orientation.w = 1.0 
+
+                msg.current_waypoint = current_waypoint
+                msg.next_waypoint = next_waypoint
                 self.publisher_.publish(msg)
                 self.goal_reached = False
                 self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")

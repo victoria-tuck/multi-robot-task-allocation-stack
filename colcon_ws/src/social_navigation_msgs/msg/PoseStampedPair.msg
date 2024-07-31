@@ -1,0 +1,2 @@
+geometry_msgs/PoseStamped current_waypoint
+geometry_msgs/PoseStamped next_waypoint

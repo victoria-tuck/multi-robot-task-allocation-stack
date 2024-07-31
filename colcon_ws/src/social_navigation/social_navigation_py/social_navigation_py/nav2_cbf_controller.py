@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 
-from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle
+from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, PoseStampedPair
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
@@ -63,10 +63,10 @@ class RobotController(Node):
         # self.robot_radius = 0.18 #0.2 #0.18
         self.robot_radius = 0.12
         # self.robot_radius = 0.25
-        self.replan_count = 0
         self.print_count = 0
 
-        self.timer_period = 0.05#0.05 # seconds
+        # self.timer_period = 0.05#0.05 # seconds
+        self.timer_period = 0.1
         self.time_step = self.timer_period
         self.goal = np.array([0,0]).reshape(-1,1)
         
@@ -92,9 +92,10 @@ class RobotController(Node):
         # self.goal_pose_subscriber = self.create_subscription( PoseStamped, prefix + '/goal_pose_custom', self.robot_goal_callback, 10 )
         # self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
         self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
-        self.goal_listener = self.create_subscription( PoseStamped, self.prefix + '/goal_location', self.new_goal_callback, 1 )
+        # self.goal_listener = self.create_subscription( PoseStamped, self.prefix + '/goal_location', self.new_goal_callback, 1 )
+        self.goal_subscriber = self.create_subscription(PoseStampedPair, f'{self.prefix}/goal_location', self.new_goal_callback, 1)
         # self.goal_listener = self.create_subscription( PoseStamped, prefix + '/goal_location', self.new_goal_callback, 1 )
-        self.new_goal_pose = None
+        self.new_goal_poses = None
         self.human_states_valid = False
         self.all_other_robot_states_valid = False
         self.other_robot_states_valid = [False] * self.num_other_robots
@@ -103,6 +104,7 @@ class RobotController(Node):
         self.obstacles_valid = False
         self.pose_init = False
         self.goal_init = False
+        self.initial_goal = True
         self.planner_init = False
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
@@ -128,8 +130,7 @@ class RobotController(Node):
 
         # Planner
         self.navigator = BasicNavigator()
-        self.path = Path() 
-        self.path_waypoint_index = 0
+        self.path = Path()
         
         self.get_logger().info("User Controller is ONLINE")
         self.timer = self.create_timer(self.timer_period, self.controller_callback)
@@ -218,10 +219,12 @@ class RobotController(Node):
         return np.arctan2( np.sin(theta), np.cos(theta) )
 
     def new_goal_callback(self, msg):
-        msg.header.stamp = self.navigator.get_clock().now().to_msg()
-        self.new_goal_pose = msg
-        self.goal_init = False
-        print(f"{self.name} received new goal: {msg}")
+        msg.current_waypoint.header.stamp = self.navigator.get_clock().now().to_msg()
+        self.new_goal_poses = msg
+        if (msg.current_waypoint.pose != msg.next_waypoint.pose):
+            self.goal_init = False
+            self.path_active = False
+        print(f"{self.name} received new goals: {msg}")
     
     def controller_callback(self):
         if self.print_count > 100:
@@ -245,57 +248,107 @@ class RobotController(Node):
 
         # set goal for first time
         # if self.print_count > 100:
-        #     print(f"goal_init: {self.goal_init}")
-        #     print(f"new_goal_pose: {self.new_goal_pose}")
+        # print(f"goal_init: {self.goal_init}")
+        # print(f"new_goal_pose: {self.new_goal_poses}")
         # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
-        if not self.goal_init and self.new_goal_pose is not None:
-            print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
+        if not self.path_active:
+            control = Twist()
+            control.linear.x = 0.0
+            control.angular.z = 0.0
+            self.robot_command_pub.publish(control)
+        if not self.goal_init and self.new_goal_poses is not None:
+            # print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
             if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
                 # if self.print_count > 100:
                 #     print("Start planning...")
+                goal = self.new_goal_poses.current_waypoint
+                self.goal_pose = goal
+                self.goal = np.array([ goal.pose.position.x, goal.pose.position.y ]).reshape(-1,1)
+                # Get current position and publish
+                # initial_pose = PoseStamped()
+                # initial_pose.header.frame_id = 'map'
+                # initial_pose.header.stamp = self.navigator.get_clock().now().to_msg()
+                # initial_pose.pose.position.x = self.robot_state[0,0]
+                # initial_pose.pose.position.y = self.robot_state[1,0]
+                # initial_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
+                # initial_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
+                # if self.print_count > 10:
+                #     print(f"Initial pose: {current_pose.pose.position}")
+                if self.initial_goal:
+                    # self.navigator.waitUntilNav2Active()
+                    success = False
+                    tries = 0
+                    while not success:
+                        try:
+                            self.navigator.setInitialPose(current_pose)
+                            path = self.navigator.getPath(current_pose, self.goal_pose) # replace with naman's planner
+                            # if self.print_count > 10:
+                            #     print(f"Should be initial pose: {path.poses[0].pose.position}")
+                            #     print(f"Requested initial pose: {initial_pose.pose.position}")
+                            assert path is not None
+                            initial_pose_close_x = abs(path.poses[0].pose.position.x - current_pose.pose.position.x) < 0.05
+                            initial_pose_close_y = abs(path.poses[0].pose.position.y - current_pose.pose.position.y) < 0.05
+                            goal_pose_close_x = abs(path.poses[-1].pose.position.x - self.goal_pose.pose.position.x) < 0.05
+                            goal_pose_close_y = abs(path.poses[-1].pose.position.y - self.goal_pose.pose.position.y) < 0.05
+                            assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
+                            # print(f"Updated {self.name}'s path")
+                            # if close_x and close_y:
+                            self.path = path
+                            self.path2 = path
+                            # self.nav2_path_publisher.publish(self.path)
+                            success = True
+                            self.initial_goal = False
+                            return
+                        except Exception as e:
+                            # print(f"Trying to find path again")
+                            success = False
+                        tries += 1
+
                 success = False
-                while not success:
-                    msg = self.new_goal_pose
-                    self.goal_pose = msg
-                    self.goal = np.array([ msg.pose.position.x, msg.pose.position.y ]).reshape(-1,1)
+                tries = 0
+                while not self.initial_goal and not success:
+                    next_goal = self.new_goal_poses.next_waypoint
+                    # self.goal = np.array([ goal.pose.position.x, goal.pose.position.y ]).reshape(-1,1)
                     # Get current position and publish
-                    initial_pose = PoseStamped()
-                    initial_pose.header.frame_id = 'map'
-                    initial_pose.header.stamp = self.navigator.get_clock().now().to_msg()
-                    initial_pose.pose.position.x = self.robot_state[0,0]
-                    initial_pose.pose.position.y = self.robot_state[1,0]
-                    initial_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
-                    initial_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
-                    if self.print_count > 10:
-                        print(f"Initial pose: {initial_pose.pose.position}")
+                    start_pose = self.new_goal_poses.current_waypoint
+                    # start_pose = PoseStamped()
+                    # start_pose.header.frame_id = 'map'
+                    # start_pose.header.stamp = self.navigator.get_clock().now().to_msg()
+                    # start_pose.pose.position.x = self.robot_state[0,0]
+                    # start_pose.pose.position.y = self.robot_state[1,0]
+                    # start_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
+                    # start_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
+                    # if self.print_count > 10:
+                    #     print(f"Initial pose: {current_pose.pose.position}")
                     # self.navigator.clearGlobalCostmap()
-                    self.navigator.setInitialPose(initial_pose)
+                    self.navigator.setInitialPose(start_pose)
                     # self.navigator.waitUntilNav2Active()
                     try:
-                        path = self.navigator.getPath(initial_pose, self.goal_pose) # replace with naman's planner
-                        if self.print_count > 10:
-                            print(f"Should be initial pose: {path.poses[0].pose.position}")
-                            print(f"Requested initial pose: {initial_pose.pose.position}")
+                        path = self.navigator.getPath(start_pose, next_goal) # replace with naman's planner
+                        # if self.print_count > 10:
+                        #     print(f"Should be initial pose: {path.poses[0].pose.position}")
+                        #     print(f"Requested initial pose: {initial_pose.pose.position}")
                         assert path is not None
-                        initial_pose_close_x = abs(path.poses[0].pose.position.x - initial_pose.pose.position.x) < 0.05
-                        initial_pose_close_y = abs(path.poses[0].pose.position.y - initial_pose.pose.position.y) < 0.05
-                        goal_pose_close_x = abs(path.poses[-1].pose.position.x - self.goal_pose.pose.position.x) < 0.05
-                        goal_pose_close_y = abs(path.poses[-1].pose.position.y - self.goal_pose.pose.position.y) < 0.05
+                        initial_pose_close_x = abs(path.poses[0].pose.position.x - start_pose.pose.position.x) < 0.05
+                        initial_pose_close_y = abs(path.poses[0].pose.position.y - start_pose.pose.position.y) < 0.05
+                        goal_pose_close_x = abs(path.poses[-1].pose.position.x - next_goal.pose.position.x) < 0.05
+                        goal_pose_close_y = abs(path.poses[-1].pose.position.y - next_goal.pose.position.y) < 0.05
                         assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
                         print(f"Updated {self.name}'s path")
                         # if close_x and close_y:
-                        self.path = path
+                        self.path.poses = self.path2.poses + path.poses
+                        self.path2 = path
                         # self.nav2_path_publisher.publish(self.path)
-                        self.path_waypoint_index = 0
                         self.path_active = True
                         self.goal_init = True
-                        self.replan_count = 0
                         success = True
-                        self.new_goal_pose = None
+                        self.new_goal_poses = None
+                        self.initial_goal = False
                         return
                     except Exception as e:
-                        print(f"Trying to find path again")
+                        # print(f"Trying to find path again")
                         success = False
+                    tries += 1 
             
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
         if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
@@ -310,8 +363,8 @@ class RobotController(Node):
                 else:
                     break
             
-            if self.print_count > 10:
-                print(f"{self.name}'s Current goal: {goal}")
+            # if self.print_count > 10:
+            #     print(f"{self.name}'s Current goal: {goal}")
 
             # Publish path for visualization (no other use)
             self.nav2_path_publisher.publish(self.path)
@@ -345,8 +398,8 @@ class RobotController(Node):
                     self.h_min_obs_count += 1
                     self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
             except Exception as e:
-                speed = self.control_prev[0]  #0.0
-                omega = self.control_prev[1]  #0.0
+                speed = 0.0 %self.control_prev[0]  #0.0
+                omega = 0.0 %self.control_prev[1]  #0.0
                 self.error_count = self.error_count + 1
                 print(f"ERROR ******************************** count: {self.error_count} {e}")
                 
@@ -358,7 +411,11 @@ class RobotController(Node):
             control.linear.x = speed
             control.angular.z = omega #+ random.random()/5 - 0.1
             self.robot_command_pub.publish(control)
-            self.replan_count += 1
+        else:
+            control = Twist()
+            control.linear.x = 0.0
+            control.angular.z = 0.0
+            self.robot_command_pub.publish(control)
         
     
 def main(args=None):
