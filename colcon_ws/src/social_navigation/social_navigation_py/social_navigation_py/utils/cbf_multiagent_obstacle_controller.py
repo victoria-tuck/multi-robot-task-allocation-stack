@@ -9,6 +9,7 @@ from jax import lax
 from social_navigation_py.utils.polytope_utils import *
 from matplotlib.animation import FFMpegWriter
 import jax.numpy as jnp
+from functools import partial
 
 # from jaxopt import CvxpyQP
 # from jaxopt import OSQP
@@ -44,15 +45,19 @@ class cbf_controller:
         cbf_controller.k_x = 1.5#2.0#1.5#  1.5#0.5#30.0
         cbf_controller.k_v = 3.0#2.5#3.0#  3.0#1.5
         self.d_min_human = 0.2#0.5
-        self.num_agents = len(robot_init_state)/4
+        # cbf_controller.num_agents = int(len(robot_init_state)/4)
+        self.num_agents = int(len(robot_init_state)/4)
+        print(f"Number of agents: {self.num_agents}")
         
         ######### holonomic controller
         n = 4 + cbf_controller.num_people + 1 # number of constraints
 
         ##########
         # cvxpylayer base controller
+        # self.n_base = self.num_agents*(4 + cbf_controller.num_people + cbf_controller.num_obstacles)
         self.n_base = 4 + cbf_controller.num_people + cbf_controller.num_obstacles
         self.u2_base = cp.Variable((2,1))
+        print(f"Size told to u2 base: {(2,1)}. Actual size: {(self.u2_base.size)}")
         self.u2_ref_base = cp.Parameter((2,1))
         self.A2_base = cp.Parameter((self.n_base,2))
         self.b2_base = cp.Parameter((self.n_base,1))
@@ -60,7 +65,7 @@ class cbf_controller:
         # self.objective2_base = cp.Minimize( cp.sum_squares(self.u2_base-self.u2_ref_base) )
         self.objective2_base = cp.Minimize( cp.norm(self.u2_base-self.u2_ref_base) )
         self.controller2_base = cp.Problem( self.objective2_base, self.const2_base )
-        cbf_controller.controller2_base_layer = CvxpyLayer(self.controller2_base, parameters=[self.u2_ref_base, self.A2_base, self.b2_base], variables=[self.u2_base])
+        self.controller2_base_layer = CvxpyLayer(self.controller2_base, parameters=[self.u2_ref_base, self.A2_base, self.b2_base], variables=[self.u2_base])
 
         ##################
 
@@ -73,47 +78,65 @@ class cbf_controller:
         # self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
 
         # Robot
-        cbf_controller.robot = multi_dynamic_unicycle( None, pos = np.array([ robot_init_state[0,0], robot_init_state[1,0], robot_init_state[2,0], 0.0 ]), dt = self.dt, plot_polytope=False, num_agents=1)
-        self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound+2.0], [-self.control_bound, self.control_bound+2.0], [-self.control_bound, -self.control_bound-2.0], [self.control_bound, -self.control_bound-2.0] ])
+        robots_init = []
+        for i in range(self.num_agents):
+            robots_init.append(np.array([robot_init_state[4*i,0], robot_init_state[4*i+1,0], robot_init_state[4*i+2,0], 0.0]).reshape(-1,1))
+        robots_init_state = np.hstack(robots_init)
+        print(f"Initialize dynamic unicycle with {self.num_agents} agents")
+        self.robot = multi_dynamic_unicycle( None, pos = robots_init_state, dt = self.dt, plot_polytope=False, num_agents=self.num_agents)
+        self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound+2.0], [-self.control_bound, self.control_bound+2.0], [-self.control_bound, -self.control_bound-2.0], [self.control_bound, -self.control_bound-2.0] ] * self.num_agents)
         # self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound], [-self.control_bound, self.control_bound], [-self.control_bound, -self.control_bound], [self.control_bound, -self.control_bound] ])
         self.control_bound_polytope = pt.qhull( self.control_input_limit_points )
         print(f"hull: {self.control_bound_polytope}")
 
-    @staticmethod
-    @jit
-    def construct_barrier_from_states(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
+    # @staticmethod
+    @partial(jit, static_argnums=(0,))
+    def construct_barrier_from_states(self, robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius, num_agents ):         
         # barrier function
-        A1, b1, h_human_min = cbf_controller.construct_barrier_from_states_humans(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
-        A2, b2, h_obs_min = cbf_controller.construct_barrier_from_states_obstacles(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
-        return jnp.append(A1, A2, axis=0), jnp.append(b1, b2, axis=0), h_human_min, h_obs_min
+        A1, b1, h_human_min = self.construct_barrier_from_states_humans(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius)
+        A2, b2, h_obs_min = self.construct_barrier_from_states_obstacles(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius, num_agents )
+        A1_agent1 = lax.dynamic_slice(A1, (0,0), (cbf_controller.num_people,2))
+        b1_agent1 = lax.dynamic_slice(b1, (0,0), (cbf_controller.num_people,1))
+        return jnp.append(A1_agent1, A2, axis=0), jnp.append(b1_agent1, b2, axis=0), h_human_min, h_obs_min
             
-    @staticmethod
-    @jit
-    def construct_barrier_from_states_humans(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
+    # @staticmethod
+    @partial(jit, static_argnums=(0,))
+    def construct_barrier_from_states_humans(self, robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius):         
         # barrier function
-        A = jnp.zeros((cbf_controller.num_people,2)); b = jnp.zeros((cbf_controller.num_people,1))
-        h_min = 100
-        def body(i, inputs):
-            A, b, h_min = inputs
-            # dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.3)
-            dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, other_robot_states, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.15)
-            A = A.at[i, :].set( (dh_dot_dx1 @ cbf_controller.robot.g_jax(robot_state))[0,:  ]  )
-            b = b.at[i,:].set( (- dh_dot_dx1 @ cbf_controller.robot.f_jax(robot_state) - dh_dot_dx2 @ human_states_dot[:,i].reshape(-1,1) - alpha1_human[i] * h_dot - alpha2_human[i] * (h_dot + alpha1_human[i]*h))[0,:] )
-            h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
-            return A, b, h_min
-        return lax.fori_loop( 0, cbf_controller.num_people, body, (A, b, h_min) )
+        complete_state = jnp.vstack((robot_state, other_robot_states))
+        A_multi = jnp.zeros((cbf_controller.num_people*self.num_agents,2*self.num_agents)); b_multi = jnp.zeros((cbf_controller.num_people*self.num_agents,1))
+        h_overallmin = 100
+        def outer_body(j, outer_inputs):
+            A_multi, b_multi, h_overallmin = outer_inputs
+            A = jnp.zeros((cbf_controller.num_people,2)); b = jnp.zeros((cbf_controller.num_people,1))
+            def body(i, inputs):
+                A, b, h_min = inputs
+                # dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.3)
+                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_humans_alpha_jax( robot_state, other_robot_states, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.15)
+                A = A.at[i, :].set( (dh_dot_dx1 @ self.robot.g_jax_i(robot_state))[0,:  ]  )
+                b = b.at[i,:].set( (- dh_dot_dx1 @ self.robot.f_jax_i(robot_state) - dh_dot_dx2 @ human_states_dot[:,i].reshape(-1,1) - alpha1_human[i] * h_dot - alpha2_human[i] * (h_dot + alpha1_human[i]*h))[0,:] )
+                h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
+                return A, b, h_min
+            A_update, b_update, h_overallmin = lax.fori_loop( 0, cbf_controller.num_people, body, (A, b, h_overallmin) )
+            A_multi = lax.dynamic_update_slice(A_multi, A_update, (cbf_controller.num_people*j, 2*j))
+            b_multi = lax.dynamic_update_slice(b_multi, b_update, (cbf_controller.num_people*j, 0))
+            # A_multi = A_multi.at[cbf_controller.num_people*j:cbf_controller.num_people*(j+1),2*j:2*(j+1)].set(A_update)
+            # b_multi = b_multi.at[cbf_controller.num_people*j:cbf_controller.num_people*(j+1),j:(j+1)].set(b_update)
+            return A_multi, b_multi, h_overallmin
+        return lax.fori_loop(0, self.num_agents, outer_body, (A_multi, b_multi, h_overallmin))
     
-    @staticmethod
-    @jit
-    def construct_barrier_from_states_obstacles(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
+    # @staticmethod
+    @partial(jit, static_argnums=(0,))
+    def construct_barrier_from_states_obstacles(self, robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius, num_agents ):         
         # barrier function
+        complete_state = jnp.vstack((robot_state, other_robot_states))
         A = jnp.zeros((cbf_controller.num_obstacles,2)); b = jnp.zeros((cbf_controller.num_obstacles,1))
         h_min = 100
         def body(i, inputs):
             A, b, h_min = inputs
-            dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_alpha_jax( robot_state, other_robot_states, obstacle_states[:,i].reshape(-1,1), d_min = robot_radius)
-            A = A.at[i,:].set((dh_dot_dx1 @ cbf_controller.robot.g_jax(robot_state))[0,:] )
-            b = b.at[i,:].set((- dh_dot_dx1 @ cbf_controller.robot.f_jax(robot_state) - alpha1_obstacle[i] * h_dot - alpha2_obstacle[i] * (h_dot + alpha1_obstacle[i]*h))[0,:] )
+            dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_alpha_jax( robot_state, other_robot_states, obstacle_states[:,i].reshape(-1,1), d_min = robot_radius)
+            A = A.at[i,:].set((dh_dot_dx1 @ self.robot.g_jax_i(complete_state))[0,:] )
+            b = b.at[i,:].set((- dh_dot_dx1 @ self.robot.f_jax_i(complete_state) - alpha1_obstacle[i] * h_dot - alpha2_obstacle[i] * (h_dot + alpha1_obstacle[i]*h))[0,:] )
             h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
             return A, b, h_min
         return lax.fori_loop( 0, cbf_controller.num_obstacles, body, (A, b, h_min) )
@@ -121,20 +144,29 @@ class cbf_controller:
     def policy_nominal(self, robot_state, other_robot_states, robot_goal, dt):
         
         self.robot.set_state(robot_state)
-        self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        self.u2_ref_base.value = self.robot.nominal_controller( robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
         self.robot.step( self.u2_ref_base.value, dt )
         return self.robot.X[3,0], self.u2_ref_base.value[1,0]
     
                 
     def policy_cbf(self, robot_state, other_robot_states, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
         
-        self.robot.set_state(robot_state)
-        A, b, h_human_min, h_obs_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(other_robot_states), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
+        complete_state = np.vstack((robot_state, other_robot_states))
+        self.robot.set_state(complete_state)
+        A, b, h_human_min, h_obs_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(other_robot_states), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, self.num_agents )
         self.A2_base.value = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
         self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
-        self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        nominal_ctrl = self.robot.nominal_controller( robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        # self.u2_ref_base.value = nominal_ctrl[0:2,:]
+        print(f"U2 ref base: {self.u2_ref_base}")
+        self.u2_ref_base.value = nominal_ctrl[0:2]
         self.controller2_base.solve(solver=cp.GUROBI)
-        self.robot.step( self.u2_base.value, dt )         
+        print(f"Calculated control: {self.u2_base.value}")
+        if self.num_agents > 1:
+            U = np.vstack((self.u2_base.value, np.array([0,0]).reshape(-1,1)))
+        else:
+            U = self.u2_base.value
+        self.robot.step( U, dt )         
         
         # Plot polytope       
         # self.ax1[1].clear()
@@ -159,3 +191,13 @@ class cbf_controller:
         # vels = self.robot.wheel_to_vel_g() @ np.array([ self.robot.X[3,0], self.u2_base.value[1,0] ]).reshape(-1,1)
         # return self.robot.X[3,0], vels[1,0]
     
+def main():
+    controller1 = cbf_controller(np.array([3.0, 4.0, 0.0, 0.1]).reshape(-1,1), 0, 1, dynamic_alpha1=1.0, dynamic_alpha2=2.0)
+    controller2 = cbf_controller(np.array([3.0, 4.0, 0.0, 0.1, 4.0, 5.0, 0.2, 0.1]).reshape(-1,1), 0, 1, dynamic_alpha1=1.0, dynamic_alpha2=2.0)
+    robot_goal = np.array([4.0, 5.0]).reshape(-1,1)
+    other_robot_states = np.array([4.0, 5.0, 0.2, 0.1]).reshape(-1,1)
+    output = controller2.robot.nominal_controller(robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+    print(output)
+
+if __name__ == '__main__':
+    main()

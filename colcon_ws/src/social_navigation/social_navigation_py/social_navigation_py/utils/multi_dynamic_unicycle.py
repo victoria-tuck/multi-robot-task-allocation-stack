@@ -22,7 +22,8 @@ class multi_dynamic_unicycle:
         '''
         
         self.type = 'MultiAgentDynamicUnicycle' 
-        self.num_agents = num_agents       
+        self.num_agents = num_agents
+        print(f"Number of agents: {self.num_agents}")    
         self.s = 0.287
         
         self.X0 = pos.reshape(-1,1)
@@ -65,7 +66,8 @@ class multi_dynamic_unicycle:
                          0,0]).reshape(-1,1)
     
     def f(self):
-        return np.tile(self.f_i(), (self.num_agents, 1))
+        num_agents = int(len(self.X)/4)
+        return np.tile(self.f_i(), (num_agents, 1))
     
     def f_jax_i(self,X):
         return jnp.array([X[3,0]*jnp.cos(X[2,0]),
@@ -105,8 +107,14 @@ class multi_dynamic_unicycle:
     def g_i(self):
         return np.array([ [0, 0],[0, 0], [0, 1], [1, 0] ])# @ self.vel_to_wheel_g()
     
-    def g(self):
-        return np.tile(self.g_i(), (self.num_agents,1))
+    def g(self, X):
+        num_agents = int(len(X)/4)
+        print(f"Number of agents in g function: {num_agents}")
+        array = np.zeros((4*num_agents, 2*num_agents))
+        for i in range(num_agents):
+            subarray = self.g_i()
+            array[4*i:4*(i+1), 2*i:2*(i+1)] = subarray
+        return array
 
     def g_jax_i(self, X):
         return jnp.array([ [0, 0],[0, 0], [0, 1.0], [1.0, 0] ])# @ self.vel_to_wheel_g_jax()
@@ -124,7 +132,9 @@ class multi_dynamic_unicycle:
     def step(self,U, dt): #Just holonomic X,T acceleration
 
         self.U = U.reshape(-1,1)
-        self.X = self.X + ( self.f() + self.g() @ self.U )*dt
+
+        print(f"g vec: {self.g(self.X)}")
+        self.X = self.X + ( self.f() + self.g(self.X) @ self.U )*dt
         # print(self.X)
         for i in range(self.num_agents):
             self.X[4*i + 2,0] = wrap_angle(self.X[4*i + 2,0])
@@ -166,6 +176,7 @@ class multi_dynamic_unicycle:
         # k_omega = 3.0#2.0 
         # k_v = 1.0#3.0#0.3#0.15##5.0#0.15
         # k_x = k_v
+        print(f"Shape of X: {self.X.shape}. Shape of goal: {targetX.shape}")
         distance = np.linalg.norm( self.X[0:2]-targetX[0:2] )
         # print(f"distance: {distance}")
         if (distance>0.1):
@@ -189,9 +200,12 @@ class multi_dynamic_unicycle:
     
     def nominal_controller(self, targetX, other_robot_states, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
         nominal_controls_list = []
-        for i in range(self.num_agents):
-            agent_nominal_control = self.nominal_controller_i(targetX[4*i:4*(i+1)], k_omega = k_omega, k_x = k_x, k_v = k_v)
-            nominal_controls_list.append(agent_nominal_control)
+        agent_nominal_control = self.nominal_controller_i(targetX, k_omega = k_omega, k_x = k_x, k_v = k_v)
+        nominal_controls_list.append(agent_nominal_control)
+        num_other_agents = int(len(other_robot_states)/4)
+        for i in range(num_other_agents):
+            nominal_controls_list.append(np.array([0,0]).reshape(-1,1))
+        print(f"Nominal control: {nominal_controls_list} for {num_other_agents+1} agents")
         return np.concatenate(nominal_controls_list, axis=0)
     
     # def nominal_controller_jax(self, targetX, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
@@ -214,18 +228,18 @@ class multi_dynamic_unicycle:
     
     def barrier_alpha_jax(self, X, otherX, avoidX, d_min = 0.5):
         h = (X[0:2] - avoidX[0:2]).T @ (X[0:2] - avoidX[0:2]) - d_min**2
-        h_dot = 2 * (X[0:2] - avoidX[0:2]).T @ ( self.f_jax(X)[0:2]  )
-        df_dx = self.df_dx_jax(X)
-        dh_dot_dx1 = jnp.append( ( self.f_jax(X)[0:2] ).T, jnp.array([[0,0]]), axis = 1 ) + 2 * ( X[0:2] - avoidX[0:2] ).T @ df_dx[0:2,:]
-        dh_dot_dx2 = - 2 * ( self.f_jax(X)[0:2].T )
+        h_dot = 2 * (X[0:2] - avoidX[0:2]).T @ ( self.f_jax_i(X)[0:2]  )
+        df_dx_i = self.df_dx_jax_i(X)
+        dh_dot_dx1 = jnp.append( ( self.f_jax_i(X)[0:2] ).T, jnp.array([[0,0]]), axis = 1 ) + 2 * ( X[0:2] - avoidX[0:2] ).T @ df_dx_i[0:2,:]
+        dh_dot_dx2 = - 2 * ( self.f_jax_i(X)[0:2].T )
         return dh_dot_dx1, dh_dot_dx2, h_dot, h
     
     def barrier_humans_alpha_jax(self, X, otherX, targetX, targetU, d_min = 0.5):
         h = (X[0:2] - targetX[0:2]).T @ (X[0:2] - targetX[0:2]) - d_min**2
-        h_dot = 2 * (X[0:2] - targetX[0:2]).T @ ( self.f_jax(X)[0:2] - targetU[0:2] )
-        df_dx = self.df_dx_jax(X)
-        dh_dot_dx1 = jnp.append( ( self.f_jax(X)[0:2] - targetU[0:2] ).T, jnp.array([[0,0]]), axis = 1 ) + 2 * ( X[0:2] - targetX[0:2] ).T @ df_dx[0:2,:]
-        dh_dot_dx2 = - 2 * ( self.f_jax(X)[0:2].T -targetU[0:2].T )
+        h_dot = 2 * (X[0:2] - targetX[0:2]).T @ ( self.f_jax_i(X)[0:2] - targetU[0:2] )
+        df_dx_i = self.df_dx_jax_i(X)
+        dh_dot_dx1 = jnp.append( ( self.f_jax_i(X)[0:2] - targetU[0:2] ).T, jnp.array([[0,0]]), axis = 1 ) + 2 * ( X[0:2] - targetX[0:2] ).T @ df_dx_i[0:2,:]
+        dh_dot_dx2 = - 2 * ( self.f_jax_i(X)[0:2].T -targetU[0:2].T )
         return dh_dot_dx1, dh_dot_dx2, h_dot, h
     
     def barrier_agent_agent_jax_ij(self, X_i, X_j, d_min = 0.5):
@@ -240,3 +254,18 @@ class multi_dynamic_unicycle:
         dhdot_dx1 = dhdot_dx[0:4]
         dhdot_dx2 = dhdot_dx[4:]
         return dhdot_dx1, dhdot_dx2, hdot_func(X), h(X)
+
+
+def main():
+    robot_init_state = np.array([3.0, 4.0, 0.0, 0.1, 4.0, 5.0, 0.2, 0.1]).reshape(-1,1)
+    robots_init = []
+    num_agents = 2
+    for i in range(num_agents):
+        robots_init.append(np.array([robot_init_state[4*i,0], robot_init_state[4*i+1,0], robot_init_state[4*i+2,0], 0.0]).reshape(-1,1))
+    robots_init_state = np.hstack(robots_init)
+    robot = multi_dynamic_unicycle( None, pos = robots_init_state, plot_polytope=False, num_agents=num_agents)
+    print(robot.g(robot.X))
+
+    
+if __name__ == '__main__':
+    main()

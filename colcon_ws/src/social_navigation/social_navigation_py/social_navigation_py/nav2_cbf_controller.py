@@ -83,9 +83,9 @@ class RobotController(Node):
         if self.controller_id == 0:
             self.dynamic_obstacle_states_valid, self.human_states_valid, self.all_other_robot_states_valid = True, True, True
             self.update_dynamic_obstacles()
-            self.controller.policy_cbf(self.robot_state, None, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
+            self.controller.policy_cbf(self.robot_state, np.empty((0,1)), self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
         elif self.controller_id == 1:
-            self.controller.policy_nominal(self.robot_state, None, self.goal, dummy_time_step)
+            self.controller.policy_nominal(self.robot_state, np.empty((0,1)), self.goal, dummy_time_step)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
@@ -422,44 +422,44 @@ class RobotController(Node):
                 control.linear.x = 0.0
                 control.angular.z = 0.0
             else:
-                try:                
-                    other_robot_states_list = []
-                    num_other_robots = 0
-                    for i, robot in enumerate(self.other_robots):
-                        if robot in self.robot_cluster[1]:
-                            other_robot_states_list.append(np.array(self.other_robot_states[:,i]).reshape(-1,1))
-                            num_other_robots += 1
-                    if len(other_robot_states_list) > 0:
-                        other_robot_states = np.vstack(other_robot_states_list)
-                        self.get_logger().info(f'Other robot states: {other_robot_states}')
-                        self.get_logger().info(f"Size of robot state: {self.robot_state.shape} and size of other robot states: {self.other_robot_states.shape}")
-                        complete_state = np.vstack((self.robot_state, other_robot_states))
-                        if not self.cluster_controller_active or self.cluster_controller is None:
-                            # TODO: Change obstacles to include obstacles for all robots
-                            # self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles * num_other_robots, 1.0, 2.0)
-                            self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
-                            self.cluster_controller.active = True
-                        if self.controller_id == 0:
-                            speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
-                    else:
-                        other_robot_states = np.array([])
-                        if self.controller_id == 0:
-                            speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
-                        elif self.controller_id == 1:
-                            speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, other_robot_states, goal, dt )
-                    
-                    # Check if any collision constraints violated
-                    if h_dyn_obs_min < -0.01:
-                        self.h_min_dyn_obs_count += 1
-                        self.get_logger().info(f"dynamic obstacle violate: {self.h_min_dyn_obs_count}")
-                    if h_obs_min < -0.01:
-                        self.h_min_obs_count += 1
-                        self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
-                except Exception as e:
-                    speed = 0.0
-                    omega = 0.0
-                    self.error_count = self.error_count + 1
-                    print(f"ERROR ******************************** count: {self.error_count} {e}")
+                # try:                
+                other_robot_states_list = []
+                num_other_robots = 0
+                for i, robot in enumerate(self.other_robots):
+                    if robot in self.robot_cluster[1]:
+                        other_robot_states_list.append(np.array(self.other_robot_states[:,i]).reshape(-1,1))
+                        num_other_robots += 1
+                if len(other_robot_states_list) > 0:
+                    other_robot_states = np.vstack(other_robot_states_list)
+                    self.get_logger().info(f'Other robot states: {other_robot_states}')
+                    self.get_logger().info(f"Size of robot state: {self.robot_state.shape} and size of other robot states: {other_robot_states.shape}")
+                    complete_state = np.vstack((self.robot_state, other_robot_states))
+                    if not self.cluster_controller_active or self.cluster_controller is None:
+                        # TODO: Change obstacles to include obstacles for all robots
+                        # self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles * num_other_robots, 1.0, 2.0)
+                        self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
+                        self.cluster_controller.active = True
+                    if self.controller_id == 0:
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                else:
+                    other_robot_states = np.empty((0,1))
+                    if self.controller_id == 0:
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                    elif self.controller_id == 1:
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, other_robot_states, goal, dt )
+                
+                # Check if any collision constraints violated
+                if h_dyn_obs_min < -0.01:
+                    self.h_min_dyn_obs_count += 1
+                    self.get_logger().info(f"dynamic obstacle violate: {self.h_min_dyn_obs_count}")
+                if h_obs_min < -0.01:
+                    self.h_min_obs_count += 1
+                    self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
+                # except Exception as e:
+                #     speed = 0.0
+                #     omega = 0.0
+                #     self.error_count = self.error_count + 1
+                #     print(f"ERROR ******************************** count: {self.error_count} {e}")
 
                 control.linear.x = speed
                 control.angular.z = omega
@@ -523,6 +523,11 @@ class RobotController(Node):
 def main(args=None):
     rclpy.init(args=args)
     robot_controller = RobotController()
+    # robot_controller.controller = cbf_controller(np.array([3.0, 4.0, 0.0, 0.1, 4.0, 5.0, 0.2, 0.1]).reshape(-1,1), 0, 1, dynamic_alpha1=1.0, dynamic_alpha2=2.0)
+    # robot_goal = np.array([4.0, 5.0]).reshape(-1,1)
+    # other_robot_states = np.array([4.0, 5.0, 0.2, 0.1]).reshape(-1,1)
+    # output = robot_controller.controller.robot.nominal_controller(robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+    # print(output)
     rclpy.spin(robot_controller)
     rclpy.shutdown()
     
