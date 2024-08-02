@@ -187,7 +187,7 @@ class multi_dynamic_unicycle:
         # print(f"CBF nominal acc: {u_r}, omega:{omega}")
         return np.array([u_r, omega]).reshape(-1,1)
     
-    def nominal_controller(self, targetX, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
+    def nominal_controller(self, targetX, other_robot_states, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
         nominal_controls_list = []
         for i in range(self.num_agents):
             agent_nominal_control = self.nominal_controller_i(targetX[4*i:4*(i+1)], k_omega = k_omega, k_x = k_x, k_v = k_v)
@@ -212,7 +212,7 @@ class multi_dynamic_unicycle:
     #     u_r = k_v * ( speed - self.X[3,0] )
     #     return jnp.array([u_r, omega]).reshape(-1,1)
     
-    def barrier_alpha_jax(self, X, avoidX, d_min = 0.5):
+    def barrier_alpha_jax(self, X, otherX, avoidX, d_min = 0.5):
         h = (X[0:2] - avoidX[0:2]).T @ (X[0:2] - avoidX[0:2]) - d_min**2
         h_dot = 2 * (X[0:2] - avoidX[0:2]).T @ ( self.f_jax(X)[0:2]  )
         df_dx = self.df_dx_jax(X)
@@ -220,7 +220,7 @@ class multi_dynamic_unicycle:
         dh_dot_dx2 = - 2 * ( self.f_jax(X)[0:2].T )
         return dh_dot_dx1, dh_dot_dx2, h_dot, h
     
-    def barrier_humans_alpha_jax(self, X, targetX, targetU, d_min = 0.5):
+    def barrier_humans_alpha_jax(self, X, otherX, targetX, targetU, d_min = 0.5):
         h = (X[0:2] - targetX[0:2]).T @ (X[0:2] - targetX[0:2]) - d_min**2
         h_dot = 2 * (X[0:2] - targetX[0:2]).T @ ( self.f_jax(X)[0:2] - targetU[0:2] )
         df_dx = self.df_dx_jax(X)

@@ -80,22 +80,22 @@ class cbf_controller:
 
     @staticmethod
     @jit
-    def construct_barrier_from_states(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
+    def construct_barrier_from_states(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
         # barrier function
-        A1, b1, h_human_min = cbf_controller.construct_barrier_from_states_humans(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
-        A2, b2, h_obs_min = cbf_controller.construct_barrier_from_states_obstacles(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
+        A1, b1, h_human_min = cbf_controller.construct_barrier_from_states_humans(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
+        A2, b2, h_obs_min = cbf_controller.construct_barrier_from_states_obstacles(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius )
         return jnp.append(A1, A2, axis=0), jnp.append(b1, b2, axis=0), h_human_min, h_obs_min
             
     @staticmethod
     @jit
-    def construct_barrier_from_states_humans(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
+    def construct_barrier_from_states_humans(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
         # barrier function
         A = jnp.zeros((cbf_controller.num_people,2)); b = jnp.zeros((cbf_controller.num_people,1))
         h_min = 100
         def body(i, inputs):
             A, b, h_min = inputs
             # dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.3)
-            dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.15)
+            dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_humans_alpha_jax( robot_state, other_robot_states, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.15)
             A = A.at[i, :].set( (dh_dot_dx1 @ cbf_controller.robot.g_jax(robot_state))[0,:  ]  )
             b = b.at[i,:].set( (- dh_dot_dx1 @ cbf_controller.robot.f_jax(robot_state) - dh_dot_dx2 @ human_states_dot[:,i].reshape(-1,1) - alpha1_human[i] * h_dot - alpha2_human[i] * (h_dot + alpha1_human[i]*h))[0,:] )
             h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
@@ -104,34 +104,34 @@ class cbf_controller:
     
     @staticmethod
     @jit
-    def construct_barrier_from_states_obstacles(robot_state, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
+    def construct_barrier_from_states_obstacles(robot_state, other_robot_states, humans_states, human_states_dot, obstacle_states, alpha1_human, alpha2_human, alpha1_obstacle, alpha2_obstacle, robot_radius ):         
         # barrier function
         A = jnp.zeros((cbf_controller.num_obstacles,2)); b = jnp.zeros((cbf_controller.num_obstacles,1))
         h_min = 100
         def body(i, inputs):
             A, b, h_min = inputs
-            dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_alpha_jax( robot_state, obstacle_states[:,i].reshape(-1,1), d_min = robot_radius)
+            dh_dot_dx1, dh_dot_dx2, h_dot, h = cbf_controller.robot.barrier_alpha_jax( robot_state, other_robot_states, obstacle_states[:,i].reshape(-1,1), d_min = robot_radius)
             A = A.at[i,:].set((dh_dot_dx1 @ cbf_controller.robot.g_jax(robot_state))[0,:] )
             b = b.at[i,:].set((- dh_dot_dx1 @ cbf_controller.robot.f_jax(robot_state) - alpha1_obstacle[i] * h_dot - alpha2_obstacle[i] * (h_dot + alpha1_obstacle[i]*h))[0,:] )
             h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
             return A, b, h_min
         return lax.fori_loop( 0, cbf_controller.num_obstacles, body, (A, b, h_min) )
 
-    def policy_nominal(self, robot_state, robot_goal, dt):
+    def policy_nominal(self, robot_state, other_robot_states, robot_goal, dt):
         
         self.robot.set_state(robot_state)
-        self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
         self.robot.step( self.u2_ref_base.value, dt )
         return self.robot.X[3,0], self.u2_ref_base.value[1,0]
     
                 
-    def policy_cbf(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
+    def policy_cbf(self, robot_state, other_robot_states, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
         
         self.robot.set_state(robot_state)
-        A, b, h_human_min, h_obs_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
+        A, b, h_human_min, h_obs_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(other_robot_states), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
         self.A2_base.value = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
         self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
-        self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, other_robot_states, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
         self.controller2_base.solve(solver=cp.GUROBI)
         self.robot.step( self.u2_base.value, dt )         
         

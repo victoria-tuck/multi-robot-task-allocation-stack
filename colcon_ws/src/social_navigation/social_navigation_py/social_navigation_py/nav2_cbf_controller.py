@@ -80,9 +80,9 @@ class RobotController(Node):
         if self.controller_id == 0:
             self.dynamic_obstacle_states_valid, self.human_states_valid, self.all_other_robot_states_valid = True, True, True
             self.update_dynamic_obstacles()
-            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
+            self.controller.policy_cbf(self.robot_state, None, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
         elif self.controller_id == 1:
-            self.controller.policy_nominal(self.robot_state, self.goal, dummy_time_step)
+            self.controller.policy_nominal(self.robot_state, None, self.goal, dummy_time_step)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
@@ -161,7 +161,10 @@ class RobotController(Node):
         def other_robot_state_callback(msg):
             self.other_robot_states_prev = np.copy(self.other_robot_states)
             position = msg.pose.pose.position
+            orientation = msg.pose.pose.orientation
+            linear = msg.twist.twist.linear
             other_robot_pos = np.array([position.x, position.y])
+            # self.other_robot_states[:,index] = np.array(  [position.x, position.y, 2 * np.arctan2( orientation.z, orientation.w ), linear.x]  ).reshape(-1,1)
             self.other_robot_states[:,index] = other_robot_pos
             # self.get_logger().info(f"Calculated distance between {self.name} and {self.other_robots[index]}: {np.linalg.norm(other_robot_pos - self.robot_pos)}")
             # if self.print_count > 10:
@@ -171,7 +174,9 @@ class RobotController(Node):
             # if self.print_count > 10:
             #     self.get_logger().info(f"Distance to other robot: {np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))}")
             velocity = msg.twist.twist.linear
-            self.other_robot_states_dot[:, index] = np.array([velocity.x, velocity.y])
+            theta = 2 * np.arctan2( orientation.z, orientation.w )
+            self.other_robot_states_dot[:, index] = np.array([velocity.x * np.cos(theta), velocity.x * np.sin(theta)])
+            # self.other_robot_states_dot[:, index] = np.array([velocity.x, velocity.y])
             self.other_robot_states_valid[index] = True
             self.all_other_robot_states_valid = all(self.other_robot_states_valid)
             self.update_dynamic_obstacles()
@@ -412,10 +417,11 @@ class RobotController(Node):
                 control.angular.z = 0.0
             else:
                 try:                
+                    other_robot_states = None
                     if self.controller_id == 0:
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
                     elif self.controller_id == 1:
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, other_robot_states, goal, dt )
                     
                     # Check if any collision constraints violated
                     if h_dyn_obs_min < -0.01:
