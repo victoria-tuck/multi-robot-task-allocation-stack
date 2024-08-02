@@ -11,7 +11,8 @@ from std_msgs.msg import Bool
 from tf2_ros.transform_broadcaster import TransformBroadcaster
 
 # from cbf_controller import cbf_controller
-from .utils.cbf_obstacle_controller import cbf_controller
+# from .utils.cbf_obstacle_controller import cbf_controller
+from .utils.cbf_multiagent_obstacle_controller import cbf_controller
 import numpy as np
 # import jax.numpy as jnp
 
@@ -92,6 +93,7 @@ class RobotController(Node):
         self.goal_subscriber = self.create_subscription(PoseStampedPair, f'{self.prefix}/goal_location', self.new_goal_callback, 1)
         self.cluster_sub = { robot : self.create_subscription(RobotCluster, f'{robot}/cluster', self.make_cluster_callback(i, robot), 10) for i, robot in enumerate(self.other_robots)}
         self.activity_sub = self.create_subscription(Bool, f'{self.prefix}/active', self.status_callback, 10)
+        self.remote_control = self.create_subscription(Twist, f'{self.prefix}/remote_control', self.remote_control_callback, 1)
 
         self.new_goal_poses = None
         self.human_states_valid = False
@@ -121,6 +123,7 @@ class RobotController(Node):
         self.robot_location_pub = self.create_publisher( PoseStamped, self.prefix + '/robot_location', 1)
         self.robot_new_odom_pub = self.create_publisher(Odometry, f"{self.prefix}/new_odom", 10)
         self.robot_cluster_pub = self.create_publisher(RobotCluster, f"{self.prefix}/cluster", 10)
+        self.remote_control_pub = { robot: self.create_publisher(Twist, f'/{robot}/remote_control', 10) for robot in self.other_robots }
         
         # Frame broadcaster
         self.robot_tf_broadcaster = TransformBroadcaster(self)
@@ -241,6 +244,9 @@ class RobotController(Node):
             self.get_logger().info(f'{self.name} is active')
         else:
             self.get_logger().info(f'{self.name} is not active')
+
+    def remote_control_callback(self, msg):
+        self.robot_command_pub.publish(msg)
     
     def run_controller(self):
         if self.print_count > 100:
@@ -395,29 +401,6 @@ class RobotController(Node):
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
-            # self.get_logger().info(f"dt: {dt}")
-            try:                
-                if self.controller_id == 0:
-                    speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
-                elif self.controller_id == 1:
-                    speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
-                
-                # Check if any collision constraints violated
-                if h_dyn_obs_min < -0.01:
-                    self.h_min_dyn_obs_count += 1
-                    self.get_logger().info(f"dynamic obstacle violate: {self.h_min_dyn_obs_count}")
-                if h_obs_min < -0.01:
-                    self.h_min_obs_count += 1
-                    self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
-            except Exception as e:
-                speed = 0.0
-                omega = 0.0
-                self.error_count = self.error_count + 1
-                print(f"ERROR ******************************** count: {self.error_count} {e}")
-                
-            self.time_prev = t_new
-
-            ############## Publish Control Input ###################
             control = Twist()
             if not self.finalized_cluster:
                 # self.get_logger().info(f"{self.name}'s cluster has not been finalized")
@@ -428,9 +411,32 @@ class RobotController(Node):
                 control.linear.x = 0.0
                 control.angular.z = 0.0
             else:
+                try:                
+                    if self.controller_id == 0:
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                    elif self.controller_id == 1:
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
+                    
+                    # Check if any collision constraints violated
+                    if h_dyn_obs_min < -0.01:
+                        self.h_min_dyn_obs_count += 1
+                        self.get_logger().info(f"dynamic obstacle violate: {self.h_min_dyn_obs_count}")
+                    if h_obs_min < -0.01:
+                        self.h_min_obs_count += 1
+                        self.get_logger().info(f"obstacle violate: {self.h_min_obs_count}")
+                except Exception as e:
+                    speed = 0.0
+                    omega = 0.0
+                    self.error_count = self.error_count + 1
+                    print(f"ERROR ******************************** count: {self.error_count} {e}")
+
                 control.linear.x = speed
                 control.angular.z = omega
             self.robot_command_pub.publish(control)
+            for robot in self.robot_cluster[1]:
+                if self.finalized_cluster and self.name == self.robot_cluster[0] and self.robots_active[robot] and robot != self.name:
+                    self.remote_control_pub[robot].publish(control)
+            self.time_prev = t_new
         else:
             control = Twist()
             control.linear.x = 0.0
@@ -464,6 +470,14 @@ class RobotController(Node):
             self.get_logger().info(f"No other active robots in {self.name}'s cluster.")
             leader = self.name
         self.robot_cluster = (leader, cluster)
+
+        current_pose = PoseStamped()
+        current_pose.header.frame_id = 'map'
+        current_pose.header.stamp = self.navigator.get_clock().now().to_msg()
+        current_pose.pose.position.x = self.robot_state[0,0]
+        current_pose.pose.position.y = self.robot_state[1,0]
+        current_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
+        current_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
 
         msg = RobotCluster()
         msg.leader = leader
