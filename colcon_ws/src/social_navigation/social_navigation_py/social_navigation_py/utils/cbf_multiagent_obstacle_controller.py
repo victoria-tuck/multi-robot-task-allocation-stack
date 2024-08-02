@@ -44,6 +44,7 @@ class cbf_controller:
         cbf_controller.k_x = 1.5#2.0#1.5#  1.5#0.5#30.0
         cbf_controller.k_v = 3.0#2.5#3.0#  3.0#1.5
         self.d_min_human = 0.2#0.5
+        self.num_agents = len(robot_init_state)/4
         
         ######### holonomic controller
         n = 4 + cbf_controller.num_people + 1 # number of constraints
@@ -63,16 +64,16 @@ class cbf_controller:
 
         ##################
 
-        plt.ion()
-        self.fig1, self.ax1 = plt.subplots( 2, 1, figsize=(4, 9), gridspec_kw={'height_ratios': [5, 5]})# )#, gridspec_kw={'height_ratios': [1, 1]} )
-        self.ax1[0].set_xlim([-10,10])
-        self.ax1[0].set_ylim([-10,10])
-        self.offset = 3.0
-        self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
-        self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
+        # plt.ion()
+        # self.fig1, self.ax1 = plt.subplots( 2, 1, figsize=(4, 9), gridspec_kw={'height_ratios': [5, 5]})# )#, gridspec_kw={'height_ratios': [1, 1]} )
+        # self.ax1[0].set_xlim([-10,10])
+        # self.ax1[0].set_ylim([-10,10])
+        # self.offset = 3.0
+        # self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
+        # self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
 
         # Robot
-        cbf_controller.robot = multi_dynamic_unicycle( self.ax1[0], pos = np.array([ robot_init_state[0,0], robot_init_state[1,0], robot_init_state[2,0], 0.0 ]), dt = self.dt, plot_polytope=False, num_agents=1)
+        cbf_controller.robot = multi_dynamic_unicycle( None, pos = np.array([ robot_init_state[0,0], robot_init_state[1,0], robot_init_state[2,0], 0.0 ]), dt = self.dt, plot_polytope=False, num_agents=1)
         self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound+2.0], [-self.control_bound, self.control_bound+2.0], [-self.control_bound, -self.control_bound-2.0], [self.control_bound, -self.control_bound-2.0] ])
         # self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound], [-self.control_bound, self.control_bound], [-self.control_bound, -self.control_bound], [self.control_bound, -self.control_bound] ])
         self.control_bound_polytope = pt.qhull( self.control_input_limit_points )

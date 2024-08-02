@@ -52,10 +52,11 @@ class RobotController(Node):
         # Dynamic Obstacles
         self.num_other_robots = len(self.other_robots) # exact
         self.num_humans = 2 # upper bound
-        self.num_dynamic_obstacles = self.num_other_robots + self.num_humans
-        self.other_robot_states = 100*np.ones((2,self.num_other_robots))
-        self.other_robot_states_prev = np.zeros((2,self.num_other_robots))
-        self.other_robot_states_dot = np.zeros((2,self.num_other_robots))
+        # self.num_dynamic_obstacles = self.num_other_robots + self.num_humans
+        self.num_dynamic_obstacles = self.num_humans
+        self.other_robot_states = 100*np.ones((4,self.num_other_robots))
+        self.other_robot_states_prev = np.zeros((4,self.num_other_robots))
+        # self.other_robot_states_dot = np.zeros((2,self.num_other_robots))
         self.distance_to_other_robots = 100*np.ones((self.num_other_robots,1))
         self.connected_robots = []
         self.human_states = 100*np.ones((2,self.num_humans))
@@ -73,6 +74,8 @@ class RobotController(Node):
         #Controller
         self.control_prev  = np.array([0.0,0.0])
         self.controller = cbf_controller( self.robot_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
+        self.cluster_controller = None
+        self.cluster_controller_active = False
 
         # Call once to initiate JAX JIT
         self.controller_id = 0
@@ -141,9 +144,12 @@ class RobotController(Node):
 
     def update_dynamic_obstacles(self):
         if self.human_states_valid and self.all_other_robot_states_valid and self.dynamic_obstacle_states_valid:
-            self.dynamic_obstacle_states = np.hstack((self.other_robot_states, self.human_states))
-            self.dynamic_obstacle_states_prev = np.hstack((self.other_robot_states_prev, self.human_states_prev))
-            self.dynamic_obstacle_states_dot = np.hstack((self.other_robot_states_dot, self.human_states_dot))
+            self.dynamic_obstacle_states = self.human_states
+            self.dynamic_obstacle_states_prev = self.human_states_prev
+            self.dynamic_obstacle_states_dot = self.human_states_dot
+            # self.dynamic_obstacle_states = np.hstack((self.other_robot_states, self.human_states))
+            # self.dynamic_obstacle_states_prev = np.hstack((self.other_robot_states_prev, self.human_states_prev))
+            # self.dynamic_obstacle_states_dot = np.hstack((self.other_robot_states_dot, self.human_states_dot))
             self.dynamic_obstacle_states_valid = True
         
     def controller_plan_init_callback(self, msg):
@@ -164,8 +170,8 @@ class RobotController(Node):
             orientation = msg.pose.pose.orientation
             linear = msg.twist.twist.linear
             other_robot_pos = np.array([position.x, position.y])
-            # self.other_robot_states[:,index] = np.array(  [position.x, position.y, 2 * np.arctan2( orientation.z, orientation.w ), linear.x]  ).reshape(-1,1)
-            self.other_robot_states[:,index] = other_robot_pos
+            self.other_robot_states[:,index] = np.array(  [position.x, position.y, 2 * np.arctan2( orientation.z, orientation.w ), linear.x]  )
+            # self.other_robot_states[:,index] = other_robot_pos
             # self.get_logger().info(f"Calculated distance between {self.name} and {self.other_robots[index]}: {np.linalg.norm(other_robot_pos - self.robot_pos)}")
             # if self.print_count > 10:
             #     self.get_logger().info(f"Current robot position: {self.robot_pos}")
@@ -173,9 +179,9 @@ class RobotController(Node):
             self.distance_to_other_robots[index] = np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))
             # if self.print_count > 10:
             #     self.get_logger().info(f"Distance to other robot: {np.linalg.norm(other_robot_pos.reshape((2,1)) - self.robot_pos.reshape((2,1)))}")
-            velocity = msg.twist.twist.linear
-            theta = 2 * np.arctan2( orientation.z, orientation.w )
-            self.other_robot_states_dot[:, index] = np.array([velocity.x * np.cos(theta), velocity.x * np.sin(theta)])
+            # velocity = msg.twist.twist.linear
+            # theta = 2 * np.arctan2( orientation.z, orientation.w )
+            # self.other_robot_states_dot[:, index] = np.array([velocity.x * np.cos(theta), velocity.x * np.sin(theta)])
             # self.other_robot_states_dot[:, index] = np.array([velocity.x, velocity.y])
             self.other_robot_states_valid[index] = True
             self.all_other_robot_states_valid = all(self.other_robot_states_valid)
@@ -417,11 +423,30 @@ class RobotController(Node):
                 control.angular.z = 0.0
             else:
                 try:                
-                    other_robot_states = None
-                    if self.controller_id == 0:
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
-                    elif self.controller_id == 1:
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, other_robot_states, goal, dt )
+                    other_robot_states_list = []
+                    num_other_robots = 0
+                    for i, robot in enumerate(self.other_robots):
+                        if robot in self.robot_cluster[1]:
+                            other_robot_states_list.append(np.array(self.other_robot_states[:,i]).reshape(-1,1))
+                            num_other_robots += 1
+                    if len(other_robot_states_list) > 0:
+                        other_robot_states = np.vstack(other_robot_states_list)
+                        self.get_logger().info(f'Other robot states: {other_robot_states}')
+                        self.get_logger().info(f"Size of robot state: {self.robot_state.shape} and size of other robot states: {self.other_robot_states.shape}")
+                        complete_state = np.vstack((self.robot_state, other_robot_states))
+                        if not self.cluster_controller_active or self.cluster_controller is None:
+                            # TODO: Change obstacles to include obstacles for all robots
+                            # self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles * num_other_robots, 1.0, 2.0)
+                            self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
+                            self.cluster_controller.active = True
+                        if self.controller_id == 0:
+                            speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                    else:
+                        other_robot_states = np.array([])
+                        if self.controller_id == 0:
+                            speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                        elif self.controller_id == 1:
+                            speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, other_robot_states, goal, dt )
                     
                     # Check if any collision constraints violated
                     if h_dyn_obs_min < -0.01:
@@ -465,16 +490,18 @@ class RobotController(Node):
             cluster_set.update(self.other_robots_clusters[i][1])
         cluster_set.update([self.name])
         cluster = list(cluster_set)
-        self.get_logger().info(f"Active robots: {self.robots_active}")
+        # self.get_logger().info(f"Active robots: {self.robots_active}")
         active_cluster = [robot for robot in cluster if self.robots_active[robot] is True]
         # active_cluster = cluster
         cluster_priorities = [self.robot_priorities[robot] for robot in active_cluster]
         if len(active_cluster) > 0:
-            self.get_logger().info(f"{self.name}'s active cluster: {active_cluster}")
+            # self.get_logger().info(f"{self.name}'s active cluster: {active_cluster}")
             leader = active_cluster[np.argmax(cluster_priorities)]
         else:
-            self.get_logger().info(f"No other active robots in {self.name}'s cluster.")
+            # self.get_logger().info(f"No other active robots in {self.name}'s cluster.")
             leader = self.name
+        if leader != self.robot_cluster[0] or sorted(cluster) != sorted(self.robot_cluster[1]):
+            self.cluster_controller_active = False
         self.robot_cluster = (leader, cluster)
 
         current_pose = PoseStamped()
