@@ -2,7 +2,7 @@ import time
 import numpy as np
 import cvxpy as cp
 import polytope as pt
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from social_navigation_py.utils.dynamic_unicycle import dynamic_unicycle
 from jax import lax
@@ -63,16 +63,16 @@ class cbf_controller:
 
         ##################
 
-        plt.ion()
-        self.fig1, self.ax1 = plt.subplots( 2, 1, figsize=(4, 9), gridspec_kw={'height_ratios': [5, 5]})# )#, gridspec_kw={'height_ratios': [1, 1]} )
-        self.ax1[0].set_xlim([-10,10])
-        self.ax1[0].set_ylim([-10,10])
-        self.offset = 3.0
-        self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
-        self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
+        # plt.ion()
+        # self.fig1, self.ax1 = plt.subplots( 2, 1, figsize=(4, 9), gridspec_kw={'height_ratios': [5, 5]})# )#, gridspec_kw={'height_ratios': [1, 1]} )
+        # self.ax1[0].set_xlim([-10,10])
+        # self.ax1[0].set_ylim([-10,10])
+        # self.offset = 3.0
+        # self.ax1[1].set_xlim([-self.control_bound-self.offset, self.control_bound+self.offset])
+        # self.ax1[1].set_ylim([-self.control_bound-self.offset, self.control_bound+self.offset])
 
         # Robot
-        cbf_controller.robot = dynamic_unicycle( self.ax1[0], pos = np.array([ robot_init_state[0,0], robot_init_state[1,0], robot_init_state[2,0], 0.0 ]), dt = self.dt, plot_polytope=False )
+        cbf_controller.robot = dynamic_unicycle( None, pos = np.array([ robot_init_state[0,0], robot_init_state[1,0], robot_init_state[2,0], 0.0 ]), dt = self.dt, plot_polytope=False )
         self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound+2.0], [-self.control_bound, self.control_bound+2.0], [-self.control_bound, -self.control_bound-2.0], [self.control_bound, -self.control_bound-2.0] ])
         # self.control_input_limit_points = np.array([ [self.control_bound, self.control_bound], [-self.control_bound, self.control_bound], [-self.control_bound, -self.control_bound], [self.control_bound, -self.control_bound] ])
         self.control_bound_polytope = pt.qhull( self.control_input_limit_points )

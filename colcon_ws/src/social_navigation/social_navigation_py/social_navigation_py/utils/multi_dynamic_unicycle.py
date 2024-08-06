@@ -2,6 +2,7 @@ import numpy as np
 import jax.numpy as jnp
 from jax import jit
 from jax import lax
+import jax
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle, Polygon
@@ -23,11 +24,12 @@ class multi_dynamic_unicycle:
         
         self.type = 'MultiAgentDynamicUnicycle' 
         self.num_agents = num_agents
-        print(f"Number of agents: {self.num_agents}")    
+        print(f"Number of agents in multi unicycle init: {self.num_agents}")    
         self.s = 0.287
         
         self.X0 = pos.reshape(-1,1)
         self.X = np.copy(self.X0)
+        print(f"Test: {self.X0}")
         self.U = np.array([0,0] * self.num_agents).reshape(-1,1)
         self.dt = dt
         self.ax = ax
@@ -75,15 +77,20 @@ class multi_dynamic_unicycle:
                          0,0]).reshape(-1,1)
     
     def f_jax(self,X):
-        dynamics_list = jnp.zeros((self.num_agents, 4, 1))
+        num_agents = int(len(X)/4)
+        print(f"Number of agents overall: {self.num_agents}")
+        print(f"Number of agents in fjax: {num_agents}")
+        print(X)
+        num_agents = int(len(X)/4)
+        dynamics_list = jnp.zeros((num_agents * 4, 1))
         def body(i, carry):
             dynamics_list = carry
             sub_X = lax.dynamic_slice(X, (4*i, 0), (4, 1))
-            result = self.f_jax_i(sub_X).reshape((1,4,1))
-            dynamics_list = lax.dynamic_update_slice(dynamics_list, result, (i, 0, 0))
+            result = self.f_jax_i(sub_X).reshape((4,1))
+            dynamics_list = lax.dynamic_update_slice(dynamics_list, result, (4*i, 0))
             return dynamics_list
-        dynamics_list = lax.fori_loop(0, self.num_agents, body, (dynamics_list))
-        return jnp.concatenate(dynamics_list, axis=0)
+        dynamics_list = lax.fori_loop(0, num_agents, body, (dynamics_list))
+        return dynamics_list
     
     def df_dx_jax_i(self, X):
         return jnp.array([  
@@ -226,7 +233,7 @@ class multi_dynamic_unicycle:
     #     u_r = k_v * ( speed - self.X[3,0] )
     #     return jnp.array([u_r, omega]).reshape(-1,1)
     
-    def barrier_alpha_jax(self, X, otherX, avoidX, d_min = 0.5):
+    def barrier_alpha_jax(self, X, avoidX, d_min = 0.5):
         h = (X[0:2] - avoidX[0:2]).T @ (X[0:2] - avoidX[0:2]) - d_min**2
         h_dot = 2 * (X[0:2] - avoidX[0:2]).T @ ( self.f_jax_i(X)[0:2]  )
         df_dx_i = self.df_dx_jax_i(X)
@@ -234,7 +241,7 @@ class multi_dynamic_unicycle:
         dh_dot_dx2 = - 2 * ( self.f_jax_i(X)[0:2].T )
         return dh_dot_dx1, dh_dot_dx2, h_dot, h
     
-    def barrier_humans_alpha_jax(self, X, otherX, targetX, targetU, d_min = 0.5):
+    def barrier_humans_alpha_jax(self, X, targetX, targetU, d_min = 0.5):
         h = (X[0:2] - targetX[0:2]).T @ (X[0:2] - targetX[0:2]) - d_min**2
         h_dot = 2 * (X[0:2] - targetX[0:2]).T @ ( self.f_jax_i(X)[0:2] - targetU[0:2] )
         df_dx_i = self.df_dx_jax_i(X)
@@ -244,28 +251,30 @@ class multi_dynamic_unicycle:
     
     def barrier_agent_agent_jax_ij(self, X_i, X_j, d_min = 0.5):
         X = jnp.concatenate((X_i, X_j))
+        print(f"Barrier agent agent X: {X}")
         def h(X):
-            return (X[0:2] - X[4:6]).T @ (X[0:2] - X[4:6]) - d_min**2
-        dh_dx = jax.grad(h, argnums=(0))
+            return ((X[0:2] - X[4:6]).T @ (X[0:2] - X[4:6]) - d_min**2)[0,0]
+        dh_dx = jax.grad(h)
         def hdot_func(X):
-            hdot = dh_dx(X) @ self.f_jax(X)
+            hdot = (dh_dx(X).T @ self.f_jax(X))[0,0]
             return hdot
         dhdot_dx = jax.grad(hdot_func, argnums=(0))
-        dhdot_dx1 = dhdot_dx[0:4]
-        dhdot_dx2 = dhdot_dx[4:]
+        dhdot_dx_eval = dhdot_dx(X)
+        dhdot_dx1 = dhdot_dx_eval[0:4]
+        dhdot_dx2 = dhdot_dx_eval[4:]
         return dhdot_dx1, dhdot_dx2, hdot_func(X), h(X)
 
 
-def main():
-    robot_init_state = np.array([3.0, 4.0, 0.0, 0.1, 4.0, 5.0, 0.2, 0.1]).reshape(-1,1)
-    robots_init = []
-    num_agents = 2
-    for i in range(num_agents):
-        robots_init.append(np.array([robot_init_state[4*i,0], robot_init_state[4*i+1,0], robot_init_state[4*i+2,0], 0.0]).reshape(-1,1))
-    robots_init_state = np.hstack(robots_init)
-    robot = multi_dynamic_unicycle( None, pos = robots_init_state, plot_polytope=False, num_agents=num_agents)
-    print(robot.g(robot.X))
+# def main():
+#     robot_init_state = np.array([3.0, 4.0, 0.0, 0.1, 4.0, 5.0, 0.2, 0.1]).reshape(-1,1)
+#     robots_init = []
+#     num_agents = 2
+#     for i in range(num_agents):
+#         robots_init.append(np.array([robot_init_state[4*i,0], robot_init_state[4*i+1,0], robot_init_state[4*i+2,0], 0.0]).reshape(-1,1))
+#     robots_init_state = np.hstack(robots_init)
+#     robot = multi_dynamic_unicycle( None, pos = robots_init_state, plot_polytope=False, num_agents=num_agents)
+#     print(robot.g(robot.X))
 
     
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

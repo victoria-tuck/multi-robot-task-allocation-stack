@@ -1,3 +1,4 @@
+import time
 import rclpy
 from rclpy.node import Node
 
@@ -12,7 +13,8 @@ from tf2_ros.transform_broadcaster import TransformBroadcaster
 
 # from cbf_controller import cbf_controller
 # from .utils.cbf_obstacle_controller import cbf_controller
-from .utils.cbf_multiagent_obstacle_controller import cbf_controller
+from .utils.cbf_multiagent_obstacle_controller import multi_cbf_controller
+from .utils.cbf_obstacle_controller import cbf_controller
 import numpy as np
 # import jax.numpy as jnp
 
@@ -83,9 +85,10 @@ class RobotController(Node):
         if self.controller_id == 0:
             self.dynamic_obstacle_states_valid, self.human_states_valid, self.all_other_robot_states_valid = True, True, True
             self.update_dynamic_obstacles()
-            self.controller.policy_cbf(self.robot_state, np.empty((0,1)), self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
+            self.get_logger().info("Calling initial cbf")
+            self.controller.policy_cbf(self.robot_state, self.goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dummy_time_step)
         elif self.controller_id == 1:
-            self.controller.policy_nominal(self.robot_state, np.empty((0,1)), self.goal, dummy_time_step)
+            self.controller.policy_nominal(self.robot_state, self.goal, dummy_time_step)
 
         # Subscribers
         self.humans_state_sub = self.create_subscription( HumanStates, '/human_states', self.human_state_callback, 10 )
@@ -424,9 +427,11 @@ class RobotController(Node):
             else:
                 # try:                
                 other_robot_states_list = []
+                other_robots = []
                 num_other_robots = 0
                 for i, robot in enumerate(self.other_robots):
                     if robot in self.robot_cluster[1]:
+                        other_robots.append(robot)
                         other_robot_states_list.append(np.array(self.other_robot_states[:,i]).reshape(-1,1))
                         num_other_robots += 1
                 if len(other_robot_states_list) > 0:
@@ -437,16 +442,29 @@ class RobotController(Node):
                     if not self.cluster_controller_active or self.cluster_controller is None:
                         # TODO: Change obstacles to include obstacles for all robots
                         # self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles * num_other_robots, 1.0, 2.0)
-                        self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
-                        self.cluster_controller.active = True
+                        print("Initializing cluster controller")
+                        self.cluster_controller = multi_cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
+                        self.cluster_controller_active = True
+                        # speed, omega, h_dyn_obs_min, h_obs_min = 0.0, 0.0, 0, 0
                     if self.controller_id == 0:
+                        start_time = time.time()
                         speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                        self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
+                    for i, robot in enumerate(other_robots):
+                        print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")
+                        control = Twist()
+                        control.linear.x = speed[i+1][0]
+                        control.angular.z = omega[i+1][0]
+                        if self.finalized_cluster and self.name == self.robot_cluster[0] and self.robots_active[robot] and robot != self.name:
+                            self.remote_control_pub[robot].publish(control)
                 else:
                     other_robot_states = np.empty((0,1))
                     if self.controller_id == 0:
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
                     elif self.controller_id == 1:
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, other_robot_states, goal, dt )
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
+                    speed = [[speed]]
+                    omega = [[omega]]
                 
                 # Check if any collision constraints violated
                 if h_dyn_obs_min < -0.01:
@@ -461,12 +479,9 @@ class RobotController(Node):
                 #     self.error_count = self.error_count + 1
                 #     print(f"ERROR ******************************** count: {self.error_count} {e}")
 
-                control.linear.x = speed
-                control.angular.z = omega
-            self.robot_command_pub.publish(control)
-            for robot in self.robot_cluster[1]:
-                if self.finalized_cluster and self.name == self.robot_cluster[0] and self.robots_active[robot] and robot != self.name:
-                    self.remote_control_pub[robot].publish(control)
+                control.linear.x = speed[0][0]
+                control.angular.z = omega[0][0]
+                self.robot_command_pub.publish(control)
             self.time_prev = t_new
         else:
             control = Twist()
