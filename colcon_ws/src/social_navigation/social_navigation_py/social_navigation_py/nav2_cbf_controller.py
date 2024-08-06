@@ -95,6 +95,7 @@ class RobotController(Node):
         self.other_robot_state_sub = { robot: self.create_subscription( Odometry,  f'/{robot}/odom', self.make_other_robot_state_callback(i), 10) for i, robot in enumerate(self.other_robots) } 
         self.robot_state_subscriber = self.create_subscription( Odometry, self.prefix + '/odom', self.robot_state_callback, 10 )
         self.obstacle_subscriber = self.create_subscription( RobotClosestObstacle, self.prefix + '/robot_closest_obstacles', self.obstacle_callback, 10 )
+        self.other_obstacle_subscriber = { robot: self.create_subscription( RobotClosestObstacle, f'{robot}/robot_closest_obstacles', self.make_other_robot_obstacle_callback(i, robot), 10 ) for i, robot in enumerate(self.other_robots)}
         self.plan_init_sub = self.create_subscription( Bool, '/planner_init', self.controller_plan_init_callback, 10 )
         self.goal_subscriber = self.create_subscription(PoseStampedPair, f'{self.prefix}/goal_location', self.new_goal_callback, 1)
         self.cluster_sub = { robot : self.create_subscription(RobotCluster, f'{robot}/cluster', self.make_cluster_callback(i, robot), 10) for i, robot in enumerate(self.other_robots)}
@@ -121,6 +122,8 @@ class RobotController(Node):
         self.robot_cluster = (self.name, [self.name])
         self.other_robots_clusters = [(robot, [robot]) for robot in self.other_robots]
         self.robots_active = dict(zip(all_robots, [False] * (self.num_other_robots + 1)))
+        self.other_robot_obstacle_states = dict(zip(self.other_robots, np.zeros((2,self.num_obstacles))))
+        self.other_robot_obstacles_valid = [False] * self.num_other_robots
 
         # Publishers
         self.robot_command_pub = self.create_publisher( Twist, self.prefix + '/cmd_vel', 10 )
@@ -207,6 +210,15 @@ class RobotController(Node):
             self.other_robots_clusters[index] = (msg.leader, msg.cluster)
             self.finalized_cluster = all(self.finalized_each_cluster)
         return cluster_callback
+    
+    def make_other_robot_obstacle_callback(self, index, robot):
+        def other_robot_obstacle_callback(msg):
+            obstacle_states_temp = 100*np.ones((2,self.num_obstacles))
+            for i in range(min(msg.num_obstacles, self.num_obstacles)):
+                obstacle_states_temp[:,i] = np.array([ msg.obstacle_locations[i].x, msg.obstacle_locations[i].y ])
+            self.other_robot_obstacle_states[robot] = np.copy(obstacle_states_temp)
+            self.other_robot_obstacles_valid[index] = True
+        return other_robot_obstacle_callback
 
     def robot_state_callback(self, msg):
         self.robot_state = np.array(  [msg.pose.pose.position.x, msg.pose.pose.position.y, 2 * np.arctan2( msg.pose.pose.orientation.z, msg.pose.pose.orientation.w ), msg.twist.twist.linear.x]  ).reshape(-1,1)
@@ -424,7 +436,7 @@ class RobotController(Node):
                 # self.get_logger().info(f"{self.name} is not the leader.")
                 control.linear.x = 0.0
                 control.angular.z = 0.0
-            else:
+            elif all(self.other_robot_obstacles_valid):
                 # try:                
                 other_robot_states_list = []
                 other_robots = []
@@ -443,12 +455,15 @@ class RobotController(Node):
                         # TODO: Change obstacles to include obstacles for all robots
                         # self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles * num_other_robots, 1.0, 2.0)
                         print("Initializing cluster controller")
-                        self.cluster_controller = multi_cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles, 1.0, 2.0)
+                        self.cluster_controller = multi_cbf_controller(complete_state, self.num_dynamic_obstacles*(num_other_robots+1), self.num_obstacles, 1.0, 2.0)
                         self.cluster_controller_active = True
                         # speed, omega, h_dyn_obs_min, h_obs_min = 0.0, 0.0, 0, 0
                     if self.controller_id == 0:
                         start_time = time.time()
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                        other_obstacles = []
+                        for robot in other_robots:
+                            other_obstacles.append(self.other_robot_obstacle_states[robot])
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, other_obstacles, dt )
                         self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
                     for i, robot in enumerate(other_robots):
                         print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")

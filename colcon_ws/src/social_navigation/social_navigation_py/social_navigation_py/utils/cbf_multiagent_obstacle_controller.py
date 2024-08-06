@@ -165,7 +165,7 @@ class multi_cbf_controller:
             def body(i, inputs):
                 A, b, h_min = inputs
                 state = lax.dynamic_slice(complete_state, (4*i, 0), (4, 1))
-                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_alpha_jax( state, obstacle_states[:,i].reshape(-1,1), d_min = robot_radius)
+                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_alpha_jax( state, obstacle_states[:,multi_cbf_controller.num_obstacles*j + i].reshape(-1,1), d_min = robot_radius)
                 A = A.at[i,:].set((dh_dot_dx1 @ self.robot.g_jax_i(state))[0,:] )
                 b = b.at[i,:].set((- dh_dot_dx1 @ self.robot.f_jax_i(state) - alpha1_obstacle[i] * h_dot - alpha2_obstacle[i] * (h_dot + alpha1_obstacle[i]*h))[0,:] )
                 h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
@@ -192,7 +192,7 @@ class multi_cbf_controller:
             def body(i, inputs):
                 A_multi, b_multi, h_min, current_index = inputs
                 state_i = lax.dynamic_slice(complete_state, (4*i, 0), (4, 1))
-                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_agent_agent_jax_ij( state_i, state_j, d_min = robot_radius)
+                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_agent_agent_jax_ij( state_i, state_j, d_min = robot_radius + 0.15)
                 print(f"Derivatives: {dh_dot_dx1} and {dh_dot_dx2}")
                 A_multi = lax.dynamic_update_slice(A_multi, dh_dot_dx1.T @ self.robot.g_jax_i(state_i), (current_index, 2*i))
                 A_multi = lax.dynamic_update_slice(A_multi, dh_dot_dx2.T @ self.robot.g_jax_i(state_j), (current_index, 2*j))
@@ -216,7 +216,7 @@ class multi_cbf_controller:
         return self.robot.X[3,0], self.u2_ref_base.value[1,0]
     
                 
-    def policy_cbf(self, robot_state, other_robot_states, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
+    def policy_cbf(self, robot_state, other_robot_states, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, other_obstacles, dt):
         
         complete_state = np.vstack((robot_state, other_robot_states))
         print(f"Complete state: {complete_state}")
@@ -226,7 +226,9 @@ class multi_cbf_controller:
         start_time = time.time()
         num_agents = int(len(other_robot_states)/4) + 1
         print(f"Numb agents: {num_agents}")
-        A, b, h_human_min, h_obs_min, h_agent_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(other_robot_states), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, alpha1_agent_agent, alpha2_agent_agent, num_agents )
+        reshaped_other_obstacles = jnp.array(other_obstacles).transpose(1,0,2).reshape(2,-1)
+        obstacles = jnp.hstack((obstacle_states, reshaped_other_obstacles))
+        A, b, h_human_min, h_obs_min, h_agent_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(other_robot_states), jnp.asarray(human_states), jnp.asarray(human_states_dot), obstacles, self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, alpha1_agent_agent, alpha2_agent_agent, num_agents )
         print(f"Shape of A: {A.shape}")
         print(f"Shape of b: {b.shape}")
         print(f"Time to create barriers: {time.time() - start_time}")
@@ -237,7 +239,7 @@ class multi_cbf_controller:
         print(f"Time to calculate nominal: {time.time() - start_time}")
         # self.u2_ref_base.value = nominal_ctrl[0:2,:]
         print(f"U2 ref base: {self.u2_ref_base}")
-        self.u2_ref_base.value = nominal_ctrl[0:4]
+        self.u2_ref_base.value = nominal_ctrl[0:2*num_agents]
         start_time = time.time()
         self.controller2_base.solve(solver=cp.GUROBI)
         print(f"Time to run QP: {time.time() - start_time}")
