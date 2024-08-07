@@ -1,4 +1,5 @@
 import time
+import networkx as nx
 import rclpy
 from rclpy.node import Node
 
@@ -120,7 +121,7 @@ class RobotController(Node):
         self.finalized_each_cluster = [False] * self.num_other_robots
         self.finalized_cluster = False
         self.robot_cluster = (self.name, [self.name])
-        self.other_robots_clusters = [(robot, [robot]) for robot in self.other_robots]
+        self.other_robots_clusters = dict(zip(self.other_robots, [(robot, [robot], []) for robot in self.other_robots]))
         self.robots_active = dict(zip(all_robots, [False] * (self.num_other_robots + 1)))
         self.other_robot_obstacle_states = dict(zip(self.other_robots, np.zeros((2,self.num_obstacles))))
         self.other_robot_obstacles_valid = [False] * self.num_other_robots
@@ -207,7 +208,7 @@ class RobotController(Node):
             else:
                 self.finalized_each_cluster[index] = True
             self.robots_active[robot] = bool(msg.active)
-            self.other_robots_clusters[index] = (msg.leader, msg.cluster)
+            self.other_robots_clusters[robot] = (msg.leader, msg.cluster, msg.neighbors)
             self.finalized_cluster = all(self.finalized_each_cluster)
         return cluster_callback
     
@@ -261,7 +262,7 @@ class RobotController(Node):
         if (msg.current_waypoint.pose != msg.next_waypoint.pose):
             self.goal_init = False
             self.path_active = False
-        print(f"{self.name} received new goals: {msg}")
+        # print(f"{self.name} received new goals: {msg}")
 
     def status_callback(self, msg):
         self.active = bool(msg.data)
@@ -326,7 +327,7 @@ class RobotController(Node):
                     # self.navigator.waitUntilNav2Active()
                     success = False
                     tries = 0
-                    while not success:
+                    while not success and tries < 100:
                         try:
                             self.navigator.setInitialPose(current_pose)
                             path = self.navigator.getPath(current_pose, self.goal_pose) # replace with naman's planner
@@ -354,7 +355,7 @@ class RobotController(Node):
 
                 success = False
                 tries = 0
-                while not self.initial_goal and not success:
+                while not self.initial_goal and not success and tries < 100:
                     next_goal = self.new_goal_poses.next_waypoint
                     # self.goal = np.array([ goal.pose.position.x, goal.pose.position.y ]).reshape(-1,1)
                     # Get current position and publish
@@ -382,7 +383,7 @@ class RobotController(Node):
                         goal_pose_close_x = abs(path.poses[-1].pose.position.x - next_goal.pose.position.x) < 0.05
                         goal_pose_close_y = abs(path.poses[-1].pose.position.y - next_goal.pose.position.y) < 0.05
                         assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
-                        print(f"Updated {self.name}'s path")
+                        # print(f"Updated {self.name}'s path")
                         # if close_x and close_y:
                         self.path.poses = self.path2.poses + path.poses
                         self.path2 = path
@@ -432,11 +433,11 @@ class RobotController(Node):
                 # self.get_logger().info(f"{self.name}'s cluster has not been finalized")
                 control.linear.x = 0.0
                 control.angular.z = 0.0
-            elif (self.finalized_cluster and self.name != self.robot_cluster[0]):
-                # self.get_logger().info(f"{self.name} is not the leader.")
-                control.linear.x = 0.0
-                control.angular.z = 0.0
-            elif all(self.other_robot_obstacles_valid):
+            # elif (self.finalized_cluster and self.name != self.robot_cluster[0]):
+            #     # self.get_logger().info(f"{self.name} is not the leader.")
+            #     control.linear.x = 0.0
+            #     control.angular.z = 0.0
+            elif (self.finalized_cluster and self.name == self.robot_cluster[0] and all(self.other_robot_obstacles_valid)):
                 # try:                
                 other_robot_states_list = []
                 other_robots = []
@@ -448,8 +449,8 @@ class RobotController(Node):
                         num_other_robots += 1
                 if len(other_robot_states_list) > 0:
                     other_robot_states = np.vstack(other_robot_states_list)
-                    self.get_logger().info(f'Other robot states: {other_robot_states}')
-                    self.get_logger().info(f"Size of robot state: {self.robot_state.shape} and size of other robot states: {other_robot_states.shape}")
+                    # self.get_logger().info(f'Other robot states: {other_robot_states}')
+                    # self.get_logger().info(f"Size of robot state: {self.robot_state.shape} and size of other robot states: {other_robot_states.shape}")
                     complete_state = np.vstack((self.robot_state, other_robot_states))
                     if not self.cluster_controller_active or self.cluster_controller is None:
                         # TODO: Change obstacles to include obstacles for all robots
@@ -464,7 +465,7 @@ class RobotController(Node):
                         for robot in other_robots:
                             other_obstacles.append(self.other_robot_obstacle_states[robot])
                         speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, other_obstacles, dt )
-                        self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
+                        # self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
                     for i, robot in enumerate(other_robots):
                         print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")
                         control = Twist()
@@ -510,16 +511,34 @@ class RobotController(Node):
         for i in range(len(self.other_robots)):
             # self.get_logger().info(f"Distance to other robot: {self.distance_to_other_robots[i]}")
             if self.distance_to_other_robots[i] < self.min_robot_to_robot:
-                neighbors.append(i)
+                neighbors.append(self.other_robots[i])
         # self.get_logger().info(f"Positions of other robots: {self.other_robot_states}")
         # self.connected_robots = [robot for i, robot in enumerate(self.other_robots) if nearby(i)]
         # self.get_logger().info(f"Robot {self.name} close to {connected_robots}")
-        cluster_set = set()
-        # self.get_logger().info(f"{self.name}'s neighborhood: {[self.other_robots[i] for i in neighbors]}")
-        for i in neighbors:
-            cluster_set.update(self.other_robots_clusters[i][1])
-        cluster_set.update([self.name])
-        cluster = list(cluster_set)
+        # cluster_set = set()
+        # # self.get_logger().info(f"{self.name}'s neighborhood: {[self.other_robots[i] for i in neighbors]}")
+        # for i in neighbors:
+        #     cluster_set.update(self.other_robots_clusters[i][1])
+        # cluster_set.update([self.name])
+        # cluster = list(cluster_set)
+        G = nx.Graph()
+        edges = [(self.name, robot) for robot in neighbors]
+        G.add_edges_from(edges)
+        for other_robot in self.other_robots:
+            edges = [(other_robot, other_robot_neighbor) for other_robot_neighbor in self.other_robots_clusters[other_robot][2]]
+            G.add_edges_from(edges)
+        DG = G.to_directed()
+        TC = nx.transitive_closure(DG)
+        def get_agents_cluster(graph, agent):
+            # Find all weakly connected components
+            components = list(nx.connected_components(graph))
+            # Search for the component containing the specified agent
+            for component in components:
+                if agent in component:
+                    print(f"{self.name}'s cluster: {list(component)}")
+                    return list(component)
+            return [agent]
+        cluster = get_agents_cluster(TC.to_undirected(), self.name)
         # self.get_logger().info(f"Active robots: {self.robots_active}")
         active_cluster = [robot for robot in cluster if self.robots_active[robot] is True]
         # active_cluster = cluster
@@ -532,7 +551,7 @@ class RobotController(Node):
             leader = self.name
         if leader != self.robot_cluster[0] or sorted(cluster) != sorted(self.robot_cluster[1]):
             self.cluster_controller_active = False
-        self.robot_cluster = (leader, cluster)
+        self.robot_cluster = (leader, cluster, neighbors)
 
         current_pose = PoseStamped()
         current_pose.header.frame_id = 'map'
@@ -546,6 +565,7 @@ class RobotController(Node):
         msg.leader = leader
         msg.active = self.active
         msg.cluster = cluster
+        msg.neighbors = neighbors
         self.robot_cluster_pub.publish(msg)
         self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
     

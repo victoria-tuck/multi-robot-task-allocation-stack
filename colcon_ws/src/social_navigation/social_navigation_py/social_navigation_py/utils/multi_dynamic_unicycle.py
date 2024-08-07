@@ -24,12 +24,12 @@ class multi_dynamic_unicycle:
         
         self.type = 'MultiAgentDynamicUnicycle' 
         self.num_agents = num_agents
-        print(f"Number of agents in multi unicycle init: {self.num_agents}")    
+        # print(f"Number of agents in multi unicycle init: {self.num_agents}")    
         self.s = 0.287
         
         self.X0 = pos.reshape(-1,1)
         self.X = np.copy(self.X0)
-        print(f"Test: {self.X0}")
+        # print(f"Test: {self.X0}")
         self.U = np.array([0,0] * self.num_agents).reshape(-1,1)
         self.dt = dt
         self.ax = ax
@@ -78,9 +78,9 @@ class multi_dynamic_unicycle:
     
     def f_jax(self,X):
         num_agents = int(len(X)/4)
-        print(f"Number of agents overall: {self.num_agents}")
-        print(f"Number of agents in fjax: {num_agents}")
-        print(X)
+        # print(f"Number of agents overall: {self.num_agents}")
+        # print(f"Number of agents in fjax: {num_agents}")
+        # print(X)
         num_agents = int(len(X)/4)
         dynamics_list = jnp.zeros((num_agents * 4, 1))
         def body(i, carry):
@@ -116,7 +116,7 @@ class multi_dynamic_unicycle:
     
     def g(self, X):
         num_agents = int(len(X)/4)
-        print(f"Number of agents in g function: {num_agents}")
+        # print(f"Number of agents in g function: {num_agents}")
         array = np.zeros((4*num_agents, 2*num_agents))
         for i in range(num_agents):
             subarray = self.g_i()
@@ -140,7 +140,7 @@ class multi_dynamic_unicycle:
 
         self.U = U.reshape(-1,1)
 
-        print(f"g vec: {self.g(self.X)}")
+        # print(f"g vec: {self.g(self.X)}")
         self.X = self.X + ( self.f() + self.g(self.X) @ self.U )*dt
         # print(self.X)
         for i in range(self.num_agents):
@@ -183,7 +183,7 @@ class multi_dynamic_unicycle:
         # k_omega = 3.0#2.0 
         # k_v = 1.0#3.0#0.3#0.15##5.0#0.15
         # k_x = k_v
-        print(f"Shape of X: {self.X.shape}. Shape of goal: {targetX.shape}")
+        # print(f"Shape of X: {self.X.shape}. Shape of goal: {targetX.shape}")
         distance = np.linalg.norm( self.X[0:2]-targetX[0:2] )
         # print(f"distance: {distance}")
         if (distance>0.1):
@@ -205,14 +205,21 @@ class multi_dynamic_unicycle:
         # print(f"CBF nominal acc: {u_r}, omega:{omega}")
         return np.array([u_r, omega]).reshape(-1,1)
     
+    def non_ego_nominal_controller(self, i):
+        speed = 2.0 * self.X[4*i+3,0]
+        u_r = max(- speed, -1.5)
+        u_r = min(u_r, 1.5)
+        return np.array([u_r, 0.0]).reshape(-1,1)
+    
     def nominal_controller(self, targetX, other_robot_states, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
         nominal_controls_list = []
         agent_nominal_control = self.nominal_controller_i(targetX, k_omega = k_omega, k_x = k_x, k_v = k_v)
         nominal_controls_list.append(agent_nominal_control)
         num_other_agents = int(len(other_robot_states)/4)
         for i in range(num_other_agents):
-            nominal_controls_list.append(np.array([0,0]).reshape(-1,1))
-        print(f"Nominal control: {nominal_controls_list} for {num_other_agents+1} agents")
+            # nominal_controls_list.append(np.array([0,0]).reshape(-1,1))
+            nominal_controls_list.append(self.non_ego_nominal_controller(i+1))
+        # print(f"Nominal control: {nominal_controls_list} for {num_other_agents+1} agents")
         return np.concatenate(nominal_controls_list, axis=0)
     
     # def nominal_controller_jax(self, targetX, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
@@ -251,7 +258,7 @@ class multi_dynamic_unicycle:
     
     def barrier_agent_agent_jax_ij(self, X_i, X_j, d_min = 0.5):
         X = jnp.concatenate((X_i, X_j))
-        print(f"Barrier agent agent X: {X}")
+        # print(f"Barrier agent agent X: {X}")
         def h(X):
             return ((X[0:2] - X[4:6]).T @ (X[0:2] - X[4:6]) - d_min**2)[0,0]
         dh_dx = jax.grad(h)

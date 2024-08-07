@@ -198,7 +198,7 @@ class dynamic_unicycle:
         if (distance>0.1):
             desired_heading = np.arctan2( targetX[1,0]-self.X[1,0], targetX[0,0]-self.X[0,0] )
             error_heading = wrap_angle( desired_heading - self.X[2,0] )
-            if np.abs(error_heading) < np.pi/2:
+            if np.abs(error_heading) < np.pi/3: # Previously np.pi/2
                 speed = min(k_x * distance * np.cos(error_heading), 1.5)
             else:
                 speed = 0
