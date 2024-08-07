@@ -141,7 +141,7 @@ class multi_cbf_controller:
                 A, b, h_min = inputs
                 # dh_dot_dx1, dh_dot_dx2, h_dot, h = multi_cbf_controller.robot.barrier_humans_alpha_jax( robot_state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.3)
                 state = lax.dynamic_slice(complete_state, (4*i, 0), (4, 1))
-                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_humans_alpha_jax( state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = robot_radius+0.15)
+                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_humans_alpha_jax( state, humans_states[:,i].reshape(-1,1), human_states_dot[:,i].reshape(-1,1), d_min = 4*robot_radius)
                 A = A.at[i, :].set( (dh_dot_dx1 @ self.robot.g_jax_i(state))[0,:  ]  )
                 b = b.at[i,:].set( (- dh_dot_dx1 @ self.robot.f_jax_i(state) - dh_dot_dx2 @ human_states_dot[:,i].reshape(-1,1) - alpha1_human[i] * h_dot - alpha2_human[i] * (h_dot + alpha1_human[i]*h))[0,:] )
                 h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
@@ -167,7 +167,7 @@ class multi_cbf_controller:
             def body(i, inputs):
                 A, b, h_min = inputs
                 state = lax.dynamic_slice(complete_state, (4*i, 0), (4, 1))
-                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_alpha_jax( state, obstacle_states[:,multi_cbf_controller.num_obstacles*j + i].reshape(-1,1), d_min = 2*robot_radius)
+                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_alpha_jax( state, obstacle_states[:,multi_cbf_controller.num_obstacles*j + i].reshape(-1,1), d_min = 4*robot_radius)
                 A = A.at[i,:].set((dh_dot_dx1 @ self.robot.g_jax_i(state))[0,:] )
                 b = b.at[i,:].set((- dh_dot_dx1 @ self.robot.f_jax_i(state) - alpha1_obstacle[i] * h_dot - alpha2_obstacle[i] * (h_dot + alpha1_obstacle[i]*h))[0,:] )
                 h_min = jnp.min( jnp.array([h_min, h[0,0]]) )
@@ -194,7 +194,7 @@ class multi_cbf_controller:
             def body(i, inputs):
                 A_multi, b_multi, h_min, current_index = inputs
                 state_i = lax.dynamic_slice(complete_state, (4*i, 0), (4, 1))
-                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_agent_agent_jax_ij( state_i, state_j, d_min = 2*robot_radius + 0.3)
+                dh_dot_dx1, dh_dot_dx2, h_dot, h = self.robot.barrier_agent_agent_jax_ij( state_i, state_j, d_min = 4*robot_radius)
                 # print(f"Derivatives: {dh_dot_dx1} and {dh_dot_dx2}")
                 A_multi = lax.dynamic_update_slice(A_multi, dh_dot_dx1.T @ self.robot.g_jax_i(state_i), (current_index, 2*i))
                 A_multi = lax.dynamic_update_slice(A_multi, dh_dot_dx2.T @ self.robot.g_jax_i(state_j), (current_index, 2*j))

@@ -67,7 +67,7 @@ class RobotController(Node):
         self.human_states_dot = np.zeros((2,self.num_humans))
 
         # Parameters
-        self.robot_radius = 0.12 # Previous values have been 0.2 and 0.18
+        self.robot_radius = 0.15 # 0.12 # Previous values have been 0.2 and 0.18
         self.min_robot_to_robot = 4
         self.replan_count = 0
         self.print_count = 0
