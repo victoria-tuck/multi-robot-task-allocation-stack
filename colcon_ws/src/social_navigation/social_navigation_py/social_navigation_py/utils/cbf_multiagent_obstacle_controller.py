@@ -63,11 +63,12 @@ class multi_cbf_controller:
         self.u2_ref_base = cp.Parameter((2*self.num_agents,1))
         self.A2_base = cp.Parameter((self.n_base,2*self.num_agents))
         self.b2_base = cp.Parameter((self.n_base,1))
-        self.const2_base = [self.A2_base @ self.u2_base >= self.b2_base]
+        self.slack_base = cp.Variable((self.n_base,1))
+        self.const2_base = [self.A2_base @ self.u2_base + self.slack_base >= self.b2_base, self.slack_base >= 0]
         # self.objective2_base = cp.Minimize( cp.sum_squares(self.u2_base-self.u2_ref_base) )
-        self.objective2_base = cp.Minimize( cp.norm(self.u2_base-self.u2_ref_base) )
+        self.objective2_base = cp.Minimize( cp.norm(self.u2_base-self.u2_ref_base) + 1000*cp.sum(self.slack_base) )
         self.controller2_base = cp.Problem( self.objective2_base, self.const2_base )
-        self.controller2_base_layer = CvxpyLayer(self.controller2_base, parameters=[self.u2_ref_base, self.A2_base, self.b2_base], variables=[self.u2_base])
+        self.controller2_base_layer = CvxpyLayer(self.controller2_base, parameters=[self.u2_ref_base, self.A2_base, self.b2_base], variables=[self.u2_base, self.slack_base])
 
         ##################
 
@@ -218,7 +219,7 @@ class multi_cbf_controller:
         return self.robot.X[3,0], self.u2_ref_base.value[1,0]
     
                 
-    def policy_cbf(self, robot_state, other_robot_states, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, other_obstacles, dt):
+    def policy_cbf(self, robot_state, other_robot_states, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, other_obstacles, dt, slow=False):
         
         complete_state = np.vstack((robot_state, other_robot_states))
         # print(f"Complete state: {complete_state}")
@@ -230,14 +231,14 @@ class multi_cbf_controller:
         # print(f"Numb agents: {num_agents}")
         reshaped_other_obstacles = jnp.array(other_obstacles).transpose(1,0,2).reshape(2,-1)
         obstacles = jnp.hstack((obstacle_states, reshaped_other_obstacles))
-        A, b, h_human_min, h_obs_min, h_agent_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(other_robot_states), jnp.asarray(human_states), jnp.asarray(human_states_dot), obstacles, self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, alpha1_agent_agent, alpha2_agent_agent, num_agents )
+        A, b, h_human_min, h_obs_min, h_agent_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(other_robot_states), jnp.asarray(human_states), jnp.asarray(human_states_dot), obstacles, self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius, alpha1_agent_agent, alpha2_agent_agent, num_agents)
         # print(f"Shape of A: {A.shape}")
         # print(f"Shape of b: {b.shape}")
         # print(f"Time to create barriers: {time.time() - start_time}")
         self.A2_base.value = np.append( np.asarray(A), self.control_A, axis=0 )
         self.b2_base.value = np.append( np.asarray(b).reshape(-1,1), self.control_b, axis=0 )
         start_time = time.time()
-        nominal_ctrl = self.robot.nominal_controller( robot_goal, other_robot_states, k_x = multi_cbf_controller.k_x, k_v = multi_cbf_controller.k_v )
+        nominal_ctrl = self.robot.nominal_controller( robot_goal, other_robot_states, k_x = multi_cbf_controller.k_x, k_v = multi_cbf_controller.k_v, slow=slow)
         # print(f"Time to calculate nominal: {time.time() - start_time}")
         # self.u2_ref_base.value = nominal_ctrl[0:2,:]
         # print(f"U2 ref base: {self.u2_ref_base}")

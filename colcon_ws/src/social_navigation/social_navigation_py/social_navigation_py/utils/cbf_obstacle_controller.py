@@ -55,11 +55,12 @@ class cbf_controller:
         self.u2_ref_base = cp.Parameter((2,1))
         self.A2_base = cp.Parameter((self.n_base,2))
         self.b2_base = cp.Parameter((self.n_base,1))
-        self.const2_base = [self.A2_base @ self.u2_base >= self.b2_base]
+        self.slack_base = cp.Variable((self.n_base,1))
+        self.const2_base = [self.A2_base @ self.u2_base + self.slack_base >= self.b2_base, self.slack_base >= 0]
         # self.objective2_base = cp.Minimize( cp.sum_squares(self.u2_base-self.u2_ref_base) )
-        self.objective2_base = cp.Minimize( cp.norm(self.u2_base-self.u2_ref_base) )
+        self.objective2_base = cp.Minimize( cp.norm(self.u2_base-self.u2_ref_base) + 1000*cp.sum(self.slack_base))
         self.controller2_base = cp.Problem( self.objective2_base, self.const2_base )
-        cbf_controller.controller2_base_layer = CvxpyLayer(self.controller2_base, parameters=[self.u2_ref_base, self.A2_base, self.b2_base], variables=[self.u2_base])
+        cbf_controller.controller2_base_layer = CvxpyLayer(self.controller2_base, parameters=[self.u2_ref_base, self.A2_base, self.b2_base], variables=[self.u2_base, self.slack_base])
 
         ##################
 
@@ -126,13 +127,16 @@ class cbf_controller:
         return self.robot.X[3,0], self.u2_ref_base.value[1,0]
     
                 
-    def policy_cbf(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt):
+    def policy_cbf(self, robot_state, robot_goal, robot_radius, human_states, human_states_dot, obstacle_states, dt, slow=False):
         
         self.robot.set_state(robot_state)
         A, b, h_human_min, h_obs_min = self.construct_barrier_from_states(jnp.asarray(robot_state), jnp.asarray(human_states), jnp.asarray(human_states_dot), jnp.array(obstacle_states), self.alpha1_human, self.alpha2_human, self.alpha1_obstacle, self.alpha2_obstacle, robot_radius )
         self.A2_base.value = np.append( np.asarray(A), -self.control_bound_polytope.A, axis=0 )
         self.b2_base.value = np.append( np.asarray(b), -self.control_bound_polytope.b.reshape(-1,1), axis=0 )
-        self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        if not slow:
+            self.u2_ref_base.value = cbf_controller.robot.nominal_controller( robot_goal, k_x = cbf_controller.k_x, k_v = cbf_controller.k_v )
+        else:
+            self.u2_ref_base.value = cbf_controller.robot.slow_down_nominal_controller()
         self.controller2_base.solve(solver=cp.GUROBI)
         if self.u2_base.value is None:
             print("Reoptimizing")

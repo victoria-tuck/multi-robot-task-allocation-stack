@@ -214,6 +214,12 @@ class dynamic_unicycle:
         # print(f"CBF nominal acc: {u_r}, omega:{omega}")
         return np.array([u_r, omega]).reshape(-1,1)
     
+    def slow_down_nominal_controller(self):
+        speed = 2.0 * self.X[3,0]
+        u_r = max(- speed, -1.5)
+        u_r = min(u_r, 1.5)
+        return np.array([u_r, 0.0]).reshape(-1,1)
+    
     def nominal_controller_jax(self, targetX, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
         distance = jnp.linalg.norm( self.X[0:2]-targetX[0:2] )
         if (distance>0.1):

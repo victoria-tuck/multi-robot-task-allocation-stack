@@ -205,20 +205,23 @@ class multi_dynamic_unicycle:
         # print(f"CBF nominal acc: {u_r}, omega:{omega}")
         return np.array([u_r, omega]).reshape(-1,1)
     
-    def non_ego_nominal_controller(self, i):
+    def slow_down_nominal_controller(self, i):
         speed = 2.0 * self.X[4*i+3,0]
         u_r = max(- speed, -1.5)
         u_r = min(u_r, 1.5)
         return np.array([u_r, 0.0]).reshape(-1,1)
     
-    def nominal_controller(self, targetX, other_robot_states, k_omega = 1.5, k_v = 1.0, k_x = 1.0):
+    def nominal_controller(self, targetX, other_robot_states, k_omega = 1.5, k_v = 1.0, k_x = 1.0, slow=False):
         nominal_controls_list = []
-        agent_nominal_control = self.nominal_controller_i(targetX, k_omega = k_omega, k_x = k_x, k_v = k_v)
-        nominal_controls_list.append(agent_nominal_control)
+        if slow:
+            nominal_controls_list.append(self.slow_down_nominal_controller(i))
+        else:
+            agent_nominal_control = self.nominal_controller_i(targetX, k_omega = k_omega, k_x = k_x, k_v = k_v)
+            nominal_controls_list.append(agent_nominal_control)
         num_other_agents = int(len(other_robot_states)/4)
         for i in range(num_other_agents):
             # nominal_controls_list.append(np.array([0,0]).reshape(-1,1))
-            nominal_controls_list.append(self.non_ego_nominal_controller(i+1))
+            nominal_controls_list.append(self.slow_down_nominal_controller(i+1))
         # print(f"Nominal control: {nominal_controls_list} for {num_other_agents+1} agents")
         return np.concatenate(nominal_controls_list, axis=0)
     

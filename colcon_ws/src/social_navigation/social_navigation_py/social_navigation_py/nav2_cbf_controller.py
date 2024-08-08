@@ -464,7 +464,7 @@ class RobotController(Node):
                         other_obstacles = []
                         for robot in other_robots:
                             other_obstacles.append(self.other_robot_obstacle_states[robot])
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, other_obstacles, dt )
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, other_obstacles, dt , slow = not self.active)
                         # self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
                     for i, robot in enumerate(other_robots):
                         print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")
@@ -476,7 +476,7 @@ class RobotController(Node):
                 else:
                     other_robot_states = np.empty((0,1))
                     if self.controller_id == 0:
-                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt )
+                        speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt , slow = not self.active)
                     elif self.controller_id == 1:
                         speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                     speed = [[speed]]
