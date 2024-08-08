@@ -206,7 +206,7 @@ class multi_dynamic_unicycle:
         return np.array([u_r, omega]).reshape(-1,1)
     
     def slow_down_nominal_controller(self, i):
-        speed = 2.0 * self.X[4*i+3,0]
+        speed = 5.0 * self.X[4*i+3,0]
         u_r = max(- speed, -1.5)
         u_r = min(u_r, 1.5)
         return np.array([u_r, 0.0]).reshape(-1,1)
@@ -214,7 +214,7 @@ class multi_dynamic_unicycle:
     def nominal_controller(self, targetX, other_robot_states, k_omega = 1.5, k_v = 1.0, k_x = 1.0, slow=False):
         nominal_controls_list = []
         if slow:
-            nominal_controls_list.append(self.slow_down_nominal_controller(i))
+            nominal_controls_list.append(self.slow_down_nominal_controller(0))
         else:
             agent_nominal_control = self.nominal_controller_i(targetX, k_omega = k_omega, k_x = k_x, k_v = k_v)
             nominal_controls_list.append(agent_nominal_control)

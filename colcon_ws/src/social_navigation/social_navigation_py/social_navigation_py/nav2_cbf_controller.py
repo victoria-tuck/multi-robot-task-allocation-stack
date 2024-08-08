@@ -115,6 +115,7 @@ class RobotController(Node):
         self.initial_goal = True
         self.planner_init = False
         self.active = False
+        # self.replan = False
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
         self.h_min_obs_count = 0
@@ -274,6 +275,8 @@ class RobotController(Node):
 
     def remote_control_callback(self, msg):
         self.robot_command_pub.publish(msg)
+        self.initial_goal = True
+        self.goal_init = False
     
     def run_controller(self):
         if self.print_count > 100:
@@ -305,7 +308,7 @@ class RobotController(Node):
             control.linear.x = 0.0
             control.angular.z = 0.0
             self.robot_command_pub.publish(control)
-        if not self.goal_init and self.new_goal_poses is not None:
+        if not self.goal_init and self.new_goal_poses is not None and self.name == self.robot_cluster[0]:
             # print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
             if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
                 # if self.print_count > 100:
@@ -433,6 +436,7 @@ class RobotController(Node):
                 # self.get_logger().info(f"{self.name}'s cluster has not been finalized")
                 control.linear.x = 0.0
                 control.angular.z = 0.0
+                self.robot_command_pub.publish(control)
             # elif (self.finalized_cluster and self.name != self.robot_cluster[0]):
             #     # self.get_logger().info(f"{self.name} is not the leader.")
             #     control.linear.x = 0.0
@@ -460,7 +464,7 @@ class RobotController(Node):
                         self.cluster_controller_active = True
                         # speed, omega, h_dyn_obs_min, h_obs_min = 0.0, 0.0, 0, 0
                     if self.controller_id == 0:
-                        start_time = time.time()
+                        # start_time = time.time()
                         other_obstacles = []
                         for robot in other_robots:
                             other_obstacles.append(self.other_robot_obstacle_states[robot])
@@ -471,7 +475,8 @@ class RobotController(Node):
                         control = Twist()
                         control.linear.x = speed[i+1][0]
                         control.angular.z = omega[i+1][0]
-                        if self.finalized_cluster and self.name == self.robot_cluster[0] and self.robots_active[robot] and robot != self.name:
+                        # if self.finalized_cluster and self.name == self.robot_cluster[0] and self.robots_active[robot] and robot != self.name:
+                        if self.finalized_cluster and self.name == self.robot_cluster[0] and robot != self.name:
                             self.remote_control_pub[robot].publish(control)
                 else:
                     other_robot_states = np.empty((0,1))

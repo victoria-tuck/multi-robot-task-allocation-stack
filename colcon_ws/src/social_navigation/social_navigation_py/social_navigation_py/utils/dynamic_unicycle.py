@@ -215,7 +215,7 @@ class dynamic_unicycle:
         return np.array([u_r, omega]).reshape(-1,1)
     
     def slow_down_nominal_controller(self):
-        speed = 2.0 * self.X[3,0]
+        speed = 5.0 * self.X[3,0]
         u_r = max(- speed, -1.5)
         u_r = min(u_r, 1.5)
         return np.array([u_r, 0.0]).reshape(-1,1)
