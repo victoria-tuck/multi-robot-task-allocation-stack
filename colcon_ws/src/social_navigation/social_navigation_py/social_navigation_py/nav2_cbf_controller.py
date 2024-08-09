@@ -115,6 +115,7 @@ class RobotController(Node):
         self.initial_goal = True
         self.planner_init = False
         self.active = False
+        self.path_end = None
         # self.replan = False
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
@@ -326,11 +327,13 @@ class RobotController(Node):
                 # initial_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
                 # if self.print_count > 10:
                 #     print(f"Initial pose: {current_pose.pose.position}")
+                initial_fail = False
                 if self.initial_goal:
                     # self.navigator.waitUntilNav2Active()
                     success = False
                     tries = 0
                     while not success and tries < 100:
+                        self.path_active = False
                         try:
                             self.navigator.setInitialPose(current_pose)
                             path = self.navigator.getPath(current_pose, self.goal_pose) # replace with naman's planner
@@ -347,6 +350,7 @@ class RobotController(Node):
                             # if close_x and close_y:
                             self.path = path
                             self.path2 = path
+                            self.path_end = path.poses[-1]
                             # self.nav2_path_publisher.publish(self.path)
                             success = True
                             self.initial_goal = False
@@ -354,15 +358,25 @@ class RobotController(Node):
                         except Exception as e:
                             # print(f"Trying to find path again")
                             success = False
+                            self.path_active = False
                         tries += 1
+                    if tries >= 100:
+                        self.get_logger().info(f"{self.name} tried to make initial plan too many times")
+                        initial_fail = True
+                        self.path_active = False
 
                 success = False
                 tries = 0
-                while not self.initial_goal and not success and tries < 100:
+                while not self.initial_goal and not success and not initial_fail and tries < 100:
+                    self.path_active = False
                     next_goal = self.new_goal_poses.next_waypoint
                     # self.goal = np.array([ goal.pose.position.x, goal.pose.position.y ]).reshape(-1,1)
                     # Get current position and publish
-                    start_pose = self.new_goal_poses.current_waypoint
+                    # start_pose = self.new_goal_poses.current_waypoint
+                    start_pose = self.path_end
+                    start_pose.header.frame_id = "map"
+                    start_pose.header.stamp = self.get_clock().now().to_msg()
+                    # self.get_logger().info(f"Ending pose: {self.path_end} vs current waypoint: {self.new_goal_poses.current_waypoint}")
                     # start_pose = PoseStamped()
                     # start_pose.header.frame_id = 'map'
                     # start_pose.header.stamp = self.navigator.get_clock().now().to_msg()
@@ -390,6 +404,7 @@ class RobotController(Node):
                         # if close_x and close_y:
                         self.path.poses = self.path2.poses + path.poses
                         self.path2 = path
+                        self.path_end = path.poses[-1]
                         # self.nav2_path_publisher.publish(self.path)
                         self.path_active = True
                         self.goal_init = True
@@ -400,7 +415,12 @@ class RobotController(Node):
                     except Exception as e:
                         # print(f"Trying to find path again")
                         success = False
+                        self.path_active = False
                     tries += 1 
+                if tries >= 100:
+                    self.get_logger().info(f"{self.name} tried to get secondary plan too many times")
+            else:
+                self.get_logger().info("Invalid world information")
             
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
         if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
@@ -540,7 +560,7 @@ class RobotController(Node):
             # Search for the component containing the specified agent
             for component in components:
                 if agent in component:
-                    print(f"{self.name}'s cluster: {list(component)}")
+                    # print(f"{self.name}'s cluster: {list(component)}")
                     return list(component)
             return [agent]
         cluster = get_agents_cluster(TC.to_undirected(), self.name)
@@ -572,7 +592,7 @@ class RobotController(Node):
         msg.cluster = cluster
         msg.neighbors = neighbors
         self.robot_cluster_pub.publish(msg)
-        self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
+        # self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
     
 
 def main(args=None):

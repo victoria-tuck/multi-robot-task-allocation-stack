@@ -11,8 +11,11 @@ Panels:
         - /Global Planner1/Path1
         - /PointCloud1
         - /Pose1/Topic1
+        - /PointCloud3
         - /Global Planner2
+        - /Global Planner2/Path1
         - /Global Planner3
+        - /Global Planner3/Path1
         - /Global Planner4
         - /Global Planner4/Path1
         - /PointCloud4
@@ -260,7 +263,7 @@ Visualization Manager:
         - Alpha: 1
           Buffer Length: 1
           Class: rviz_default_plugins/Path
-          Color: 85; 255; 73
+          Color: 255; 25; 0
           Enabled: true
           Head Diameter: 0.019999999552965164
           Head Length: 0.019999999552965164
@@ -513,14 +516,14 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 0.008717079646885395
-        Min Value: 0.008717079646885395
+        Max Value: 0.00871659442782402
+        Min Value: 0.00871659442782402
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz_default_plugins/PointCloud
-      Color: 255; 255; 255
-      Color Transformer: AxisColor
+      Color: 255; 25; 0
+      Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -747,7 +750,7 @@ Visualization Manager:
         - Alpha: 1
           Buffer Length: 1
           Class: rviz_default_plugins/Path
-          Color: 85; 100; 255
+          Color: 255; 0; 255
           Enabled: true
           Head Diameter: 0.019999999552965164
           Head Length: 0.019999999552965164
@@ -759,7 +762,7 @@ Visualization Manager:
             X: 0
             Y: 0
             Z: 0
-          Pose Color: 50; 255; 47
+          Pose Color: 255; 0; 255
           Pose Style: Arrows
           Radius: 0.029999999329447746
           Shaft Diameter: 0.10000000149011612
@@ -868,7 +871,7 @@ Visualization Manager:
         - Alpha: 1
           Buffer Length: 1
           Class: rviz_default_plugins/Path
-          Color: 255; 100; 0
+          Color: 15; 205; 10
           Enabled: true
           Head Diameter: 0.019999999552965164
           Head Length: 0.019999999552965164
@@ -880,7 +883,7 @@ Visualization Manager:
             X: 0
             Y: 0
             Z: 0
-          Pose Color: 50; 255; 47
+          Pose Color: 15; 205; 10
           Pose Style: Arrows
           Radius: 0.029999999329447746
           Shaft Diameter: 0.10000000149011612
@@ -989,7 +992,7 @@ Visualization Manager:
         - Alpha: 1
           Buffer Length: 1
           Class: rviz_default_plugins/Path
-          Color: 255; 100; 255
+          Color: 25; 155; 255
           Enabled: true
           Head Diameter: 0.019999999552965164
           Head Length: 0.019999999552965164
@@ -1001,7 +1004,7 @@ Visualization Manager:
             X: 0
             Y: 0
             Z: 0
-          Pose Color: 50; 255; 47
+          Pose Color: 25; 155; 255
           Pose Style: Arrows
           Radius: 0.029999999329447746
           Shaft Diameter: 0.10000000149011612
@@ -1072,7 +1075,7 @@ Visualization Manager:
       Axis: Z
       Channel Name: intensity
       Class: rviz_default_plugins/PointCloud
-      Color: 205; 255; 100
+      Color: 15; 205; 10
       Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
@@ -1195,7 +1198,7 @@ Visualization Manager:
         Alpha: 1
         Axes Length: 1
         Axes Radius: 0.10000000149011612
-        Color: 5; 255; 0
+        Color: 255; 0; 255
         Head Length: 0.30000001192092896
         Head Radius: 0.5
         Shaft Length: 1
@@ -1234,7 +1237,7 @@ Visualization Manager:
         Alpha: 1
         Axes Length: 1
         Axes Radius: 0.10000000149011612
-        Color: 105; 125; 100
+        Color: 15; 205; 10
         Head Length: 0.30000001192092896
         Head Radius: 0.5
         Shaft Length: 1
@@ -1273,7 +1276,7 @@ Visualization Manager:
         Alpha: 1
         Axes Length: 1
         Axes Radius: 0.10000000149011612
-        Color: 100; 155; 0
+        Color: 25; 155; 255
         Head Length: 0.30000001192092896
         Head Radius: 0.5
         Shaft Length: 1
@@ -1433,5 +1436,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1848
-  X: 70
-  Y: 617
+  X: 1971
+  Y: 452

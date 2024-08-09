@@ -58,7 +58,7 @@ class cbf_controller:
         self.slack_base = cp.Variable((self.n_base,1))
         self.const2_base = [self.A2_base @ self.u2_base + self.slack_base >= self.b2_base, self.slack_base >= 0]
         # self.objective2_base = cp.Minimize( cp.sum_squares(self.u2_base-self.u2_ref_base) )
-        self.objective2_base = cp.Minimize( cp.norm(self.u2_base-self.u2_ref_base) + 1000*cp.sum(self.slack_base))
+        self.objective2_base = cp.Minimize( cp.norm(self.u2_base-self.u2_ref_base) + 100*cp.sum(self.slack_base))
         self.controller2_base = cp.Problem( self.objective2_base, self.const2_base )
         cbf_controller.controller2_base_layer = CvxpyLayer(self.controller2_base, parameters=[self.u2_ref_base, self.A2_base, self.b2_base], variables=[self.u2_base, self.slack_base])
 
