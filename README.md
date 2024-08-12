@@ -83,16 +83,11 @@ rcsetup input_file:=<setup_file>
 rsfm
 ```
 
-5. To start the user controller for one robot:
+5. To start the user controller for multiple robots:
 ```
-rcbf2r1
+multi_rcbf
 ```
-OR
-for many robots:
-```
-rcbf <number_of_robots>
-```
-When using the second option, nav2_cbf processes will need to be killed using `ps` to find the pid and then `kill <pid>` for each process.
+with the configuration specified in ```src/social_navigation/social_navigation/configs/case_config.yaml```
 
 6. When the controller status is ONLINE, run the following command to set goal and run controller simulation
 ```
