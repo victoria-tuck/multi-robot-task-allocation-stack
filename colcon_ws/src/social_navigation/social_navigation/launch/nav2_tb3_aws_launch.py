@@ -11,14 +11,15 @@ def generate_launch_description():
     
     # Set environment variable
     env_cmd1 = SetEnvironmentVariable(name='TURTLEBOT3_MODEL', value='waffle')
-    env_cmd2 = SetEnvironmentVariable(name='GAZEBO_MODEL_PATH', value='$GAZEBO_MODEL_PATH:/opt/ros/galactic/share/turtlebot3_gazebo/models')
-    env_cmd3 = SetEnvironmentVariable(name='GAZEBO_MODEL_PATH', value='$GAZEBO_MODEL_PATH:/home/colcon_ws/src/aws-robomaker-hospital-world/ignition_models')
+    # env_cmd2 = SetEnvironmentVariable(name='GAZEBO_MODEL_PATH', value='$GAZEBO_MODEL_PATH:/opt/ros/galactic/share/turtlebot3_gazebo/models')
+    # env_cmd3 = SetEnvironmentVariable(name='GAZEBO_MODEL_PATH', value='$GAZEBO_MODEL_PATH:/home/colcon_ws/src/aws-robomaker-hospital-world/ignition_models')
 
 
     # Launch turtlebot
     # turtlebot_dir = get_package_share_directory('nav2_bringup')
     social_navigation_dir = get_package_share_directory('social_navigation')
 
+    # print(social_navigation_dir)
     # world_file = os.path.join(social_navigation_dir, 'worlds', 'waffle_aws_hospital.world'),
     turtle_bot3_demo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -29,7 +30,8 @@ def generate_launch_description():
                 # 'namespace': 'robot1',
                 # 'use_namespace': 'True',
                 'slam': 'False',
-                'map': os.path.join(social_navigation_dir, 'worlds', 'map_aws', 'my_map.yaml')
+                'map': os.path.join(social_navigation_dir, 'worlds', 'map_aws', 'my_map.yaml'),
+                'use_sim_time': 'True'
                 # 'world': world_file
             }.items()
         )
@@ -38,11 +40,14 @@ def generate_launch_description():
     
     ld = LaunchDescription()
     ld.add_action(env_cmd1)
-    ld.add_action(env_cmd2)
+    # ld.add_action(env_cmd2)
     # ld.add_action(env_cmd3)
     # PushRosNamespace('robot1')
     ld.add_action(turtle_bot3_demo)
     return ld
+
+if __name__ == '__main__':
+    generate_launch_description()
 
 # FOR SLAM and making a map
 #ros2 launch aws_robomaker_hospital_world view_hospital.launch.py

@@ -29,7 +29,9 @@ setup(
             'minimal_publisher = social_navigation_py.minimal_publisher:main',
             'goal_setter = social_navigation_py.goal_setter:main',
             'goal_setter_for_travel_time = social_navigation_py.travel_time_collector:main',
-            'dispatcher = social_navigation_py.dispatcher:main'
+            'dispatcher = social_navigation_py.dispatcher:main',
+            'init_planner = social_navigation_py.init_planner:main', 
+            'image_saver = social_navigation_py.image_saver:main'
         ],
     },
 )

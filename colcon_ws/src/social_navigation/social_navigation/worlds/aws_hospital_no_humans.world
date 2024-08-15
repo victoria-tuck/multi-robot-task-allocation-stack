@@ -1447,6 +1447,41 @@
       </include>
     </model>
 
+    <model name="camera_model">
+      <static>true</static>
+      <pose>0 0 2 0 0 0</pose> <!-- Position the camera at (x, y, z) with (roll, pitch, yaw) -->
+      <link name="camera_link">
+        <sensor name="camera_sensor" type="camera">
+          <always_on>1</always_on>
+          <update_rate>30</update_rate> <!-- Capture at 30 frames per second -->
+          <camera>
+            <horizontal_fov>1.3962634</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <plugin name="camera_save_plugin" filename="libgazebo_ros_camera.so">
+            <ros namespace="/camera"/>
+            <imageTopicName>image_raw</imageTopicName>
+            <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+            <frameName>camera_frame</frameName>
+            <hackBaseline>0.07</hackBaseline>
+            <distortionK1>0.0</distortionK1>
+            <distortionK2>0.0</distortionK2>
+            <distortionK3>0.0</distortionK3>
+            <distortionT1>0.0</distortionT1>
+            <distortionT2>0.0</distortionT2>
+          </plugin>
+        </sensor>
+      </link>
+    </model>
+
 
 
 

@@ -77,5 +77,6 @@ RUN echo "alias multi_rcbf='ros2 launch social_navigation multi_cbf.launch.py" >
 RUN echo "alias rmppi='ros2 run social_navigation_py nav2_mppi --ros-args -p use_sim_time:=True'" >> ~/.bashrc
 RUN echo "alias rsfm='ros2 launch social_navigation human_sfm.launch.py'" >> ~/.bashrc
 RUN echo "alias rcset='ros2 launch social_navigation goal_setter.launch.py'" >> ~/.bashrc
-RUN echo "alias rcdis='ros2 run social_navigation_py dispatcher --ros-args -p use_sim_time:=True'" >> ~/.bashrc
+# RUN echo "alias rcdis='ros2 run social_navigation_py dispatcher --ros-args -p use_sim_time:=True'" >> ~/.bashrc
+RUN echo "alias rcdis='ros2 launch social_navigation dispatcher.launch.py'" >> ~/.bashrc
 RUN echo "alias rctimecollect='ros2 run social_navigation_py goal_setter_for_travel_time --ros-args -p use_sim_time:=True'" >> ~/.bashrc

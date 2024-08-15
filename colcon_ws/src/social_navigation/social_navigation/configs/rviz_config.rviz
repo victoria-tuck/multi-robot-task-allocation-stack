@@ -7,7 +7,10 @@ Panels:
         - /Global Options1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /Map1
+        - /Map1/Status1
         - /Global Planner1
+        - /Global Planner1/Global Costmap1
         - /Global Planner1/Path1
         - /PointCloud1
         - /Pose1/Topic1

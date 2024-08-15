@@ -153,8 +153,9 @@ def parse_arguments(argv):
         if ":=" in arg:
             parsed_arg = arg.split(':')
             print(parsed_arg)
-            args.append(f"-{parsed_arg[0]}")
-            args.append(parsed_arg[1][1:])
+            if not parsed_arg[0] == 'use_sim_time' and not parsed_arg[0] == 'autostart':
+                args.append(f"-{parsed_arg[0]}")
+                args.append(parsed_arg[1][1:])
     return args
 
 

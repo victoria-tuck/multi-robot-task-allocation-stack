@@ -262,7 +262,7 @@ map_server:
     use_sim_time: True
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
-    yaml_filename: ""
+    yaml_filename: "/home/colcon_ws/install/social_navigation/share/social_navigation/worlds/map_aws/my_map.yaml"
 
 map_saver:
   ros__parameters:

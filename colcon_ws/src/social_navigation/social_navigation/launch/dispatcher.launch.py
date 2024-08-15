@@ -1,6 +1,5 @@
 import os
 import sys
-import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -14,8 +13,6 @@ def generate_launch_description():
     
     social_navigation_dir = get_package_share_directory('social_navigation_py')    
     social_navigation_config_dir = os.path.join( get_package_share_directory('social_navigation'), 'configs')
-    config_file = os.path.join(social_navigation_config_dir, 'case_config.yaml')
-    print(f"Config file: {config_file}")
     
     use_sim_time = LaunchConfiguration('use_sim_time')
     declare_use_sim_time_cmd = DeclareLaunchArgument(
@@ -23,29 +20,29 @@ def generate_launch_description():
         default_value='true',
         description='Use simulation (Gazebo) clock if true')
     
-    with open(config_file, 'r') as file:
-        config = yaml.safe_load(file)
-    print(f"Config: {config}")
-    
-    agent_names = list(config["agents"].keys())
-    print(f"Agent names: {agent_names}")
-    if len(agent_names) > 1:
-        other_agents = {agent_names[i]: agent_names[:i] + agent_names[i+1:] for i in range(len(agent_names))} # Make sure this can work for one agent
-    else:
-        other_agents = {agent_names[0]: ['robot2']}
+    arguments = parse_arguments(sys.argv)
 
-    controllers = [Node(
+    dispatcher = Node(
         package='social_navigation_py',
-        executable='nav2_cbf',
+        executable='dispatcher',
         output='screen',
         parameters=[{
-            'use_sim_time': use_sim_time,
-            'robot_name': agent,
-            'robot_list': other_agents[agent]}]
-    ) for agent in agent_names]
+            'use_sim_time': use_sim_time}],
+        arguments=arguments
+    )
 
     ld = LaunchDescription()
-    for controller in controllers:
-        ld.add_action(declare_use_sim_time_cmd)
-        ld.add_action(controller)
+    ld.add_action(declare_use_sim_time_cmd)
+    ld.add_action(dispatcher)
     return ld
+
+
+def parse_arguments(argv):
+    args = []
+    for arg in argv:
+        if ":=" in arg:
+            parsed_arg = arg.split(':')
+            print(parsed_arg)
+            args.append(f"-{parsed_arg[0]}")
+            args.append(parsed_arg[1][1:])
+    return args
