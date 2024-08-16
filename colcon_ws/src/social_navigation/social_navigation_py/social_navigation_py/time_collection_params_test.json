@@ -1,0 +1,11 @@
+{
+  "iterations": 1,
+  "save_mode": "MAX_CEIL",
+  "format": "GRAPH",
+  "map_locations":
+    [
+      [7.9, -7.5],
+      [0, 2.2]
+    ],
+  "map_location_ids": [1,0]
+}
