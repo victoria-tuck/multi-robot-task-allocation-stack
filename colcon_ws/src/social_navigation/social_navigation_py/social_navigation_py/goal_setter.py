@@ -36,7 +36,7 @@ class GoalSetter(Node):
 
         self.activity_publisher = self.create_publisher(Bool, f'{prefix}/active', 10)
         self.publisher_ = self.create_publisher(PoseStampedPair, f'{prefix}/goal_location', 1)
-        self.timer_period = 1.0
+        self.timer_period = 0.1
         self.goal_timer = self.create_timer(self.timer_period, self.publish_goal)
         self.feedback_timer = self.create_timer(self.timer_period, self.publish_feedback)
         self.status_timer = self.create_timer(self.timer_period, self.publish_status)
@@ -46,6 +46,8 @@ class GoalSetter(Node):
 
         self.locs = []
         self.loc_idx = 0
+        self.current_message_count = 10
+        self.current_message = None
 
         self.active = False
         self.goal_reached = True
@@ -93,10 +95,15 @@ class GoalSetter(Node):
 
                 msg.current_waypoint = current_waypoint
                 msg.next_waypoint = next_waypoint
+                self.current_message = msg
+                self.current_message_count = 0
                 self.publisher_.publish(msg)
                 self.goal_reached = False
                 self.active = True
                 self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")
+        elif self.current_message_count < 10 and self.current_message is not None:
+            self.publisher_.publish(self.current_message)
+            self.current_message_count += 1
         else:
             self.active = False
             # else:

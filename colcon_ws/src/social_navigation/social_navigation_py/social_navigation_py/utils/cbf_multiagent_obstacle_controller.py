@@ -248,10 +248,10 @@ class multi_cbf_controller:
         if self.u2_base.value is None:
             print("Reoptimizing")
             self.controller2_base.solve(solver=cp.GUROBI, reoptimize=True)
-        print(f"Time to run QP: {time.time() - start_time}")
+        # print(f"Time to run QP: {time.time() - start_time}")
         # if len(other_robot_states) > 0:
         #     exit()
-        print(f"Calculated control: {self.u2_base.value}")
+        # print(f"Calculated control: {self.u2_base.value}")
         # if self.num_agents > 1:
         #     U = np.vstack((self.u2_base.value, np.array([0,0]).reshape(-1,1)))
         # else:

@@ -36,14 +36,20 @@ def launch_cbf_launch(context):
     social_nav_dir = get_package_share_directory('social_navigation')
     cbf_launch = os.path.join(social_nav_dir, 'launch/multi_cbf.launch.py')
     return [IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(cbf_launch)
+        PythonLaunchDescriptionSource(cbf_launch),
+        launch_arguments={
+            'use_sim_time': 'true'
+        }.items()
     )]
 
 def launch_goal_setter_launch(context):
     social_nav_dir = get_package_share_directory('social_navigation')
     goal_setter_launch = os.path.join(social_nav_dir, 'launch/goal_setter.launch.py')
     return [IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(goal_setter_launch)
+        PythonLaunchDescriptionSource(goal_setter_launch),
+        launch_arguments={
+            'use_sim_time': 'true'
+        }.items()
     )]
 
 
@@ -54,7 +60,7 @@ def generate_launch_description():
 
     gazebo_launch = os.path.join(world_dir, 'launch/view_hospital.launch.py')
     nav_launch = os.path.join(social_nav_dir, 'launch/nav2_tb3_aws_launch.py')
-    # setup_launch = os.path.join(social_nav_dir, 'launch/init_controller_setup.launch.py')
+    setup_launch = os.path.join(social_nav_dir, 'launch/init_controller_setup.launch.py')
 
     # map = LaunchConfiguration('map')
     # declare_map_arg = DeclareLaunchArgument(
@@ -71,32 +77,41 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
-    ld.add_action(TimerAction(
-        period=20.0,
-        actions=[OpaqueFunction(function=launch_gazebo_launch)]
-    ))
+    # ld.add_action(TimerAction(
+    #     period=20.0,
+    #     actions=[OpaqueFunction(function=launch_gazebo_launch)]
+    # ))
     # ld.add_action(TimerAction(
     #                 period=30.0,
     #                 actions=[]))
     # ld.add_action(declare_map_arg)
-    ld.add_action(TimerAction(
-        period=0.0,
-        actions=[OpaqueFunction(function=launch_nav_launch)])
-    )
+    # ld.add_action(TimerAction(
+    #     period=0.0,
+    #     actions=[OpaqueFunction(function=launch_nav_launch)])
+    # )
 
     ld.add_action(TimerAction(
-        period=60.0,
+        period=0.0,
+        actions=[IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(setup_launch),
+            launch_arguments={
+                'use_sim_time': 'true'
+            }.items()
+        )]
+    ))
+    ld.add_action(TimerAction(
+        period=15.0,
         actions=[OpaqueFunction(function=launch_cbf_launch)]
     ))
 
     ld.add_action(TimerAction(
-        period=90.0,
-        actions=[OpaqueFunction(function=launch_goal_setter_launch)]
+        period=20.0,
+        actions=[planner_initializer]
     ))
 
     ld.add_action(TimerAction(
-        period=95.0,
-        actions=[planner_initializer]
+        period=25.0,
+        actions=[OpaqueFunction(function=launch_goal_setter_launch)]
     ))
     
 
