@@ -35,9 +35,9 @@ ADD colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SM
 WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa
 RUN pip3 install -r requirements.txt
 RUN pip3 install .
-WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa/bitwuzla
-RUN pip3 install .
-RUN echo "export PYTHONPATH=\$PYTHONPATH:$(pwd)/build/src/api/python" >> ~/.bashrc
+# WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa/bitwuzla
+# RUN pip3 install .
+# RUN echo "export PYTHONPATH=\$PYTHONPATH:$(pwd)/build/src/api/python" >> ~/.bashrc
 
 WORKDIR /home/colcon_ws
 #RUN add-apt-repository ppa:deadsnakes/ppa
