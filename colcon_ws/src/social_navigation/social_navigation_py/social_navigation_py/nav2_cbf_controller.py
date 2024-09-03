@@ -265,15 +265,15 @@ class RobotController(Node):
         if (msg.current_waypoint.pose != msg.next_waypoint.pose):
             self.goal_init = False
             self.path_active = False
-        # print(f"{self.name} received new goals: {msg}")
+        self.get_logger().info(f"{self.name} received new goals: {msg.current_waypoint.pose}")
 
     def status_callback(self, msg):
         self.active = bool(msg.data)
         self.robots_active[self.name] = bool(msg.data)
-        if msg.data:
-            self.get_logger().info(f'{self.name} is active')
-        else:
-            self.get_logger().info(f'{self.name} is not active')
+        # if msg.data:
+        #     self.get_logger().info(f'{self.name} is active')
+        # else:
+        #     self.get_logger().info(f'{self.name} is not active')
 
     def remote_control_callback(self, msg):
         self.robot_command_pub.publish(msg)
@@ -309,6 +309,7 @@ class RobotController(Node):
             control = Twist()
             control.linear.x = 0.0
             control.angular.z = 0.0
+            # self.get_logger().info(f"{self.name}'s path is inactive")
             self.robot_command_pub.publish(control)
         if not self.goal_init and self.new_goal_poses is not None and self.name == self.robot_cluster[0]:
             # print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
@@ -333,8 +334,9 @@ class RobotController(Node):
                     # self.navigator.waitUntilNav2Active()
                     success = False
                     tries = 0
-                    while not success and tries < 100:
+                    while not success and tries < 10:
                         self.path_active = False
+                        self.get_logger().info(f"{self.name} trying for the {tries} time")
                         try:
                             self.navigator.setInitialPose(current_pose)
                             path = self.navigator.getPath(current_pose, self.goal_pose) # replace with naman's planner
@@ -355,20 +357,26 @@ class RobotController(Node):
                             # self.nav2_path_publisher.publish(self.path)
                             success = True
                             self.initial_goal = False
+                            print(f"Updated {self.name}'s path")
                             return
                         except Exception as e:
-                            # print(f"Trying to find path again")
+                            # print(f"{self.name} trying to find path again")
+                            self.get_logger().info(f"{self.name} failing to plan due to {e}")
                             success = False
                             self.path_active = False
+                            self.initial_goal = True
                         tries += 1
-                    if tries >= 100:
+                    if tries >= 10 and not success:
                         self.get_logger().info(f"{self.name} tried to make initial plan too many times")
                         initial_fail = True
                         self.path_active = False
+                        self.initial_goal = True
+                        success = False
 
                 success = False
                 tries = 0
-                while not self.initial_goal and not success and not initial_fail and tries < 100:
+                while not self.initial_goal and not success and not initial_fail and tries < 10:
+                    self.get_logger().info(f"{self.name} trying for the {tries} time")
                     self.path_active = False
                     next_goal = self.new_goal_poses.next_waypoint
                     # self.goal = np.array([ goal.pose.position.x, goal.pose.position.y ]).reshape(-1,1)
@@ -401,25 +409,32 @@ class RobotController(Node):
                         goal_pose_close_x = abs(path.poses[-1].pose.position.x - next_goal.pose.position.x) < 0.05
                         goal_pose_close_y = abs(path.poses[-1].pose.position.y - next_goal.pose.position.y) < 0.05
                         assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
-                        # print(f"Updated {self.name}'s path")
                         # if close_x and close_y:
-                        self.path.poses = self.path2.poses + path.poses
+                        # self.path.poses = self.path2.poses + path.poses
+                        self.get_logger().info(f"{self.name} found valid path")
+                        self.path.poses = self.path.poses + path.poses
                         self.path2 = path
                         self.path_end = path.poses[-1]
                         # self.nav2_path_publisher.publish(self.path)
                         self.path_active = True
                         self.goal_init = True
                         success = True
-                        self.new_goal_poses = None
                         self.initial_goal = False
+                        print(f"Updated {self.name}'s path")
                         return
                     except Exception as e:
+                        self.get_logger().info(f"{self.name} failing to plan due to {e}")
                         # print(f"Trying to find path again")
                         success = False
                         self.path_active = False
+                        self.goal_init = False
+                        # self.initial_goal = True
                     tries += 1 
-                if tries >= 100:
-                    self.get_logger().info(f"{self.name} tried to get secondary plan too many times")
+                if tries >= 10 and not success:
+                    self.get_logger().info(f"{self.name} tried to get secondary plan too many times.")
+                    self.goal_init = False
+                elif success:
+                    self.new_goal_poses = None
             else:
                 self.get_logger().info("Invalid world information")
     
@@ -567,7 +582,7 @@ class RobotController(Node):
         #         self.get_logger().info("Invalid world information")
             
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
-        if (self.path_active and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
+        if (self.path_active and len(self.path.poses) > 0 and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
@@ -597,7 +612,7 @@ class RobotController(Node):
             dt = (t_new - self.time_prev)/10**9
             control = Twist()
             if not self.finalized_cluster:
-                # self.get_logger().info(f"{self.name}'s cluster has not been finalized")
+                self.get_logger().info(f"{self.name}'s cluster has not been finalized")
                 control.linear.x = 0.0
                 control.angular.z = 0.0
                 self.robot_command_pub.publish(control)
@@ -623,7 +638,7 @@ class RobotController(Node):
                     if not self.cluster_controller_active or self.cluster_controller is None:
                         # TODO: Change obstacles to include obstacles for all robots
                         # self.cluster_controller = cbf_controller(complete_state, self.num_dynamic_obstacles, self.num_obstacles * num_other_robots, 1.0, 2.0)
-                        print("Initializing cluster controller")
+                        # print("Initializing cluster controller")
                         self.cluster_controller = multi_cbf_controller(complete_state, self.num_dynamic_obstacles*(num_other_robots+1), self.num_obstacles, 1.0, 2.0)
                         self.cluster_controller_active = True
                         # speed, omega, h_dyn_obs_min, h_obs_min = 0.0, 0.0, 0, 0
@@ -635,7 +650,7 @@ class RobotController(Node):
                         speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, other_obstacles, dt , slow = not self.active)
                         # self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
                     for i, robot in enumerate(other_robots):
-                        print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")
+                        # print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")
                         control = Twist()
                         control.linear.x = speed[i+1][0]
                         control.angular.z = omega[i+1][0]
@@ -667,8 +682,14 @@ class RobotController(Node):
                 control.linear.x = speed[0][0]
                 control.angular.z = omega[0][0]
                 self.robot_command_pub.publish(control)
+            # else:
+            #     self.get_logger().info(f"{self.name} not the leader")
             self.time_prev = t_new
         else:
+            # if not self.path_active:
+            #     self.get_logger().info(f"Unable to control {self.name} because path is inactive")
+            # elif not (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
+            #     self.get_logger().info(f"Unable to control {self.name} because state is invalid")
             control = Twist()
             control.linear.x = 0.0
             control.angular.z = 0.0
