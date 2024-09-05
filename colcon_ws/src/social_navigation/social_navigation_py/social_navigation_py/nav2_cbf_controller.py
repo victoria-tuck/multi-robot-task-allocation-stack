@@ -102,6 +102,7 @@ class RobotController(Node):
         self.cluster_sub = { robot : self.create_subscription(RobotCluster, f'{robot}/cluster', self.make_cluster_callback(i, robot), 10) for i, robot in enumerate(self.other_robots)}
         self.activity_sub = self.create_subscription(Bool, f'{self.prefix}/active', self.status_callback, 10)
         self.remote_control = self.create_subscription(Twist, f'{self.prefix}/remote_control', self.remote_control_callback, 1)
+        self.path_return_sub = self.create_subscription(Path, f'{self.prefix}/path_return', self.path_callback, 1)
 
         self.new_goal_poses = None
         self.human_states_valid = False
@@ -130,7 +131,7 @@ class RobotController(Node):
 
         # Publishers
         self.robot_command_pub = self.create_publisher( Twist, self.prefix + '/cmd_vel', 10 )
-        self.path_request_pub = self.create_publisher(PathRequest, self.prefix + '/path_request', 1)
+        self.path_request_pub = self.create_publisher(PathRequest, '/path_request', 1)
         self.nav2_path_publisher = self.create_publisher( Path, self.prefix + '/plan', 1)
         self.robot_local_goal_pub = self.create_publisher( PoseStamped, self.prefix + '/local_goal', 1)
         self.robot_location_pub = self.create_publisher( PoseStamped, self.prefix + '/robot_location', 1)
@@ -281,6 +282,34 @@ class RobotController(Node):
         self.initial_goal = True
         self.goal_init = False
 
+    def path_callback(self, msg):
+        # Todo: Relocate to here everything from the run_planner logic that handles the newly received plan
+        if False:
+            path = msg.path
+
+            # assert path is not None
+            # initial_pose_close_x = abs(path.poses[0].pose.position.x - current_pose.pose.position.x) < 0.05
+            # initial_pose_close_y = abs(path.poses[0].pose.position.y - current_pose.pose.position.y) < 0.05
+            # goal_pose_close_x = abs(path.poses[-1].pose.position.x - goal_pose.pose.position.x) < 0.05
+            # goal_pose_close_y = abs(path.poses[-1].pose.position.y - goal_pose.pose.position.y) < 0.05
+            # assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
+            
+            if self.initial_goal and self.new_goal_poses is not None:
+                self.path = path
+                self.path2 = path
+                self.path_end = path.poses[-1]
+                # self.nav2_path_publisher.publish(self.path)
+                self.initial_goal = False
+            elif not self.initial_goal:
+                self.path.poses = self.path.poses + path.poses
+                self.path2 = path
+                self.path_end = path.poses[-1]
+                # self.nav2_path_publisher.publish(self.path)
+                self.path_active = True
+                self.goal_init = True
+                self.initial_goal = False
+                self.new_goal_poses = None
+
     def run_planner(self):
     # def run_controller(self):
         if self.print_count > 100:
@@ -340,6 +369,7 @@ class RobotController(Node):
                         self.path_active = False
                         self.get_logger().info(f"{self.name} trying for the {tries} time")
                         request_msg = PathRequest()
+                        request_msg.id = self.name
                         request_msg.current_pose = current_pose
                         request_msg.goal_pose = self.goal_pose
                         self.path_request_pub.publish(request_msg)
