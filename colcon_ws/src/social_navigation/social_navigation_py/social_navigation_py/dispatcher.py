@@ -60,8 +60,8 @@ class Dispatcher(Node):
 
     def initialize_solver(self):
         # MRTASolver arguments
-        # file = 'simulation/testcase_4agents_duplicate_tasks.json'
-        file = 'simulation/testcase_6agents.json'
+        file = 'simulation/testcase_4agents_duplicate_tasks.json'
+        # file = 'simulation/testcase_6agents.json'
         solver = 'bitwuzla'
         theory = 'QF_UFBV'
         capacity = 2

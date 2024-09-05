@@ -3,7 +3,7 @@ import networkx as nx
 import rclpy
 from rclpy.node import Node
 
-from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster, PoseStampedPair
+from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster, PoseStampedPair, PathRequest
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
@@ -130,6 +130,7 @@ class RobotController(Node):
 
         # Publishers
         self.robot_command_pub = self.create_publisher( Twist, self.prefix + '/cmd_vel', 10 )
+        self.path_request_pub = self.create_publisher(PathRequest, self.prefix + '/path_request', 1)
         self.nav2_path_publisher = self.create_publisher( Path, self.prefix + '/plan', 1)
         self.robot_local_goal_pub = self.create_publisher( PoseStamped, self.prefix + '/local_goal', 1)
         self.robot_location_pub = self.create_publisher( PoseStamped, self.prefix + '/robot_location', 1)
@@ -281,6 +282,7 @@ class RobotController(Node):
         self.goal_init = False
 
     def run_planner(self):
+    # def run_controller(self):
         if self.print_count > 100:
             print(f"Planner init: {self.planner_init}")  
         if not self.planner_init:
@@ -337,6 +339,10 @@ class RobotController(Node):
                     while not success and tries < 10:
                         self.path_active = False
                         self.get_logger().info(f"{self.name} trying for the {tries} time")
+                        request_msg = PathRequest()
+                        request_msg.current_pose = current_pose
+                        request_msg.goal_pose = self.goal_pose
+                        self.path_request_pub.publish(request_msg)
                         try:
                             self.navigator.setInitialPose(current_pose)
                             path = self.navigator.getPath(current_pose, self.goal_pose) # replace with naman's planner
@@ -584,6 +590,7 @@ class RobotController(Node):
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
         if (self.path_active and len(self.path.poses) > 0 and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
+            self.get_logger().info(f"Controlling {self.name}")
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
             while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):#0.8
@@ -682,6 +689,7 @@ class RobotController(Node):
                 control.linear.x = speed[0][0]
                 control.angular.z = omega[0][0]
                 self.robot_command_pub.publish(control)
+                self.get_logger().info(f"{self.name} publishing control of {control.linear.x}, {control.angular.z}")
             # else:
             #     self.get_logger().info(f"{self.name} not the leader")
             self.time_prev = t_new
@@ -757,7 +765,7 @@ class RobotController(Node):
         msg.cluster = cluster
         msg.neighbors = neighbors
         self.robot_cluster_pub.publish(msg)
-        # self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
+        self.get_logger().info(f"{self.name}'s cluster: {self.robot_cluster[1]} with leader {leader}.")
     
 
 def main(args=None):

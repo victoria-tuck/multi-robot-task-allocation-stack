@@ -6,7 +6,9 @@ import polytope as pt
 import matplotlib.pyplot as plt
 
 from social_navigation_py.utils.multi_dynamic_unicycle import multi_dynamic_unicycle
+import jax
 from jax import lax
+jax.config.update('jax_platform_name', 'cpu')
 from social_navigation_py.utils.polytope_utils import *
 from matplotlib.animation import FFMpegWriter
 import jax.numpy as jnp
