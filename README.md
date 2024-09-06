@@ -53,10 +53,9 @@ nav2_cbf_controller.py:
 get_human_states.cpp : 
 - line this->declare_parameter<int>("num_humans",25)
 ```
-Choose nominal controller gains and CBF parameters in 
-```
-cbf_obstacle_controller.py
-```
+Choose nominal controller gains and CBF parameters in `cbf_obstacle_controller.py`.
+
+To change the number of controllers that are started, change the case config file in `multi_cbf.launch.py` to your config file or change the name of the file to `case_config.yaml`
 
 ## Running the Code
 Then run the code in the following sequence. To aid in implementation, several aliases are defined in the `~/.bashrc` file upon docker build. Wait for each command to complete before running the next.
