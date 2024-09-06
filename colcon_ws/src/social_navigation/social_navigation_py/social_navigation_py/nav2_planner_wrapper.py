@@ -36,7 +36,9 @@ class Planner_Wrapper(Node):
         id, current_pose, goal_pose = msg.id, msg.current_pose, msg.goal_pose
 
         success = False
+        count = 0
         while not success:
+            # self.get_logger().info(f"Finding {id}'s path for the {count} time")
             try:
                 self.navigator.setInitialPose(current_pose)
                 path = self.navigator.getPath(current_pose, goal_pose)
@@ -50,6 +52,8 @@ class Planner_Wrapper(Node):
                 success = True
             except:
                 success = False
+            count += 1
+        # self.get_logger().info(f"Found {id}'s path after {count - 1} tries")
 
         self.paths[id] = path
 
@@ -60,7 +64,7 @@ class Planner_Wrapper(Node):
         for key, path in self.paths.items():
             if path is not None:
                 self.path_pub[key].publish(path)
-                self.get_logger().info(f"Publishing {key}'s path: {path}")
+                # self.get_logger().info(f"Publishing {key}'s path: {path}")
         
 
 
