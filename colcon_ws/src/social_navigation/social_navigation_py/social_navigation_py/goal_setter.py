@@ -54,7 +54,7 @@ class GoalSetter(Node):
 
     def goal_sequence_callback(self, msg):
         self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
-        print(f"{self.name} updated its goals: {self.locs}")
+        # print(f"{self.name} updated its goals: {self.locs}")
 
     def publish_goal(self):
         if self.loc_idx < len(self.locs):
@@ -100,7 +100,7 @@ class GoalSetter(Node):
                 self.publisher_.publish(msg)
                 self.goal_reached = False
                 self.active = True
-                self.get_logger().info(f"Using non-build goal_setter. New goal sent: {msg}")
+                self.get_logger().info(f"Using non-build goal_setter. New goal sent: ({msg.current_waypoint.pose.position.x}, {msg.current_waypoint.pose.position.y}) then ({msg.next_waypoint.pose.position.x}, {msg.next_waypoint.pose.position.y})")
         elif self.current_message_count < 10 and self.current_message is not None:
             self.publisher_.publish(self.current_message)
             self.current_message_count += 1

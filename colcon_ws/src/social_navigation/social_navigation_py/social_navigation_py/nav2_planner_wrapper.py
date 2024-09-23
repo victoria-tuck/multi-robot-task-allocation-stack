@@ -1,3 +1,4 @@
+import time
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
@@ -37,10 +38,11 @@ class Planner_Wrapper(Node):
 
         success = False
         count = 0
-        while not success:
+        while not success and count < 100:
             # self.get_logger().info(f"Finding {id}'s path for the {count} time")
             try:
                 self.navigator.setInitialPose(current_pose)
+                time.sleep(0.1)
                 path = self.navigator.getPath(current_pose, goal_pose)
 
                 assert path is not None
@@ -51,11 +53,13 @@ class Planner_Wrapper(Node):
                 assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
                 success = True
             except:
+
                 success = False
             count += 1
         # self.get_logger().info(f"Found {id}'s path after {count - 1} tries")
 
-        self.paths[id] = path
+        if success:
+            self.paths[id] = path
 
     def publish_paths(self):
         """

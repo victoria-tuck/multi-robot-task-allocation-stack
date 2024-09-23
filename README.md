@@ -65,6 +65,10 @@ Then run the code in the following sequence. To aid in implementation, several a
 ```
 rgazebo input_file:=<path_to_setup_file>
 ```
+Example:
+```
+rgazebo input_file:=/home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/robot_setup_6.json
+```
 Note: After this step, the Gazebo environment should include the robots as shown below (robots are in the center of each blue circle). Upon start-up, the robot installation will occasionally fail. If this occurs, rerun the above command.
 
 2. To launch the ROS2 navigation stack (to use its planners)
@@ -76,11 +80,19 @@ rnav2
 ```
 ros2 launch aws_robomaker_hospital_world main.launch.py input_file:=<path_to_setup_file>
 ```
-Note: After this step, the rviz environment should look like the photo below. If it does not, rerun this command.
+Example:
+```
+ros2 launch aws_robomaker_hospital_world main.launch.py input_file:=/home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/robot_setup_6.json
+```
+Note: After this step, the rviz environment should look like the photo below (ToDo: Include photo). If it does not, rerun this command.
 
 4. To launch navigation stack wrapper
 ```
 rcplan --ros-args -p "robots:=<list_of_robot_names>"
+```
+Example:
+```
+rcplan --ros-args -p "robots:=["robot1", "robot2", "robot3", "robot4", "robot5", "robot6"]"
 ```
 
 5. To start the social force model
@@ -91,6 +103,10 @@ rsfm
 6. **This will start moving the robots.** For task allocation and high-level path planning for a set of agents:
 ```
 rcdis -p input_file:=<setup_file>
+```
+Example:
+```
+rcdis -p input_file:=/home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/robot_setup_6.json
 ```
 
 ## Debugging

@@ -14,7 +14,7 @@ def generate_launch_description():
     
     social_navigation_dir = get_package_share_directory('social_navigation_py')    
     social_navigation_config_dir = os.path.join( get_package_share_directory('social_navigation'), 'configs')
-    config_file = os.path.join(social_navigation_config_dir, 'case_config.yaml')
+    config_file = os.path.join(social_navigation_config_dir, 'case_config_6.yaml')
     print(f"Config file: {config_file}")
     
     use_sim_time = LaunchConfiguration('use_sim_time')

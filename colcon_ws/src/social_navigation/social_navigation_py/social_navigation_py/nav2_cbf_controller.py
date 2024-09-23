@@ -117,6 +117,7 @@ class RobotController(Node):
         self.planner_init = False
         self.active = False
         self.path_end = None
+        self.remote_controlled = False
         # self.replan = False
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
@@ -267,7 +268,7 @@ class RobotController(Node):
         if (msg.current_waypoint.pose != msg.next_waypoint.pose):
             self.goal_init = False
             self.path_active = False
-        self.get_logger().info(f"{self.name} received new goals: {msg.current_waypoint.pose}")
+        self.get_logger().info(f"{self.name} received new goals: ({msg.current_waypoint.pose.position.x}, {msg.current_waypoint.pose.position.y})")
 
     def status_callback(self, msg):
         self.active = bool(msg.data)
@@ -279,6 +280,7 @@ class RobotController(Node):
 
     def remote_control_callback(self, msg):
         self.robot_command_pub.publish(msg)
+        self.remote_controlled = True
         self.initial_goal = True
         self.goal_init = False
 
@@ -295,16 +297,19 @@ class RobotController(Node):
         # goal_pose_close_x = abs(path.poses[-1].pose.position.x - goal_pose.pose.position.x) < 0.05
         # goal_pose_close_y = abs(path.poses[-1].pose.position.y - goal_pose.pose.position.y) < 0.05
         # assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
-        if not self.goal_init and self.new_goal_poses is not None:
+        if not self.goal_init and self.new_goal_poses is not None and not self.remote_controlled:
             new_path = False
+            new_start_pos = path.poses[0].pose.position
+            close_to_pos_x = abs(self.robot_state[0,0] - new_start_pos.x) < 0.05
+            close_to_pos_y = abs(self.robot_state[1,0] - new_start_pos.y) < 0.05
+            starting_path = close_to_pos_x and close_to_pos_y
             if len(self.path.poses) > 0:
                 current_end_pos = self.path.poses[-1].pose.position
-                new_start_pos = path.poses[0].pose.position
                 close_x = abs(current_end_pos.x - new_start_pos.x) < 0.05
                 close_y = abs(current_end_pos.y - new_start_pos.y) < 0.05
                 new_path = close_x and close_y
-            if self.initial_goal:
-                self.get_logger().info(f"Setting {self.name}'s initial path.")
+            if self.initial_goal and starting_path:
+                # self.get_logger().info(f"Setting {self.name}'s initial path to {path}.")
                 self.path = path
                 self.path2 = path
                 self.path_end = path.poses[-1]
@@ -312,7 +317,7 @@ class RobotController(Node):
                 self.initial_goal = False
             elif new_path:
             # elif self.second_goal:
-                self.get_logger().info(f"Extending {self.name}'s path.")
+                # self.get_logger().info(f"Extending {self.name}'s path to {path}.")
                 self.path.poses = self.path.poses + path.poses
                 self.path2 = path
                 self.path_end = path.poses[-1]
@@ -320,7 +325,9 @@ class RobotController(Node):
                 self.path_active = True
                 self.goal_init = True
                 self.initial_goal = False
-                self.new_goal_poses = None
+                # self.new_goal_poses = None
+                if len(self.path.poses) < 2:
+                    self.get_logger().info(f"SHORT PATH. POSSIBLE ERROR. {self.name}'s path is {path}.")
 
     def run_planner(self):
     # def run_controller(self):
@@ -328,8 +335,11 @@ class RobotController(Node):
             print(f"Planner init: {self.planner_init}")  
         if not self.planner_init:
             return
+        
+        if self.goal_init and len(self.path.poses) < 2:
+            self.get_logger().info(f"SHORT PATH. POSSIBLE ERROR. {self.name}'s path is {self.path.poses}.")
 
-        # # Get current position and publish
+        # # # Get current position and publish
         current_pose = PoseStamped()
         current_pose.header.frame_id = 'map'
         current_pose.header.stamp = self.navigator.get_clock().now().to_msg()
@@ -337,24 +347,25 @@ class RobotController(Node):
         current_pose.pose.position.y = self.robot_state[1,0]
         current_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
         current_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
-        self.robot_location_pub.publish(current_pose)
+        # self.robot_location_pub.publish(current_pose)
 
-        # if self.print_count > 10:
-        #     self.navigator.setInitialPose(current_pose)
+        # # if self.print_count > 10:
+        # #     self.navigator.setInitialPose(current_pose)
 
 
-        # set goal for first time
-        # if self.print_count > 100:
-        # print(f"goal_init: {self.goal_init}")
-        # print(f"new_goal_pose: {self.new_goal_poses}")
-        # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
-        if not self.path_active:
-            control = Twist()
-            control.linear.x = 0.0
-            control.angular.z = 0.0
-            # self.get_logger().info(f"{self.name}'s path is inactive")
-            self.robot_command_pub.publish(control)
-        if not self.goal_init and self.new_goal_poses is not None and self.name == self.robot_cluster[0]:
+        # # set goal for first time
+        # # if self.print_count > 100:
+        # # print(f"goal_init: {self.goal_init}")
+        # # print(f"new_goal_pose: {self.new_goal_poses}")
+        # # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
+        # if not self.path_active:
+        #     control = Twist()
+        #     control.linear.x = 0.0
+        #     control.angular.z = 0.0
+        #     # self.get_logger().info(f"{self.name}'s path is inactive")
+        #     self.robot_command_pub.publish(control)
+        if not self.goal_init and self.new_goal_poses is not None:
+        # if not self.goal_init and self.new_goal_poses is not None and self.name == self.robot_cluster[0]:
             # print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
             if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
                 # if self.print_count > 100:
@@ -379,7 +390,7 @@ class RobotController(Node):
                     tries = 0
                     # while not success and tries < 10:
                     self.path_active = False
-                    self.get_logger().info(f"{self.name} trying for the {tries} time")
+                    # self.get_logger().info(f"{self.name} trying for the {tries} time")
                     request_msg = PathRequest()
                     request_msg.id = self.name
                     request_msg.current_pose = current_pose
@@ -505,15 +516,15 @@ class RobotController(Node):
         # if not self.planner_init:
         #     return
 
-        # # # Get current position and publish
-        # current_pose = PoseStamped()
-        # current_pose.header.frame_id = 'map'
-        # current_pose.header.stamp = self.navigator.get_clock().now().to_msg()
-        # current_pose.pose.position.x = self.robot_state[0,0]
-        # current_pose.pose.position.y = self.robot_state[1,0]
-        # current_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
-        # current_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
-        # self.robot_location_pub.publish(current_pose)
+        # # Get current position and publish
+        current_pose = PoseStamped()
+        current_pose.header.frame_id = 'map'
+        current_pose.header.stamp = self.navigator.get_clock().now().to_msg()
+        current_pose.pose.position.x = self.robot_state[0,0]
+        current_pose.pose.position.y = self.robot_state[1,0]
+        current_pose.pose.orientation.w = np.cos( self.robot_state[2,0]/2 )
+        current_pose.pose.orientation.z = np.sin( self.robot_state[2,0]/2 )
+        self.robot_location_pub.publish(current_pose)
 
         # # if self.print_count > 10:
         # #     self.navigator.setInitialPose(current_pose)
@@ -524,11 +535,11 @@ class RobotController(Node):
         # # print(f"goal_init: {self.goal_init}")
         # # print(f"new_goal_pose: {self.new_goal_poses}")
         # # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
-        # if not self.path_active:
-        #     control = Twist()
-        #     control.linear.x = 0.0
-        #     control.angular.z = 0.0
-        #     self.robot_command_pub.publish(control)
+        if not self.path_active:
+            control = Twist()
+            control.linear.x = 0.0
+            control.angular.z = 0.0
+            self.robot_command_pub.publish(control)
         # if not self.goal_init and self.new_goal_poses is not None and self.name == self.robot_cluster[0]:
         #     # print(self.robot_state_valid, self.human_states_valid, self.obstacles_valid)
         #     if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
@@ -645,7 +656,7 @@ class RobotController(Node):
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
         if (self.path_active and len(self.path.poses) > 0 and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
-            self.get_logger().info(f"Controlling {self.name}")
+            # self.get_logger().info(f"Controlling {self.name}")
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
             while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):#0.8
@@ -654,6 +665,7 @@ class RobotController(Node):
                     assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
                     goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
                 else:
+                    self.get_logger().info(f"End of {self.name}'s path.")
                     break
 
             # Publish path for visualization (no other use)
@@ -674,7 +686,7 @@ class RobotController(Node):
             dt = (t_new - self.time_prev)/10**9
             control = Twist()
             if not self.finalized_cluster:
-                self.get_logger().info(f"{self.name}'s cluster has not been finalized")
+                # self.get_logger().info(f"{self.name}'s cluster has not been finalized")
                 control.linear.x = 0.0
                 control.angular.z = 0.0
                 self.robot_command_pub.publish(control)
@@ -722,7 +734,10 @@ class RobotController(Node):
                 else:
                     other_robot_states = np.empty((0,1))
                     if self.controller_id == 0:
+                        start_time = time.time()
                         speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt , slow = not self.active)
+                        if time.time() - start_time > 0.1:
+                            self.get_logger().info(f"Time to calculate {self.name}'s policy was large: {time.time() - start_time}")
                     elif self.controller_id == 1:
                         speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                     speed = [[speed]]
@@ -744,7 +759,7 @@ class RobotController(Node):
                 control.linear.x = speed[0][0]
                 control.angular.z = omega[0][0]
                 self.robot_command_pub.publish(control)
-                self.get_logger().info(f"{self.name} publishing control of {control.linear.x}, {control.angular.z}")
+                # self.get_logger().info(f"{self.name} publishing control of {control.linear.x}, {control.angular.z}")
             # else:
             #     self.get_logger().info(f"{self.name} not the leader")
             self.time_prev = t_new
@@ -804,6 +819,7 @@ class RobotController(Node):
             leader = self.name
         if leader != self.robot_cluster[0] or sorted(cluster) != sorted(self.robot_cluster[1]):
             self.cluster_controller_active = False
+        self.remote_controlled = leader != self.name
         self.robot_cluster = (leader, cluster, neighbors)
 
         current_pose = PoseStamped()
