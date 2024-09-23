@@ -6,7 +6,7 @@ import rclpy
 from rclpy.node import Node
 
 from geometry_msgs.msg import Pose, PoseArray
-from social_navigation_msgs.msg import Feedback
+from social_navigation_msgs.msg import Feedback, Plan
 
 from MRTASolver import MRTASolver
 # ToDo: Put load_config in run_realistic_setting instead of create_randomized_inputs
@@ -44,15 +44,14 @@ class Dispatcher(Node):
         # Initialize variables
         self.timer_period = 1.0
         self.task_set_index = 0
-        self.positions_lists = []
+        # self.positions_lists = []
         self.feedback = [[] for i in range(len(robot_list))]
         self.has_new_sequences = False
-        with open('roadmap.pkl', 'rb') as file:
-            self.roadmap = pickle.load(file)
 
         # Initialize subscribers, publishers, and callbacks
         self.feedback_subscribers = { robot: self.create_subscription( Feedback,  f'/{robot}/feedback', self.make_feedback_callback(i), 1) for i, robot in enumerate(robot_list) }
-        self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
+        self.plan_publishers = { robot: self.create_publisher(Plan, f'/{robot}/plan', 1) for robot in robot_list }
+        # self.publishers_ = { robot: self.create_publisher(PoseArray, f'/{robot}/goal_sequence', 1) for robot in robot_list }
         self.update_plan_timer = self.create_timer(self.timer_period, self.update_plan_callback)
         self.publish_timer = self.create_timer(self.timer_period, self.publish_goal_sequence_callback)
 
@@ -90,25 +89,6 @@ class Dispatcher(Node):
         self.plans = []
         self.has_new_sequences = True
 
-    def coord(self, rid):
-        coordinate_map = {0: (0, 2.2),
-                          1: (7.9, -7.5),
-                          2: (7.85, -21.8),
-                          3: (4.25, -27.2),
-                          4: (-7.75, -21.7),
-                          5: (-7.75, -7.5)}
-        old_coordinate_map = {0: (0, 2.2), 
-                          1: (4.25, -27.2), # updated to (4.5, -27.2), # was (4.25, -27.5)
-                          2: (-7.75, -21.7), 
-                          3: (7.85, -21.8), 
-                          4: (7.9, -7.5), 
-                          5: (-7.75, -7.5)}
-        return coordinate_map.get(rid, None)
-    
-    def road_coord(self, prev_rid, next_rid):
-        prev_rid_map = self.roadmap.get(prev_rid)
-        return prev_rid_map.get(next_rid)
-
     def room_id(self, task_id, agents, tasks_stream):
         task_counts = [len(tasks) for tasks, _ in tasks_stream]
         num_agents = len(agents)
@@ -129,37 +109,23 @@ class Dispatcher(Node):
             prev_ids += curr_count * 2
         assert False, f"Task id {task_id} does not exist"
 
-    def is_agent_id(self, id, num_agents):
-        return id >= 0 and id < num_agents
-
     def get_plan(self, id_sequence, agents, tasks_stream):
+        def is_agent_id(id, num_agents):
+            return id >= 0 and id < num_agents
+    
         num_agents = len(agents)
         plan = []
         started_plan = False
         for i, task_id in enumerate(id_sequence):
             # print(task_id)
-            if self.is_agent_id(task_id, num_agents) and started_plan:
+            if is_agent_id(task_id, num_agents) and started_plan:
                 return plan
             else:
                 started_plan = True
             plan.append(self.room_id(task_id, agents, tasks_stream))
         return plan
 
-    def create_pose_from_point(self, point) -> Pose:
-        msg = Pose()
-        # print(point)
-        msg.position.x = float(point[0])
-        msg.position.y = float(point[1])
-        return msg
-
     def update_plan_callback(self):
-        def plan_to_positions(plan):
-            positions_list = []
-            for prev_id, next_id in zip(plan[:-1], plan[1:]):
-                positions = self.road_coord(prev_id, next_id)
-                positions_list += positions
-            return positions_list
-
         current_time_s = self.clock.now().nanoseconds * 1e-9
         if self.task_set_index < len(self.tasks_stream):
             next_tasks, next_batch_arrives = self.tasks_stream[self.task_set_index]
@@ -169,36 +135,42 @@ class Dispatcher(Node):
                 self.get_logger().info(f"New tasks arrived at {next_batch_arrives}s")
                 next_plan = self.solver.allocate_next_task_set(self.feedback)
                 self.plans.append(next_plan)
-                positions_lists = []
-                for agt in next_plan['agt']:
-                    # print(f"Agent's ids: {agt['id']}")
-                    room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
-                    positions_lists.append(plan_to_positions(room_ids))
-                    # pose_lists.append([self.coord(rid) for rid in room_ids])
-                    # Test case that some times caused issues:
-                    # if self.task_set_index == 0:
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5),(-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                    # else:
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
-                        # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
-                self.positions_lists = positions_lists
+                # positions_lists = []
+                self.plans_list = [self.get_plan(agt['id'], self.agents, self.tasks_stream) for agt in next_plan['agt']]
+                # for agt in next_plan['agt']:
+                #     # print(f"Agent's ids: {agt['id']}")
+                #     room_ids = self.get_plan(agt['id'], self.agents, self.tasks_stream)
+                #     plans_list.append(room_ids)
+                #     # positions_lists.append(plan_to_positions(room_ids))
+                #     # pose_lists.append([self.coord(rid) for rid in room_ids])
+                #     # Test case that some times caused issues:
+                #     # if self.task_set_index == 0:
+                #         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5)]]
+                #         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5),(-7.75, -7.5)]]
+                #         # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                #         # pose_lists = [[(0, 2.2), (-7.75, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                #     # else:
+                #         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (-7.75, -7.5), (7.85, -21.8), (0, 2.2)], [(4.25, -27.5), (4.25, -27.5), (7.9, -7.5), (7.9, -7.5), (-7.75, -7.5)]]
+                #         # pose_lists = [[(0, 2.2), (7.9, -7.5), (-7.75, -21.7), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (-7.75, -7.5)]]
+                #         # pose_lists = [[(0, 2.2), (-7.75, -21.7), (7.9, -7.5), (-7.75, -7.5), (7.9, -7.5)], [(4.25, -27.5), (4.25, -27.5), (-7.75, -7.5)]]
+                # # self.positions_lists = positions_lists
+                # self.plans
                 self.task_set_index += 1
                 self.has_new_sequences = True
 
     def publish_goal_sequence_callback(self):
         # ToDo: Add intermediate nodes and times in here
-        for (name, publisher), position_list in zip(self.publishers_.items(), self.positions_lists):
-            msg = PoseArray()
-            msg.header.frame_id = "map"
-            msg.header.stamp = self.get_clock().now().to_msg()
-            msg.poses = [self.create_pose_from_point(pos) for pos in position_list][1:]
+        for (name, publisher), plan in zip(self.plan_publishers.items(), self.plans_list):
+            msg = Plan()
+            msg.plan = plan
+            # msg.plan = plan[1:]
+            # msg = PoseArray()
+            # msg.header.frame_id = "map"
+            # msg.header.stamp = self.get_clock().now().to_msg()
+            # msg.poses = [self.create_pose_from_point(pos) for pos in position_list][1:]
             publisher.publish(msg)
             if self.has_new_sequences:
-                self.get_logger().info(f"New goal sequence sent to {name}: {position_list[1:]}")
+                self.get_logger().info(f"New plan sent to {name}: {plan[1:]}")
         self.has_new_sequences = False
 
     def make_feedback_callback(self, index):

@@ -32,6 +32,7 @@ set (msg_files
   "msg/RobotCluster.msg"
   "msg/QueueRequest.msg"
   "msg/QueueMsg.msg"
+  "msg/Plan.msg"
 )
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}

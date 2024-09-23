@@ -4,13 +4,14 @@ from rclpy.clock import Clock
 from rclpy.executors import MultiThreadedExecutor
 from nav2_simple_commander.robot_navigator import BasicNavigator
 
-from geometry_msgs.msg import PoseStamped, PoseArray
-from social_navigation_msgs.msg import Feedback, PoseStampedPair
+from geometry_msgs.msg import PoseStamped, PoseArray, Pose
+from social_navigation_msgs.msg import Feedback, PoseStampedPair, Plan
 from std_msgs.msg import Bool
 
 import json
 import math
 import numpy as np
+import pickle
 import sys
 import argparse
 
@@ -32,7 +33,10 @@ class GoalSetter(Node):
         self.clock = self.get_clock()
         self.actual_arrival_times = []
 
-        self.subscriber = self.create_subscription( PoseArray, prefix + '/goal_sequence', self.goal_sequence_callback, 10 )
+        with open('roadmap.pkl', 'rb') as file:
+            self.roadmap = pickle.load(file)
+
+        self.subscriber = self.create_subscription( Plan, prefix + '/plan', self.goal_sequence_callback, 10 )
 
         self.activity_publisher = self.create_publisher(Bool, f'{prefix}/active', 10)
         self.publisher_ = self.create_publisher(PoseStampedPair, f'{prefix}/goal_location', 1)
@@ -51,9 +55,28 @@ class GoalSetter(Node):
 
         self.active = False
         self.goal_reached = True
+    
+    # def create_pose_from_point(self, point) -> Pose:
+    #     msg = Pose()
+    #     # print(point)
+    #     msg.position.x = float(point[0])
+    #     msg.position.y = float(point[1])
+    #     return msg
 
     def goal_sequence_callback(self, msg):
-        self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
+        def road_coord(prev_rid, next_rid):
+            prev_rid_map = self.roadmap.get(prev_rid)
+            return prev_rid_map.get(next_rid)
+
+        def plan_to_positions(plan):
+            positions_list = []
+            for prev_id, next_id in zip(plan[:-1], plan[1:]):
+                positions = road_coord(prev_id, next_id)
+                positions_list += positions
+            return positions_list
+        
+        self.locs = plan_to_positions(msg.plan)[1:]
+        # self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
         # print(f"{self.name} updated its goals: {self.locs}")
 
     def publish_goal(self):
