@@ -3,7 +3,7 @@ import networkx as nx
 import rclpy
 from rclpy.node import Node
 
-from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster, PoseStampedPair, PathRequest
+from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster, PoseStampedPair, PathRequest, QueueRequest
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
@@ -73,6 +73,7 @@ class RobotController(Node):
         self.print_count = 0
         self.timer_period_s = 0.05
         self.goal = np.array([0,0]).reshape(-1,1)
+        self.leaving_room = int(self.name[-1])
         
         #Controller
         self.control_prev  = np.array([0.0,0.0])
@@ -139,7 +140,8 @@ class RobotController(Node):
         self.robot_new_odom_pub = self.create_publisher(Odometry, f"{self.prefix}/new_odom", 10)
         self.robot_cluster_pub = self.create_publisher(RobotCluster, f"{self.prefix}/cluster", 10)
         self.remote_control_pub = { robot: self.create_publisher(Twist, f'/{robot}/remote_control', 10) for robot in self.other_robots }
-        
+        self.queue_request_pub = self.create_publisher(QueueRequest, "/queue_request", 1)
+
         # Frame broadcaster
         self.robot_tf_broadcaster = TransformBroadcaster(self)
 
@@ -152,6 +154,7 @@ class RobotController(Node):
         self.get_logger().info(f"Current time: {self.time_prev}")
         self.controller_timer = self.create_timer(self.timer_period_s, self.run_controller)
         self.planner_timer = self.create_timer(self.timer_period_s*10, self.run_planner)
+        self.queue_request_timer = self.create_timer(self.timer_period_s*10, self.run_queue_request)
         self.nearby_robots_timer = self.create_timer(self.timer_period_s, self.nearby_robots)
         self.get_logger().info("User Controller is ONLINE")
 
@@ -510,6 +513,14 @@ class RobotController(Node):
             else:
                 self.get_logger().info("Invalid world information")
     
+    def run_queue_request(self):
+        # If agent is near room and next target is the room, publish queue request
+        if abs(self.robot_state[0,0] - 7.9) < 3.0 and abs(self.robot_state[1,0] + 7.5) < 3.0 and self.leaving_room != 2:
+            queue_request_msg = QueueRequest()
+            queue_request_msg.room_id = 2
+            queue_request_msg.robot_name = self.name
+            self.queue_request_pub.publish(queue_request_msg)
+
     def run_controller(self):
         # if self.print_count > 100:
         #     print(f"Planner init: {self.planner_init}")  

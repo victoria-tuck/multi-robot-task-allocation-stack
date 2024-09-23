@@ -1,0 +1,2 @@
+int8 room_id
+string robot_name

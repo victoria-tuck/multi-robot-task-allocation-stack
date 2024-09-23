@@ -30,6 +30,8 @@ set (msg_files
   "msg/PoseStampedPair.msg"
   "msg/PathRequest.msg"
   "msg/RobotCluster.msg"
+  "msg/QueueRequest.msg"
+  "msg/QueueMsg.msg"
 )
 rosidl_generate_interfaces(${PROJECT_NAME}
   ${msg_files}

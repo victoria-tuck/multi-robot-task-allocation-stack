@@ -1,0 +1,13 @@
+agents:
+  robot1:
+    start: [0, 2.2]
+  robot2:
+    start: [5.5, -11.0]
+  robot3:
+    start: [7.85, -21.8]
+  robot4:
+    start: [4.25, -27.2]
+  robot5:
+    start: [-7.75, -21.7]
+  robot6:
+    start: [-7.75, -7.5]
