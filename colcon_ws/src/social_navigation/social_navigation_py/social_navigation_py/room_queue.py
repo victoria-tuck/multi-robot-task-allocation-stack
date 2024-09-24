@@ -8,13 +8,13 @@ class Room_Queue(Node):
     def __init__(self):
         super().__init__(f'room_queue')
 
-        self.room_id = 2
+        self.room_id = 6
         self.robot_queue = Queue(maxsize=6)
         self.robot_set = set()
 
         self.queue_request_subscriber = self.create_subscription(QueueRequest, '/queue_request', self.request_callback, 1)
         # self.remove_request_subscriber = self.create_subscription(String, '/remove_from_queue', self.queue_remove_callback, 1)
-        self.queue_publisher = self.create_publisher(QueueMsg, f'/room2/queue', 10)
+        self.queue_publisher = self.create_publisher(QueueMsg, f'/room6/queue', 10)
 
         self.timer_period = 0.5
         self.timer = self.create_timer(self.timer_period, self.publish_queue)
