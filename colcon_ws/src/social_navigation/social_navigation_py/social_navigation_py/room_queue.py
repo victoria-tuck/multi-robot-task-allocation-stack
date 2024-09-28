@@ -8,13 +8,13 @@ class Room_Queue(Node):
     def __init__(self):
         super().__init__(f'room_queue')
 
-        self.room_id = 6
+        self.room_id = 1
         self.robot_queue = Queue(maxsize=6)
         self.robot_set = set()
 
         self.queue_request_subscriber = self.create_subscription(QueueRequest, '/queue_request', self.request_callback, 1)
         # self.remove_request_subscriber = self.create_subscription(String, '/remove_from_queue', self.queue_remove_callback, 1)
-        self.queue_publisher = self.create_publisher(QueueMsg, f'/room6/queue', 10)
+        self.queue_publisher = self.create_publisher(QueueMsg, f'/room1/queue', 10)
 
         self.timer_period = 0.5
         self.timer = self.create_timer(self.timer_period, self.publish_queue)
@@ -25,7 +25,9 @@ class Room_Queue(Node):
             robot_id = msg.robot_name  # Assuming the robot ID is in msg.data
         
             # Check if the robot is already in the set
-            if robot_id not in self.robot_set:
+            if len(self.robot_set) == 0:
+                self.allowed_robot = msg.robot_name
+            elif robot_id not in self.robot_set:
                 if not self.robot_queue.full():
                     # Add to both queue and set
                     self.robot_queue.put(robot_id)
@@ -38,6 +40,7 @@ class Room_Queue(Node):
 
     def queue_remove_callback(self, msg):
         self.allowed_robot = self.robot_queue.get()
+        self.robot_set.remove(msg.robot_id)
 
     def publish_queue(self):
         msg = QueueMsg()

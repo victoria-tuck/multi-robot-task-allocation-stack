@@ -547,6 +547,7 @@ class RobotController(Node):
         # # print(f"new_goal_pose: {self.new_goal_poses}")
         # # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
         if not self.path_active:
+            print("Path is inactive")
             control = Twist()
             control.linear.x = 0.0
             control.angular.z = 0.0
@@ -667,7 +668,7 @@ class RobotController(Node):
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
         if (self.path_active and len(self.path.poses) > 0 and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
-            # self.get_logger().info(f"Controlling {self.name}")
+            self.get_logger().info(f"Controlling {self.name}")
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
             while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):#0.8

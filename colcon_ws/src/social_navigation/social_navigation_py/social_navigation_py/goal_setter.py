@@ -5,7 +5,7 @@ from rclpy.executors import MultiThreadedExecutor
 from nav2_simple_commander.robot_navigator import BasicNavigator
 
 from geometry_msgs.msg import PoseStamped, PoseArray, Pose
-from social_navigation_msgs.msg import Feedback, PoseStampedPair, Plan, QueueRequest
+from social_navigation_msgs.msg import Feedback, PoseStampedPair, Plan, QueueRequest, QueueMsg
 from std_msgs.msg import Bool
 
 import json
@@ -34,12 +34,14 @@ class GoalSetter(Node):
         self.clock = self.get_clock()
         self.actual_arrival_times = []
 
-        with open('roadmap.pkl', 'rb') as file:
-            self.roadmap = pickle.load(file)
+        # with open('roadmap.pkl', 'rb') as file:
+        with open('roadmap_and_queues.pkl', 'rb') as file:
+            self.roadmap, self.queues, self.queue_to_room = pickle.load(file)
 
         self.queue_request_timer = self.create_timer(0.5, self.run_queue_check)
 
         self.subscriber = self.create_subscription( Plan, prefix + '/plan', self.goal_sequence_callback, 10 )
+        self.queue_subscribers = {room: self.create_subscription(QueueMsg, f'room{room}/queue', self.make_queue_callback(room), 10 ) for room in range(6)}
 
         self.activity_publisher = self.create_publisher(Bool, f'{prefix}/active', 10)
         self.publisher_ = self.create_publisher(PoseStampedPair, f'{prefix}/goal_location', 1)
@@ -52,13 +54,24 @@ class GoalSetter(Node):
         self.feedback_publisher = self.create_publisher(Feedback, prefix + '/feedback', 1)
         self.queue_request_pub = self.create_publisher(QueueRequest, "/queue_request", 1)
 
+        self.room_positions = {0: (0, 2.2),
+                               1: (7.9, -7.5),
+                               2: (7.85, -21.8),
+                               3: (4.25, -27.2),
+                               4: (-7.75, -21.7),
+                               5: (-7.75, -7.5)}
+
         self.locs = []
-        self.loc_idx = 0
+        # self.loc_idx = 0
+        self.loc_idx = 3
         self.goal_idx = 0
         self.waypoints = []
         self.goal_room = None
         self.current_message_count = 10
         self.current_message = None
+        self.queue_position = None
+        self.in_queue = False
+        self.added_position = 10
 
         self.active = False
         self.goal_reached = True
@@ -82,7 +95,7 @@ class GoalSetter(Node):
                 positions_list.append(positions[1:])
             return positions_list
         
-        self.goal_sequence = msg.plan
+        self.goal_sequence = msg.plan[1:]
         self.locs = plan_to_positions(msg.plan)
         # self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
         # print(f"{self.name} updated its goals: {self.locs}")
@@ -90,6 +103,8 @@ class GoalSetter(Node):
     def publish_goal(self):
         if self.goal_idx < len(self.locs):
             self.goal_room = self.goal_sequence[self.goal_idx]
+            # print(f"Current goal room: {self.goal_room}")
+            # print(f"Current sequence: {self.waypoints}")
             self.waypoints = self.locs[self.goal_idx]
             if self.loc_idx < len(self.waypoints):
                 goal = self.waypoints[self.loc_idx]
@@ -148,28 +163,63 @@ class GoalSetter(Node):
         msg.data = self.active
         self.activity_publisher.publish(msg)
 
+    def make_queue_callback(self, room):
+        def queue_callback(msg):
+            print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
+            if room == self.goal_room:
+                queue_position = [index for index, value in enumerate(msg.robot_queue) if value == self.name]
+                updated_queue_position = False
+                if msg.allowed_robot == self.name and self.queue_position != 0:
+                    print("Setting queue position to 0")
+                    self.queue_position = 0
+                    self.in_queue = True
+                    updated_queue_position = True
+                elif len(queue_position) > 0 and queue_position != self.queue_position:
+                    self.queue_position = queue_position[0] + 1
+                    self.in_queue = True
+                    updated_queue_position = True
+                else:
+                    self.in_queue = False
+            if self.queue_position is not None and self.queue_position < self.added_position and updated_queue_position:
+                if self.queue_position == 0:
+                    self.added_position = 0
+                    self.locs[self.goal_idx] += self.queue_to_room[self.goal_room]
+                    print(f"New path to room: {self.locs[self.goal_idx]}")
+                else:
+                    self.added_position = self.queue_position
+                    self.locs[self.goal_idx].append(self.queues[self.goal_room][self.queue_position-1])
+                self.loc_idx += 1
+                self.goal_reached = True
+        return queue_callback
+
     def listen_location_callback(self, msg):
         self.position = (msg.pose.position.x, msg.pose.position.y)
         if self.goal_idx < len(self.locs) and self.loc_idx < len(self.waypoints):
             if dist(self.waypoints[self.loc_idx], self.position) < DIST_THRES:
                 current_clock = self.clock.now()
                 self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
-                print(self.actual_arrival_times)
+                # print(self.actual_arrival_times) # ToDo: Make this not count the queue multiple times
+                arrival_point = self.room_positions[self.goal_room]
                 if self.loc_idx + 1 < len(self.waypoints):
                     self.loc_idx += 1
-                else:
+                    self.goal_reached = True
+                elif abs(self.position[0] - arrival_point[0]) < 0.5 and abs(self.position[1] - arrival_point[1]) < 0.5:
                     self.goal_idx += 1
                     self.loc_idx = 0
                     self.waypoints = []
-                self.goal_reached = True
+                    self.goal_reached = True
+                else:
+                    self.goal_reached = False
 
     def run_queue_check(self):
-        if self.loc_idx < len(self.waypoints):
-            arrival_point = self.waypoints[-1]
-            if abs(self.position[0] - arrival_point[0]) < 3.0 and abs(self.position[1] - arrival_point[1]) < 3.0:
+        if self.goal_room is not None and not self.in_queue:
+            arrival_point = self.room_positions[self.goal_room]
+            # arrival_point = self.waypoints[-1]
+            if abs(self.position[0] - arrival_point[0]) < 5.0 and abs(self.position[1] - arrival_point[1]) < 5.0:
                 queue_request_msg = QueueRequest()
                 queue_request_msg.room_id = self.goal_room
                 queue_request_msg.robot_name = self.name
+                self.in_queue = False
                 self.queue_request_pub.publish(queue_request_msg)
 
     def publish_feedback(self):
