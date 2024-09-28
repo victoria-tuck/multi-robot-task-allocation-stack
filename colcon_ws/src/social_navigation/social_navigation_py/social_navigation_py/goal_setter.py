@@ -153,6 +153,8 @@ class GoalSetter(Node):
             elif self.current_message_count < 10 and self.current_message is not None:
                 self.publisher_.publish(self.current_message)
                 self.current_message_count += 1
+            elif self.in_queue:
+                self.active = True
             else:
                 self.active = False
                 # else:
@@ -165,7 +167,7 @@ class GoalSetter(Node):
 
     def make_queue_callback(self, room):
         def queue_callback(msg):
-            print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
+            # print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
             if room == self.goal_room:
                 queue_position = [index for index, value in enumerate(msg.robot_queue) if value == self.name]
                 updated_queue_position = False
@@ -178,7 +180,7 @@ class GoalSetter(Node):
                     self.queue_position = queue_position[0] + 1
                     self.in_queue = True
                     updated_queue_position = True
-                else:
+                elif self.queue_position is None:
                     self.in_queue = False
             if self.queue_position is not None and self.queue_position < self.added_position and updated_queue_position:
                 if self.queue_position == 0:
@@ -188,8 +190,9 @@ class GoalSetter(Node):
                 else:
                     self.added_position = self.queue_position
                     self.locs[self.goal_idx].append(self.queues[self.goal_room][self.queue_position-1])
-                self.loc_idx += 1
+                self.loc_idx += 2
                 self.goal_reached = True
+                self.active = True
         return queue_callback
 
     def listen_location_callback(self, msg):

@@ -668,7 +668,7 @@ class RobotController(Node):
         # Get next waypoint to follow from given path. It finds the next waypoint that is atleast 1 m away and removes the waypoints occurring before this 1 m point
         if (self.path_active and len(self.path.poses) > 0 and (self.robot_state_valid and self.human_states_valid and self.obstacles_valid)):
             # Select closest waypoint from received path
-            self.get_logger().info(f"Controlling {self.name}")
+            # self.get_logger().info(f"Controlling {self.name}")
             assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
             goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
             while (np.linalg.norm(goal[:,0] - self.robot_state[0:2,0])<0.5):#0.8
@@ -693,6 +693,7 @@ class RobotController(Node):
             goal_msg.header.frame_id = "map"
             goal_msg.header.stamp = self.navigator.get_clock().now().to_msg()
             self.robot_local_goal_pub.publish( goal_msg )
+            self.get_logger().info(f"Goal: {goal}")
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
@@ -771,7 +772,7 @@ class RobotController(Node):
                 control.linear.x = speed[0][0]
                 control.angular.z = omega[0][0]
                 self.robot_command_pub.publish(control)
-                # self.get_logger().info(f"{self.name} publishing control of {control.linear.x}, {control.angular.z}")
+                self.get_logger().info(f"{self.name} publishing control of {control.linear.x}, {control.angular.z}")
             # else:
             #     self.get_logger().info(f"{self.name} not the leader")
             self.time_prev = t_new
