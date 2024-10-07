@@ -102,6 +102,7 @@ class RobotController(Node):
         self.goal_subscriber = self.create_subscription(PoseStampedPair, f'{self.prefix}/goal_location', self.new_goal_callback, 1)
         self.cluster_sub = { robot : self.create_subscription(RobotCluster, f'{robot}/cluster', self.make_cluster_callback(i, robot), 10) for i, robot in enumerate(self.other_robots)}
         self.activity_sub = self.create_subscription(Bool, f'{self.prefix}/active', self.status_callback, 10)
+        # self.waiting_sub = self.create_subscription(Bool, f'{self.prefix}/waiting', self.waiting_callback, 10)
         self.remote_control = self.create_subscription(Twist, f'{self.prefix}/remote_control', self.remote_control_callback, 1)
         self.path_return_sub = self.create_subscription(Path, f'{self.prefix}/path_return', self.path_callback, 1)
 
@@ -119,6 +120,7 @@ class RobotController(Node):
         self.active = False
         self.path_end = None
         self.remote_controlled = False
+        # self.waiting = False
         # self.replan = False
         self.error_count = 0
         self.h_min_dyn_obs_count = 0
@@ -128,6 +130,7 @@ class RobotController(Node):
         self.robot_cluster = (self.name, [self.name])
         self.other_robots_clusters = dict(zip(self.other_robots, [(robot, [robot], []) for robot in self.other_robots]))
         self.robots_active = dict(zip(all_robots, [False] * (self.num_other_robots + 1)))
+        # self.robots_waiting = dict(zip(all_robots, [False] * (self.num_other_robots + 1)))
         self.other_robot_obstacle_states = dict(zip(self.other_robots, np.zeros((2,self.num_obstacles))))
         self.other_robot_obstacles_valid = [False] * self.num_other_robots
 
@@ -277,10 +280,16 @@ class RobotController(Node):
     def status_callback(self, msg):
         self.active = bool(msg.data)
         self.robots_active[self.name] = bool(msg.data)
+        # if not bool(msg.data):
+        #     self.get_logger().info(f'{self.name} is not active')
         # if msg.data:
         #     self.get_logger().info(f'{self.name} is active')
         # else:
         #     self.get_logger().info(f'{self.name} is not active')
+
+    # def waiting_callback(self, msg):
+    #     self.waiting = bool(msg.data)
+    #     self.robots_waiting[self.name] = bool(msg.data)
 
     def remote_control_callback(self, msg):
         self.robot_command_pub.publish(msg)
@@ -835,6 +844,7 @@ class RobotController(Node):
             self.cluster_controller_active = False
         self.remote_controlled = leader != self.name
         self.robot_cluster = (leader, cluster, neighbors)
+        # self.get_logger().info(f"{self.name}'s active cluster: {active_cluster} with leader {leader}")
 
         current_pose = PoseStamped()
         current_pose.header.frame_id = 'map'

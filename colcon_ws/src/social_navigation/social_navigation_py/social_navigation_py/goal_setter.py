@@ -49,11 +49,14 @@ class GoalSetter(Node):
         self.goal_timer = self.create_timer(self.timer_period, self.publish_goal)
         self.feedback_timer = self.create_timer(self.timer_period, self.publish_feedback)
         self.status_timer = self.create_timer(self.timer_period, self.publish_status)
+        self.release_queue_timer = self.create_timer(self.timer_period, self.release_queue)
+        # self.waiting_timer = self.create_timer(self.timer_period, self.publish_waiting)
         self.name = name
         self.location_listener = self.create_subscription(PoseStamped, prefix + '/robot_location', self.listen_location_callback, 1)
         self.feedback_publisher = self.create_publisher(Feedback, prefix + '/feedback', 1)
         self.queue_request_pub = self.create_publisher(QueueRequest, "/queue_request", 1)
         self.queue_remove_pub = {room_id: self.create_publisher(String, f"/room{room_id}/remove_from_queue", 1) for room_id in range(6)}
+        # self.waiting_pub = self.create_publisher(Bool, f'{prefix}/waiting', 10)
 
         self.room_positions = {0: (0, 2.2),
                                1: (7.9, -7.5),
@@ -76,6 +79,7 @@ class GoalSetter(Node):
         self.added_position = 10
         self.prev_room = None
         self.prev_point = None
+        self.waiting = False
 
         self.active = False
         self.goal_reached = True
@@ -155,7 +159,7 @@ class GoalSetter(Node):
 
                     msg.current_waypoint = current_waypoint
                     msg.next_waypoint = next_waypoint
-                    msg.initialize = self.loc_idx == 0
+                    msg.initialize = self.loc_idx == 0 #or self.queue_position == 0
                     self.current_message = msg
                     self.current_message_count = 0
                     self.publisher_.publish(msg)
@@ -166,16 +170,22 @@ class GoalSetter(Node):
                 self.publisher_.publish(self.current_message)
                 self.current_message_count += 1
             elif self.in_queue:
-                self.active = True
-            else:
-                self.active = False
+                # self.active = False
+                self.get_logger().info("In queue. Not active.")
+            # else:
+            #     self.active = False
                 # else:
                     # self.get_logger().info(f"Waiting for goal {goal} to be reached...")
 
     def publish_status(self):
         msg = Bool()
-        msg.data = self.active
+        msg.data = self.active and not self.waiting
         self.activity_publisher.publish(msg)
+
+    # def publish_waiting(self):
+    #     msg = Bool()
+    #     msg.data = self.waiting
+    #     self.waiting_pub.publish(msg)
 
     def make_queue_callback(self, room):
         def queue_callback(msg):
@@ -199,40 +209,52 @@ class GoalSetter(Node):
                     self.added_position = 0
                     # self.loc_idx = len(self.locs[self.goal_idx]) + 1
                     self.locs[self.goal_idx] += self.queue_to_room[self.goal_room]
+                    self.waypoints = self.locs[self.goal_idx]
                     print(f"New path to room: {self.locs[self.goal_idx]}")
                 else:
                     self.added_position = self.queue_position
                     self.locs[self.goal_idx].append(self.queues[self.goal_room][self.queue_position-1])
+                    self.waypoints = self.locs[self.goal_idx]
                     # self.loc_idx += 1
                 # self.loc_idx += 2
                 self.goal_reached = True
                 self.active = True
+                self.waiting = False
+                self.get_logger().info("Updating queue. Active")
         return queue_callback
 
     def listen_location_callback(self, msg):
         self.position = (msg.pose.position.x, msg.pose.position.y)
         if self.goal_idx < len(self.locs) and self.loc_idx < len(self.waypoints):
-            self.get_logger().info(f"Checking current position {self.position} against goal {self.waypoints[self.loc_idx]}")
+            # self.get_logger().info(f"Checking current position {self.position} against goal {self.waypoints[self.loc_idx]}")
             if dist(self.waypoints[self.loc_idx], self.position) < DIST_THRES:
                 current_clock = self.clock.now()
                 self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
-                self.get_logger().info(f"Reached next waypoint")
+                # self.get_logger().info(f"Reached next waypoint")
                 # print(self.actual_arrival_times) # ToDo: Make this not count the queue multiple times
                 arrival_point = self.room_positions[self.goal_room]
                 if self.loc_idx + 1 < len(self.waypoints):
                     print("Increased waypoint index")
                     self.loc_idx += 1
                     self.goal_reached = True
-                elif abs(self.position[0] - arrival_point[0]) < 0.5 and abs(self.position[1] - arrival_point[1]) < 0.5:
+                    self.waiting = False
+                elif abs(self.position[0] - arrival_point[0]) < DIST_THRES and abs(self.position[1] - arrival_point[1]) < DIST_THRES:
                     print("Increased goal index")
                     self.goal_idx += 1
                     self.loc_idx = 0
-                    self.waypoints = []
-                    self.goal_reached = True
                     self.prev_room = self.goal_room
+                    if self.goal_idx < len(self.locs):
+                        self.waypoints = self.locs[self.goal_idx]
+                        self.goal_room = self.goal_sequence[self.goal_idx]
+                    else:
+                        self.waypoints = []
+                    self.goal_reached = True
                     self.finished_with_queue = True
+                    self.waiting = False
                 else:
+                    print(f"{self.name} switched into waiting mode with waypoints: {self.waypoints}, goal index: {self.goal_idx}, and loc index: {self.loc_idx}")
                     self.goal_reached = False
+                    self.waiting = True
 
     def run_queue_check(self):
         if self.goal_room is not None and not self.in_queue:
@@ -244,12 +266,17 @@ class GoalSetter(Node):
                 queue_request_msg.robot_name = self.name
                 self.in_queue = False
                 self.queue_request_pub.publish(queue_request_msg)
-        elif self.finished_with_queue:
+
+    def release_queue(self):
+        if self.finished_with_queue:
             prev_point = self.room_positions[self.prev_room]
             if (abs(self.position[0] - prev_point[0]) > 5.0 or abs(self.position[1] - prev_point[1]) > 5.0):
                 queue_remove_msg = String()
                 queue_remove_msg.data = self.name
                 self.queue_remove_pub[self.prev_room].publish(queue_remove_msg)
+                self.finished_with_queue = False
+                self.queue_position = None
+                self.in_queue = False
 
 
     def publish_feedback(self):

@@ -28,6 +28,7 @@ class Room_Queue(Node):
             # Check if the robot is already in the set
             if len(self.robot_set) == 0:
                 self.allowed_robot = msg.robot_name
+                self.robot_set.add(robot_id)
             elif robot_id not in self.robot_set:
                 if not self.robot_queue.full():
                     # Add to both queue and set
@@ -40,11 +41,19 @@ class Room_Queue(Node):
             #     self.get_logger().info(f"Robot {robot_id} is already in the queue.")
 
     def queue_remove_callback(self, msg):
-        self.get_logger().info(f"Removing {self.allowed_robot} from queue.")
-        self.allowed_robot = self.robot_queue.get()
-        self.robot_set.remove(msg.data)
+        if msg.data in self.robot_set:
+            self.get_logger().info(f"Removing {msg.data} from queue.")
+            try:
+                next_allowed = self.robot_queue.get(block=False)
+                self.allowed_robot = next_allowed
+            except:
+                self.allowed_robot = None
+                print("The queue is empty.")
+            self.robot_set.remove(msg.data)
+            self.get_logger().info(f"Finished removing from queue. New allowed robot: {self.allowed_robot} and queue: {list(self.robot_set)}")
 
     def publish_queue(self):
+        self.get_logger().info(f"Publishing queue")
         msg = QueueMsg()
         msg.allowed_robot = self.allowed_robot
         msg.robot_queue = list(self.robot_set)
