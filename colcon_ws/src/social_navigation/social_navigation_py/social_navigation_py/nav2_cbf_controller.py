@@ -271,6 +271,7 @@ class RobotController(Node):
         if (msg.current_waypoint.pose != msg.next_waypoint.pose):
             self.goal_init = False
             self.path_active = False
+            self.initial_goal = msg.initialize
         self.get_logger().info(f"{self.name} received new goals: ({msg.current_waypoint.pose.position.x}, {msg.current_waypoint.pose.position.y})")
 
     def status_callback(self, msg):
@@ -547,7 +548,7 @@ class RobotController(Node):
         # # print(f"new_goal_pose: {self.new_goal_poses}")
         # # if (not self.goal_init or self.replan_count > 100) and self.new_goal_pose is not None:
         if not self.path_active:
-            print("Path is inactive")
+            # print("Path is inactive")
             control = Twist()
             control.linear.x = 0.0
             control.angular.z = 0.0
@@ -677,7 +678,7 @@ class RobotController(Node):
                     assert np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]) is not None
                     goal = np.array([self.path.poses[0].pose.position.x, self.path.poses[0].pose.position.y]).reshape(-1,1)
                 else:
-                    self.get_logger().info(f"End of {self.name}'s path.")
+                    # self.get_logger().info(f"End of {self.name}'s path.")
                     break
 
             # Publish path for visualization (no other use)
@@ -693,7 +694,7 @@ class RobotController(Node):
             goal_msg.header.frame_id = "map"
             goal_msg.header.stamp = self.navigator.get_clock().now().to_msg()
             self.robot_local_goal_pub.publish( goal_msg )
-            self.get_logger().info(f"Goal: {goal}")
+            # self.get_logger().info(f"Goal: {goal}")
             
             t_new = self.get_clock().now().nanoseconds
             dt = (t_new - self.time_prev)/10**9
@@ -772,7 +773,7 @@ class RobotController(Node):
                 control.linear.x = speed[0][0]
                 control.angular.z = omega[0][0]
                 self.robot_command_pub.publish(control)
-                self.get_logger().info(f"{self.name} publishing control of {control.linear.x}, {control.angular.z}")
+                # self.get_logger().info(f"{self.name} publishing control of {control.linear.x}, {control.angular.z}")
             # else:
             #     self.get_logger().info(f"{self.name} not the leader")
             self.time_prev = t_new

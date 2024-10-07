@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 
 from social_navigation_msgs.msg import QueueMsg, QueueRequest
+from std_msgs.msg import String
 
 class Room_Queue(Node):
     def __init__(self):
@@ -13,7 +14,7 @@ class Room_Queue(Node):
         self.robot_set = set()
 
         self.queue_request_subscriber = self.create_subscription(QueueRequest, '/queue_request', self.request_callback, 1)
-        # self.remove_request_subscriber = self.create_subscription(String, '/remove_from_queue', self.queue_remove_callback, 1)
+        self.remove_request_subscriber = self.create_subscription(String, '/room1/remove_from_queue', self.queue_remove_callback, 1)
         self.queue_publisher = self.create_publisher(QueueMsg, f'/room1/queue', 10)
 
         self.timer_period = 0.5
@@ -39,8 +40,9 @@ class Room_Queue(Node):
             #     self.get_logger().info(f"Robot {robot_id} is already in the queue.")
 
     def queue_remove_callback(self, msg):
+        self.get_logger().info(f"Removing {self.allowed_robot} from queue.")
         self.allowed_robot = self.robot_queue.get()
-        self.robot_set.remove(msg.robot_id)
+        self.robot_set.remove(msg.data)
 
     def publish_queue(self):
         msg = QueueMsg()

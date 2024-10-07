@@ -6,7 +6,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 
 from geometry_msgs.msg import PoseStamped, PoseArray, Pose
 from social_navigation_msgs.msg import Feedback, PoseStampedPair, Plan, QueueRequest, QueueMsg
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 
 import json
 import math
@@ -16,7 +16,7 @@ import sys
 import argparse
 
 DIST_THRES = 1
-GOAL_REGION_RADIUS = 0.4 #0.25 #0.25 #0.5
+GOAL_REGION_RADIUS = 0.2 #0.25 #0.25 #0.5
 
 def dist(c1, c2):
     return math.sqrt((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2)
@@ -53,6 +53,7 @@ class GoalSetter(Node):
         self.location_listener = self.create_subscription(PoseStamped, prefix + '/robot_location', self.listen_location_callback, 1)
         self.feedback_publisher = self.create_publisher(Feedback, prefix + '/feedback', 1)
         self.queue_request_pub = self.create_publisher(QueueRequest, "/queue_request", 1)
+        self.queue_remove_pub = {room_id: self.create_publisher(String, f"/room{room_id}/remove_from_queue", 1) for room_id in range(6)}
 
         self.room_positions = {0: (0, 2.2),
                                1: (7.9, -7.5),
@@ -63,7 +64,7 @@ class GoalSetter(Node):
 
         self.locs = []
         # self.loc_idx = 0
-        self.loc_idx = 3
+        self.loc_idx = 0
         self.goal_idx = 0
         self.waypoints = []
         self.goal_room = None
@@ -71,10 +72,14 @@ class GoalSetter(Node):
         self.current_message = None
         self.queue_position = None
         self.in_queue = False
+        self.finished_with_queue = False
         self.added_position = 10
+        self.prev_room = None
+        self.prev_point = None
 
         self.active = False
         self.goal_reached = True
+        self.goal_sequence = []
     
     # def create_pose_from_point(self, point) -> Pose:
     #     msg = Pose()
@@ -88,23 +93,29 @@ class GoalSetter(Node):
             prev_rid_map = self.roadmap.get(prev_rid)
             return prev_rid_map.get(next_rid)
 
-        def plan_to_positions(plan):
+        def plan_to_positions(plan, start):
             positions_list = []
-            for prev_id, next_id in zip(plan[:-1], plan[1:]):
+            for prev_id, next_id in zip(plan[start:-1], plan[start+1:]):
                 positions = road_coord(prev_id, next_id)
                 positions_list.append(positions[1:])
             return positions_list
         
-        self.goal_sequence = msg.plan[1:]
-        self.locs = plan_to_positions(msg.plan)
+        ind = 0
+        for goal in self.goal_sequence:
+            if goal != msg.plan[ind+1]:
+                break
+            ind += 1
+        self.goal_sequence = self.goal_sequence[:ind] + list(msg.plan[ind+1:])
+        # self.goal_sequence = msg.plan[1:]
+        self.locs = self.locs[:ind] + plan_to_positions(msg.plan, ind)
         # self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
-        # print(f"{self.name} updated its goals: {self.locs}")
+        print(f"{self.name} updated its goals: {self.locs} starting at index {ind}")
 
     def publish_goal(self):
         if self.goal_idx < len(self.locs):
             self.goal_room = self.goal_sequence[self.goal_idx]
             # print(f"Current goal room: {self.goal_room}")
-            # print(f"Current sequence: {self.waypoints}")
+            print(f"Current sequence: {self.waypoints}")
             self.waypoints = self.locs[self.goal_idx]
             if self.loc_idx < len(self.waypoints):
                 goal = self.waypoints[self.loc_idx]
@@ -144,6 +155,7 @@ class GoalSetter(Node):
 
                     msg.current_waypoint = current_waypoint
                     msg.next_waypoint = next_waypoint
+                    msg.initialize = self.loc_idx == 0
                     self.current_message = msg
                     self.current_message_count = 0
                     self.publisher_.publish(msg)
@@ -185,12 +197,14 @@ class GoalSetter(Node):
             if self.queue_position is not None and self.queue_position < self.added_position and updated_queue_position:
                 if self.queue_position == 0:
                     self.added_position = 0
+                    # self.loc_idx = len(self.locs[self.goal_idx]) + 1
                     self.locs[self.goal_idx] += self.queue_to_room[self.goal_room]
                     print(f"New path to room: {self.locs[self.goal_idx]}")
                 else:
                     self.added_position = self.queue_position
                     self.locs[self.goal_idx].append(self.queues[self.goal_room][self.queue_position-1])
-                self.loc_idx += 2
+                    # self.loc_idx += 1
+                # self.loc_idx += 2
                 self.goal_reached = True
                 self.active = True
         return queue_callback
@@ -198,19 +212,25 @@ class GoalSetter(Node):
     def listen_location_callback(self, msg):
         self.position = (msg.pose.position.x, msg.pose.position.y)
         if self.goal_idx < len(self.locs) and self.loc_idx < len(self.waypoints):
+            self.get_logger().info(f"Checking current position {self.position} against goal {self.waypoints[self.loc_idx]}")
             if dist(self.waypoints[self.loc_idx], self.position) < DIST_THRES:
                 current_clock = self.clock.now()
                 self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
+                self.get_logger().info(f"Reached next waypoint")
                 # print(self.actual_arrival_times) # ToDo: Make this not count the queue multiple times
                 arrival_point = self.room_positions[self.goal_room]
                 if self.loc_idx + 1 < len(self.waypoints):
+                    print("Increased waypoint index")
                     self.loc_idx += 1
                     self.goal_reached = True
                 elif abs(self.position[0] - arrival_point[0]) < 0.5 and abs(self.position[1] - arrival_point[1]) < 0.5:
+                    print("Increased goal index")
                     self.goal_idx += 1
                     self.loc_idx = 0
                     self.waypoints = []
                     self.goal_reached = True
+                    self.prev_room = self.goal_room
+                    self.finished_with_queue = True
                 else:
                     self.goal_reached = False
 
@@ -224,6 +244,13 @@ class GoalSetter(Node):
                 queue_request_msg.robot_name = self.name
                 self.in_queue = False
                 self.queue_request_pub.publish(queue_request_msg)
+        elif self.finished_with_queue:
+            prev_point = self.room_positions[self.prev_room]
+            if (abs(self.position[0] - prev_point[0]) > 5.0 or abs(self.position[1] - prev_point[1]) > 5.0):
+                queue_remove_msg = String()
+                queue_remove_msg.data = self.name
+                self.queue_remove_pub[self.prev_room].publish(queue_remove_msg)
+
 
     def publish_feedback(self):
         msg = Feedback()
