@@ -3,8 +3,8 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
 
-from social_navigation_msgs.msg import PathRequest
-from nav_msgs.msg import Path
+from social_navigation_msgs.msg import PathRequest, PathReturn
+# from nav_msgs.msg import Path
 
 from nav2_simple_commander.robot_navigator import BasicNavigator
 
@@ -25,7 +25,7 @@ class Planner_Wrapper(Node):
 
         self.planner_request_subscriber = self.create_subscription(PathRequest, '/path_request', self.request_callback, 1)
         # # self.init_planner_publisher = self.create_publisher(Bool, f'/planner_init', 1)
-        self.path_pub = { robot: self.create_publisher(Path, f'/{robot}/path_return', 10) for robot in self.robots }
+        self.path_pub = { robot: self.create_publisher(PathReturn, f'/{robot}/path_return', 10) for robot in self.robots }
         self.publish_timer = self.create_timer(self.timer_period, self.publish_paths)
 
         self.get_logger().info("Planner wrapper initialized")
@@ -53,21 +53,25 @@ class Planner_Wrapper(Node):
                 assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
                 success = True
             except:
-
+                self.get_logger().info(f"Issue finding {id}'s path")
                 success = False
             count += 1
-        # self.get_logger().info(f"Found {id}'s path after {count - 1} tries")
+        self.get_logger().info(f"Found {id}'s path after {count - 1} tries")
 
         if success:
-            self.paths[id] = path
+            self.paths[id] = (current_pose, goal_pose, path)
 
     def publish_paths(self):
         """
         Publish most recently calculated paths for all agents
         """
-        for key, path in self.paths.items():
-            if path is not None:
-                self.path_pub[key].publish(path)
+        for key, path_tuple in self.paths.items():
+            if path_tuple is not None:
+                msg = PathReturn()
+                msg.current_pose, msg.goal_pose = path_tuple[0], path_tuple[1]
+                msg.header = path_tuple[2].header
+                msg.poses = path_tuple[2].poses
+                self.path_pub[key].publish(msg)
                 # self.get_logger().info(f"Publishing {key}'s path: {path}")
         
 

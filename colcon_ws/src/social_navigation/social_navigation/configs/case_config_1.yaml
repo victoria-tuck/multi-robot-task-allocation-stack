@@ -1,0 +1,3 @@
+agents:
+  robot1:
+    start: [0, 2.2]

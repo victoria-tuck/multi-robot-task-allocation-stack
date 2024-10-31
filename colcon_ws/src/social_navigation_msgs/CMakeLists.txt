@@ -29,6 +29,7 @@ set (msg_files
   "msg/Feedback.msg"
   "msg/PoseStampedPair.msg"
   "msg/PathRequest.msg"
+  "msg/PathReturn.msg"
   "msg/RobotCluster.msg"
   "msg/QueueRequest.msg"
   "msg/QueueMsg.msg"

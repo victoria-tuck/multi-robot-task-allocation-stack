@@ -1,0 +1,4 @@
+geometry_msgs/PoseStamped current_pose
+geometry_msgs/PoseStamped goal_pose
+std_msgs/Header header
+geometry_msgs/PoseStamped[] poses

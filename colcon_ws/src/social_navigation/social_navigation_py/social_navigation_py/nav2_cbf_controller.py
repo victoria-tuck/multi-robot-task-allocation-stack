@@ -2,8 +2,9 @@ import time
 import networkx as nx
 import rclpy
 from rclpy.node import Node
+import csv
 
-from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster, PoseStampedPair, PathRequest, QueueRequest
+from social_navigation_msgs.msg import HumanStates, RobotClosestObstacle, RobotCluster, PoseStampedPair, PathRequest, QueueRequest, PathReturn
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
@@ -104,7 +105,7 @@ class RobotController(Node):
         self.activity_sub = self.create_subscription(Bool, f'{self.prefix}/active', self.status_callback, 10)
         # self.waiting_sub = self.create_subscription(Bool, f'{self.prefix}/waiting', self.waiting_callback, 10)
         self.remote_control = self.create_subscription(Twist, f'{self.prefix}/remote_control', self.remote_control_callback, 1)
-        self.path_return_sub = self.create_subscription(Path, f'{self.prefix}/path_return', self.path_callback, 1)
+        self.path_return_sub = self.create_subscription(PathReturn, f'{self.prefix}/path_return', self.path_callback, 1)
 
         self.new_goal_poses = None
         self.human_states_valid = False
@@ -160,6 +161,16 @@ class RobotController(Node):
         # self.queue_request_timer = self.create_timer(self.timer_period_s*10, self.run_queue_request)
         self.nearby_robots_timer = self.create_timer(self.timer_period_s, self.nearby_robots)
         self.get_logger().info("User Controller is ONLINE")
+
+        self.save_data_timer = self.create_timer(1, self.save_times)
+        self.time_to_calc_ind = []
+        self.time_to_calc_multi = []
+
+    def save_times(self):
+        with open(f'control_time_{self.name}.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(self.time_to_calc_ind)
+            writer.writerow(self.time_to_calc_multi)
 
     def update_dynamic_obstacles(self):
         if self.human_states_valid and self.all_other_robot_states_valid and self.dynamic_obstacle_states_valid:
@@ -275,7 +286,10 @@ class RobotController(Node):
             self.goal_init = False
             self.path_active = False
             self.initial_goal = msg.initialize
-        self.get_logger().info(f"{self.name} received new goals: ({msg.current_waypoint.pose.position.x}, {msg.current_waypoint.pose.position.y})")
+            self.get_logger().info("Sending new waypoints")
+            if self.initial_goal:
+                self.get_logger().info(f"Setting {self.name} to reinitialize")
+        self.get_logger().info(f"{self.name} received new goals: ({msg.current_waypoint.pose.position.x}, {msg.current_waypoint.pose.position.y}) and ({msg.next_waypoint.pose.position.x}, {msg.next_waypoint.pose.position.y})")
 
     def status_callback(self, msg):
         self.active = bool(msg.data)
@@ -297,7 +311,7 @@ class RobotController(Node):
         self.initial_goal = True
         self.goal_init = False
 
-    def path_callback(self, path):
+    def path_callback(self, msg):
         # Todo: Relocate to here everything from the run_planner logic that handles the newly received plan
         # path = msg.path
 
@@ -310,9 +324,15 @@ class RobotController(Node):
         # goal_pose_close_x = abs(path.poses[-1].pose.position.x - goal_pose.pose.position.x) < 0.05
         # goal_pose_close_y = abs(path.poses[-1].pose.position.y - goal_pose.pose.position.y) < 0.05
         # assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
+        print(f"{self.name} processing {msg} message")
+        new_path = Path()
+        new_path.header = msg.header
+        new_path.poses = msg.poses
+        path_goal_pose = msg.goal_pose.pose
         if not self.goal_init and self.new_goal_poses is not None and not self.remote_controlled:
-            new_path = False
-            new_start_pos = path.poses[0].pose.position
+            print(f"Processing {self.name}'s new path of length {len(new_path.poses)} with goal {path_goal_pose}")
+            is_new_path = False
+            new_start_pos = new_path.poses[0].pose.position
             close_to_pos_x = abs(self.robot_state[0,0] - new_start_pos.x) < 0.05
             close_to_pos_y = abs(self.robot_state[1,0] - new_start_pos.y) < 0.05
             starting_path = close_to_pos_x and close_to_pos_y
@@ -320,27 +340,27 @@ class RobotController(Node):
                 current_end_pos = self.path.poses[-1].pose.position
                 close_x = abs(current_end_pos.x - new_start_pos.x) < 0.05
                 close_y = abs(current_end_pos.y - new_start_pos.y) < 0.05
-                new_path = close_x and close_y
-            if self.initial_goal and starting_path:
-                # self.get_logger().info(f"Setting {self.name}'s initial path to {path}.")
-                self.path = path
-                self.path2 = path
-                self.path_end = path.poses[-1]
+                is_new_path = close_x and close_y
+            if self.initial_goal and starting_path and path_goal_pose == self.new_goal_poses.current_waypoint.pose:
+                self.get_logger().info(f"Setting {self.name}'s initial path to {new_path}.")
+                self.path = new_path
+                self.path2 = new_path
+                self.path_end = new_path.poses[-1]
                 # self.nav2_path_publisher.publish(self.path)
                 self.initial_goal = False
-            elif new_path:
+            elif is_new_path and path_goal_pose == self.new_goal_poses.next_waypoint.pose:
             # elif self.second_goal:
-                # self.get_logger().info(f"Extending {self.name}'s path to {path}.")
-                self.path.poses = self.path.poses + path.poses
-                self.path2 = path
-                self.path_end = path.poses[-1]
+                self.get_logger().info(f"Extending {self.name}'s path to {new_path}.")
+                self.path.poses = self.path.poses + new_path.poses
+                self.path2 = new_path
+                self.path_end = new_path.poses[-1]
                 # self.nav2_path_publisher.publish(self.path)
                 self.path_active = True
                 self.goal_init = True
                 self.initial_goal = False
                 # self.new_goal_poses = None
-                if len(self.path.poses) < 2:
-                    self.get_logger().info(f"SHORT PATH. POSSIBLE ERROR. {self.name}'s path is {path}.")
+                # if len(self.path.poses) < 2:
+                #     self.get_logger().info(f"SHORT PATH. POSSIBLE ERROR. {self.name}'s path is {path}.")
 
     def run_planner(self):
     # def run_controller(self):
@@ -349,8 +369,8 @@ class RobotController(Node):
         if not self.planner_init:
             return
         
-        if self.goal_init and len(self.path.poses) < 2:
-            self.get_logger().info(f"SHORT PATH. POSSIBLE ERROR. {self.name}'s path is {self.path.poses}.")
+        # if self.goal_init and len(self.path.poses) < 2:
+        #     self.get_logger().info(f"SHORT PATH. POSSIBLE ERROR. {self.name}'s path is {self.path.poses}.")
 
         # # # Get current position and publish
         current_pose = PoseStamped()
@@ -383,6 +403,7 @@ class RobotController(Node):
             if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
                 # if self.print_count > 100:
                 #     print("Start planning...")
+                self.get_logger().info(f"Planning for {self.name}")
                 goal = self.new_goal_poses.current_waypoint
                 self.goal_pose = goal
                 self.goal = np.array([ goal.pose.position.x, goal.pose.position.y ]).reshape(-1,1)
@@ -409,6 +430,7 @@ class RobotController(Node):
                     request_msg.current_pose = current_pose
                     request_msg.goal_pose = self.goal_pose
                     self.path_request_pub.publish(request_msg)
+                    self.get_logger().info(f"Making initial plan for {self.name} with current pose ({request_msg.current_pose.pose.position.x}, {request_msg.current_pose.pose.position.y}) and goal pose ({request_msg.goal_pose.pose.position.x}, {request_msg.goal_pose.pose.position.y})")
                         # try:
                         #     self.navigator.setInitialPose(current_pose)
                         #     path = self.navigator.getPath(current_pose, self.goal_pose) # replace with naman's planner
@@ -460,6 +482,7 @@ class RobotController(Node):
                     request_msg.current_pose = start_pose
                     request_msg.goal_pose = next_goal
                     self.path_request_pub.publish(request_msg)
+                    self.get_logger().info(f"Creating secondary plan for {self.name}")
 
                 #     self.get_logger().info(f"{self.name} trying for the {tries} time")
                 #     self.path_active = False
@@ -744,7 +767,9 @@ class RobotController(Node):
                         other_obstacles = []
                         for robot in other_robots:
                             other_obstacles.append(self.other_robot_obstacle_states[robot])
+                        start_time = time.time()
                         speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, other_obstacles, dt , slow = not self.active)
+                        self.time_to_calc_multi.append(time.time() - start_time)
                         # self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
                     for i, robot in enumerate(other_robots):
                         # print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")
@@ -759,8 +784,9 @@ class RobotController(Node):
                     if self.controller_id == 0:
                         start_time = time.time()
                         speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_cbf( self.robot_state, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, dt , slow = not self.active)
-                        if time.time() - start_time > 0.1:
-                            self.get_logger().info(f"Time to calculate {self.name}'s policy was large: {time.time() - start_time}")
+                        self.time_to_calc_ind.append(time.time() - start_time)
+                        # if time.time() - start_time > 0.1:
+                        #     self.get_logger().info(f"Time to calculate {self.name}'s policy was large: {time.time() - start_time}")
                     elif self.controller_id == 1:
                         speed, omega, h_dyn_obs_min, h_obs_min = self.controller.policy_nominal( self.robot_state, goal, dt )
                     speed = [[speed]]

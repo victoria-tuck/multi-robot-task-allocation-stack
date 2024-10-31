@@ -80,6 +80,7 @@ class GoalSetter(Node):
         self.prev_room = None
         self.prev_point = None
         self.waiting = False
+        self.reinitialize = False
 
         self.active = False
         self.goal_reached = True
@@ -113,21 +114,23 @@ class GoalSetter(Node):
         # self.goal_sequence = msg.plan[1:]
         self.locs = self.locs[:ind] + plan_to_positions(msg.plan, ind)
         # self.locs = [(pose.position.x, pose.position.y) for pose in msg.poses]
-        print(f"{self.name} updated its goals: {self.locs} starting at index {ind}")
+        # self.get_logger().info(f"{self.name} updated its goals: {self.locs} starting at index {ind}")
 
     def publish_goal(self):
         if self.goal_idx < len(self.locs):
             self.goal_room = self.goal_sequence[self.goal_idx]
             # print(f"Current goal room: {self.goal_room}")
-            print(f"Current sequence: {self.waypoints}")
+            # print(f"Current sequence: {self.waypoints}")
             self.waypoints = self.locs[self.goal_idx]
+            # print(f"{self.name}'s current sequence: {self.waypoints}")
+            # self.get_logger().info(f"Checking goals with index {self.loc_idx} and goal index {self.goal_idx}")
             if self.loc_idx < len(self.waypoints):
                 goal = self.waypoints[self.loc_idx]
                 if self.loc_idx + 1 < len(self.waypoints):
                     next_goal = self.waypoints[self.loc_idx + 1]
                 else:
                     next_goal = goal
-                if self.goal_reached:
+                if not self.waiting and self.goal_reached:
                     msg = PoseStampedPair()
                     current_waypoint = PoseStamped()
                     current_waypoint.header.frame_id = "map"
@@ -159,13 +162,16 @@ class GoalSetter(Node):
 
                     msg.current_waypoint = current_waypoint
                     msg.next_waypoint = next_waypoint
-                    msg.initialize = self.loc_idx == 0 #or self.queue_position == 0
+                    msg.initialize = self.loc_idx == 0 or self.reinitialize #or self.queue_position == 0
+                    self.reinitialize = False
                     self.current_message = msg
                     self.current_message_count = 0
                     self.publisher_.publish(msg)
                     self.goal_reached = False
                     self.active = True
                     self.get_logger().info(f"Using non-build goal_setter. New goal sent: ({msg.current_waypoint.pose.position.x}, {msg.current_waypoint.pose.position.y}) then ({msg.next_waypoint.pose.position.x}, {msg.next_waypoint.pose.position.y})")
+                # else:
+                #     self.get_logger().info(f"{self.name} waiting to send goals.")
             elif self.current_message_count < 10 and self.current_message is not None:
                 self.publisher_.publish(self.current_message)
                 self.current_message_count += 1
@@ -194,11 +200,12 @@ class GoalSetter(Node):
                 queue_position = [index for index, value in enumerate(msg.robot_queue) if value == self.name]
                 updated_queue_position = False
                 if msg.allowed_robot == self.name and self.queue_position != 0:
-                    print("Setting queue position to 0")
+                    print(f"Current queue position: {self.queue_position}. Setting queue position to 0")
                     self.queue_position = 0
                     self.in_queue = True
                     updated_queue_position = True
-                elif len(queue_position) > 0 and queue_position != self.queue_position:
+                elif len(queue_position) > 0 and queue_position[0] + 1 != self.queue_position:
+                    print(f"Setting queue position to {queue_position[0] + 1}")
                     self.queue_position = queue_position[0] + 1
                     self.in_queue = True
                     updated_queue_position = True
@@ -208,17 +215,21 @@ class GoalSetter(Node):
                 if self.queue_position == 0:
                     self.added_position = 0
                     # self.loc_idx = len(self.locs[self.goal_idx]) + 1
+                    next_idx = len(self.locs[self.goal_idx])
                     self.locs[self.goal_idx] += self.queue_to_room[self.goal_room]
                     self.waypoints = self.locs[self.goal_idx]
-                    print(f"New path to room: {self.locs[self.goal_idx]}")
+                    self.loc_idx = next_idx
+                    print(f"New path to room: {self.locs[self.goal_idx]} with next planned position {self.waypoints[self.loc_idx]}")
                 else:
                     self.added_position = self.queue_position
                     self.locs[self.goal_idx].append(self.queues[self.goal_room][self.queue_position-1])
                     self.waypoints = self.locs[self.goal_idx]
-                    # self.loc_idx += 1
                 # self.loc_idx += 2
                 self.goal_reached = True
                 self.active = True
+                if self.waiting:
+                    self.reinitialize = True
+                    self.get_logger().info(f"Setting {self.name} to reinitialize after waiting")
                 self.waiting = False
                 self.get_logger().info("Updating queue. Active")
         return queue_callback
@@ -238,7 +249,7 @@ class GoalSetter(Node):
                     self.loc_idx += 1
                     self.goal_reached = True
                     self.waiting = False
-                elif abs(self.position[0] - arrival_point[0]) < DIST_THRES and abs(self.position[1] - arrival_point[1]) < DIST_THRES:
+                elif abs(self.waypoints[self.loc_idx][0] - arrival_point[0]) < 0.3 and abs(self.waypoints[self.loc_idx][1] - arrival_point[1]) < 0.3:
                     print("Increased goal index")
                     self.goal_idx += 1
                     self.loc_idx = 0
@@ -252,7 +263,7 @@ class GoalSetter(Node):
                     self.finished_with_queue = True
                     self.waiting = False
                 else:
-                    print(f"{self.name} switched into waiting mode with waypoints: {self.waypoints}, goal index: {self.goal_idx}, and loc index: {self.loc_idx}")
+                    # print(f"{self.name} switched into waiting with waypoints: {self.waypoints}, goal index: {self.goal_idx}, and loc index: {self.loc_idx}")
                     self.goal_reached = False
                     self.waiting = True
 

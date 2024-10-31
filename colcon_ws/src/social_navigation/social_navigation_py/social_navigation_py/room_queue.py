@@ -47,7 +47,7 @@ class Room_Queue(Node):
                 next_allowed = self.robot_queue.get(block=False)
                 self.allowed_robot = next_allowed
             except:
-                self.allowed_robot = None
+                self.allowed_robot = ""
                 print("The queue is empty.")
             self.robot_set.remove(msg.data)
             self.get_logger().info(f"Finished removing from queue. New allowed robot: {self.allowed_robot} and queue: {list(self.robot_set)}")
@@ -56,10 +56,10 @@ class Room_Queue(Node):
         self.get_logger().info(f"Publishing queue")
         msg = QueueMsg()
         msg.allowed_robot = self.allowed_robot
-        msg.robot_queue = list(self.robot_set)
+        msg.robot_queue = list(self.robot_queue.queue)
         
         self.queue_publisher.publish(msg)
-        self.get_logger().info(f"Robot allowed in room: {self.allowed_robot} and robots in queue: {list(self.robot_set)}")
+        self.get_logger().info(f"Robot allowed in room: {self.allowed_robot} and robots in queue: {list(self.robot_queue.queue)}")
 
 
 def main(args=None):
