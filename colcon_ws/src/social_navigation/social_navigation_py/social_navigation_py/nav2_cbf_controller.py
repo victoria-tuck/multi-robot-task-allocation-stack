@@ -286,7 +286,7 @@ class RobotController(Node):
             self.goal_init = False
             self.path_active = False
             self.initial_goal = msg.initialize
-            self.get_logger().info("Sending new waypoints")
+            # self.get_logger().info("Sending new waypoints")
             if self.initial_goal:
                 self.get_logger().info(f"Setting {self.name} to reinitialize")
         self.get_logger().info(f"{self.name} received new goals: ({msg.current_waypoint.pose.position.x}, {msg.current_waypoint.pose.position.y}) and ({msg.next_waypoint.pose.position.x}, {msg.next_waypoint.pose.position.y})")
@@ -324,7 +324,7 @@ class RobotController(Node):
         # goal_pose_close_x = abs(path.poses[-1].pose.position.x - goal_pose.pose.position.x) < 0.05
         # goal_pose_close_y = abs(path.poses[-1].pose.position.y - goal_pose.pose.position.y) < 0.05
         # assert initial_pose_close_x and initial_pose_close_y and goal_pose_close_x and goal_pose_close_y
-        print(f"{self.name} processing {msg} message")
+        # print(f"{self.name} processing {msg} message")
         new_path = Path()
         new_path.header = msg.header
         new_path.poses = msg.poses
@@ -342,7 +342,7 @@ class RobotController(Node):
                 close_y = abs(current_end_pos.y - new_start_pos.y) < 0.05
                 is_new_path = close_x and close_y
             if self.initial_goal and starting_path and path_goal_pose == self.new_goal_poses.current_waypoint.pose:
-                self.get_logger().info(f"Setting {self.name}'s initial path to {new_path}.")
+                # self.get_logger().info(f"Setting {self.name}'s initial path to {new_path}.")
                 self.path = new_path
                 self.path2 = new_path
                 self.path_end = new_path.poses[-1]
@@ -350,7 +350,7 @@ class RobotController(Node):
                 self.initial_goal = False
             elif is_new_path and path_goal_pose == self.new_goal_poses.next_waypoint.pose:
             # elif self.second_goal:
-                self.get_logger().info(f"Extending {self.name}'s path to {new_path}.")
+                # self.get_logger().info(f"Extending {self.name}'s path to {new_path}.")
                 self.path.poses = self.path.poses + new_path.poses
                 self.path2 = new_path
                 self.path_end = new_path.poses[-1]
@@ -403,7 +403,7 @@ class RobotController(Node):
             if (self.robot_state_valid and self.human_states_valid and self.obstacles_valid):
                 # if self.print_count > 100:
                 #     print("Start planning...")
-                self.get_logger().info(f"Planning for {self.name}")
+                # self.get_logger().info(f"Planning for {self.name}")
                 goal = self.new_goal_poses.current_waypoint
                 self.goal_pose = goal
                 self.goal = np.array([ goal.pose.position.x, goal.pose.position.y ]).reshape(-1,1)
@@ -482,7 +482,7 @@ class RobotController(Node):
                     request_msg.current_pose = start_pose
                     request_msg.goal_pose = next_goal
                     self.path_request_pub.publish(request_msg)
-                    self.get_logger().info(f"Creating secondary plan for {self.name}")
+                    # self.get_logger().info(f"Creating secondary plan for {self.name}")
 
                 #     self.get_logger().info(f"{self.name} trying for the {tries} time")
                 #     self.path_active = False

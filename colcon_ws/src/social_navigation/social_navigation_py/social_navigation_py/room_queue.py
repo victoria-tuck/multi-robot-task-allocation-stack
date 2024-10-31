@@ -1,21 +1,22 @@
 from queue import Queue
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
 
 from social_navigation_msgs.msg import QueueMsg, QueueRequest
 from std_msgs.msg import String
 
 class Room_Queue(Node):
-    def __init__(self):
-        super().__init__(f'room_queue')
+    def __init__(self, room_id=None):
+        super().__init__(f'room_queue_{room_id}')
 
-        self.room_id = 1
+        self.room_id = room_id
         self.robot_queue = Queue(maxsize=6)
         self.robot_set = set()
 
         self.queue_request_subscriber = self.create_subscription(QueueRequest, '/queue_request', self.request_callback, 1)
-        self.remove_request_subscriber = self.create_subscription(String, '/room1/remove_from_queue', self.queue_remove_callback, 1)
-        self.queue_publisher = self.create_publisher(QueueMsg, f'/room1/queue', 10)
+        self.remove_request_subscriber = self.create_subscription(String, f'/room{self.room_id}/remove_from_queue', self.queue_remove_callback, 1)
+        self.queue_publisher = self.create_publisher(QueueMsg, f'/room{self.room_id}/queue', 10)
 
         self.timer_period = 0.5
         self.timer = self.create_timer(self.timer_period, self.publish_queue)
@@ -63,11 +64,28 @@ class Room_Queue(Node):
 
 
 def main(args=None):
-    rclpy.init(args=args)
-    room_queue = Room_Queue()
-    rclpy.spin(room_queue)
-    room_queue.destroy_node()
-    rclpy.shutdown() 
+    # rclpy.init(args=args)
+    # room_queue = Room_Queue()
+    # rclpy.spin(room_queue)
+    # room_queue.destroy_node()
+    # rclpy.shutdown() 
+
+    num_rooms = 6
+
+    # Initialize Nodes
+    rclpy.init()
+    executor = MultiThreadedExecutor()
+    room_queues = []
+    for id in range(0, num_rooms):
+        room_queue = Room_Queue(room_id=id)
+        room_queues.append(room_queue)
+        executor.add_node(room_queue)
+    executor.spin()
+
+    # Clean up
+    for node in room_queues:
+        node.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':

@@ -195,7 +195,8 @@ class GoalSetter(Node):
 
     def make_queue_callback(self, room):
         def queue_callback(msg):
-            # print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
+            print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
+            print(f"Checking room {room} against desired room {self.goal_room}")
             if room == self.goal_room:
                 queue_position = [index for index, value in enumerate(msg.robot_queue) if value == self.name]
                 updated_queue_position = False
@@ -276,6 +277,8 @@ class GoalSetter(Node):
                 queue_request_msg.room_id = self.goal_room
                 queue_request_msg.robot_name = self.name
                 self.in_queue = False
+                self.queue_position = None
+                self.added_position = 10
                 self.queue_request_pub.publish(queue_request_msg)
 
     def release_queue(self):
@@ -287,6 +290,7 @@ class GoalSetter(Node):
                 self.queue_remove_pub[self.prev_room].publish(queue_remove_msg)
                 self.finished_with_queue = False
                 self.queue_position = None
+                self.added_position = 10
                 self.in_queue = False
 
 
