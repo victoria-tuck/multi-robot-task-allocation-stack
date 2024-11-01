@@ -167,10 +167,11 @@ class RobotController(Node):
         self.time_to_calc_multi = []
 
     def save_times(self):
-        with open(f'control_time_{self.name}.csv', 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(self.time_to_calc_ind)
-            writer.writerow(self.time_to_calc_multi)
+        nothing = True
+        # with open(f'control_time_{self.name}.csv', 'w', newline='') as file:
+        #     writer = csv.writer(file)
+        #     writer.writerow(self.time_to_calc_ind)
+        #     writer.writerow(self.time_to_calc_multi)
 
     def update_dynamic_obstacles(self):
         if self.human_states_valid and self.all_other_robot_states_valid and self.dynamic_obstacle_states_valid:
@@ -330,7 +331,7 @@ class RobotController(Node):
         new_path.poses = msg.poses
         path_goal_pose = msg.goal_pose.pose
         if not self.goal_init and self.new_goal_poses is not None and not self.remote_controlled:
-            print(f"Processing {self.name}'s new path of length {len(new_path.poses)} with goal {path_goal_pose}")
+            # print(f"Processing {self.name}'s new path of length {len(new_path.poses)} with goal {path_goal_pose}")
             is_new_path = False
             new_start_pos = new_path.poses[0].pose.position
             close_to_pos_x = abs(self.robot_state[0,0] - new_start_pos.x) < 0.05

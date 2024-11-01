@@ -195,8 +195,8 @@ class GoalSetter(Node):
 
     def make_queue_callback(self, room):
         def queue_callback(msg):
-            print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
-            print(f"Checking room {room} against desired room {self.goal_room}")
+            # print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
+            # print(f"Checking room {room} against desired room {self.goal_room}")
             if room == self.goal_room:
                 queue_position = [index for index, value in enumerate(msg.robot_queue) if value == self.name]
                 updated_queue_position = False
@@ -284,7 +284,8 @@ class GoalSetter(Node):
     def release_queue(self):
         if self.finished_with_queue:
             prev_point = self.room_positions[self.prev_room]
-            if (abs(self.position[0] - prev_point[0]) > 5.0 or abs(self.position[1] - prev_point[1]) > 5.0):
+            # Moved away from room or room is last task position
+            if abs(self.position[0] - prev_point[0]) > 5.0 or abs(self.position[1] - prev_point[1]) > 5.0 or self.goal_idx >= len(self.locs):
                 queue_remove_msg = String()
                 queue_remove_msg.data = self.name
                 self.queue_remove_pub[self.prev_room].publish(queue_remove_msg)
