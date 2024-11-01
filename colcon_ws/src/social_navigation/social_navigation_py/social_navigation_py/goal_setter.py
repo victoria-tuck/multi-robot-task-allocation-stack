@@ -176,12 +176,14 @@ class GoalSetter(Node):
                 self.publisher_.publish(self.current_message)
                 self.current_message_count += 1
             elif self.in_queue:
-                # self.active = False
-                self.get_logger().info("In queue. Not active.")
+                self.active = self.queue_position == 0
+                self.get_logger().info("In queue. Not active unless at the head of the queue.")
             # else:
             #     self.active = False
                 # else:
                     # self.get_logger().info(f"Waiting for goal {goal} to be reached...")
+        else:
+            self.active = False
 
     def publish_status(self):
         msg = Bool()
@@ -197,6 +199,7 @@ class GoalSetter(Node):
         def queue_callback(msg):
             # print(f"Processing queue callback with {msg.allowed_robot} allowed and {msg.robot_queue} as the queue.")
             # print(f"Checking room {room} against desired room {self.goal_room}")
+            updated_queue_position = False
             if room == self.goal_room:
                 queue_position = [index for index, value in enumerate(msg.robot_queue) if value == self.name]
                 updated_queue_position = False
@@ -232,7 +235,7 @@ class GoalSetter(Node):
                     self.reinitialize = True
                     self.get_logger().info(f"Setting {self.name} to reinitialize after waiting")
                 self.waiting = False
-                self.get_logger().info("Updating queue. Active")
+                self.get_logger().info(f"Updating queue. {self.name} active")
         return queue_callback
 
     def listen_location_callback(self, msg):
@@ -260,6 +263,7 @@ class GoalSetter(Node):
                         self.goal_room = self.goal_sequence[self.goal_idx]
                     else:
                         self.waypoints = []
+                        self.goal_room = None
                     self.goal_reached = True
                     self.finished_with_queue = True
                     self.waiting = False

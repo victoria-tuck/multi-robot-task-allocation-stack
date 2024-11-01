@@ -164,14 +164,14 @@ class RobotController(Node):
 
         self.save_data_timer = self.create_timer(1, self.save_times)
         self.time_to_calc_ind = []
-        self.time_to_calc_multi = []
+        self.time_to_calc_multi = [[], [], [], [], []]
 
     def save_times(self):
-        nothing = True
-        # with open(f'control_time_{self.name}.csv', 'w', newline='') as file:
-        #     writer = csv.writer(file)
-        #     writer.writerow(self.time_to_calc_ind)
-        #     writer.writerow(self.time_to_calc_multi)
+        # nothing = True
+        with open(f'control_time_{self.name}_2.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(self.time_to_calc_ind)
+            writer.writerow(self.time_to_calc_multi)
 
     def update_dynamic_obstacles(self):
         if self.human_states_valid and self.all_other_robot_states_valid and self.dynamic_obstacle_states_valid:
@@ -283,7 +283,7 @@ class RobotController(Node):
     def new_goal_callback(self, msg):
         msg.current_waypoint.header.stamp = self.navigator.get_clock().now().to_msg()
         self.new_goal_poses = msg
-        if (msg.current_waypoint.pose != msg.next_waypoint.pose):
+        if (msg.current_waypoint.pose != msg.next_waypoint.pose) or msg.initialize:
             self.goal_init = False
             self.path_active = False
             self.initial_goal = msg.initialize
@@ -771,7 +771,7 @@ class RobotController(Node):
                             other_obstacles.append(self.other_robot_obstacle_states[robot])
                         start_time = time.time()
                         speed, omega, h_dyn_obs_min, h_obs_min = self.cluster_controller.policy_cbf( self.robot_state, other_robot_states, goal, self.robot_radius, self.dynamic_obstacle_states, self.dynamic_obstacle_states_dot, self.obstacle_states, other_obstacles, dt , slow = not self.active)
-                        self.time_to_calc_multi.append(time.time() - start_time)
+                        self.time_to_calc_multi[int(len(other_robots) + 1)].append(time.time() - start_time)
                         # self.get_logger().info(f"Time to calculate policy: {time.time() - start_time}")
                     for i, robot in enumerate(other_robots):
                         # print(f"Calculated control for {robot}: {speed[i+1]}, {omega[i+1]}")
