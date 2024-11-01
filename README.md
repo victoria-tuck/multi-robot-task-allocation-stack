@@ -95,11 +95,6 @@ Example:
 rcplan --ros-args -p "robots:=["robot1", "robot2", "robot3", "robot4", "robot5", "robot6"]"
 ```
 
-5. To start the social force model
-```
-rsfm
-```
-
 6. **This will start moving the robots.** For task allocation and high-level path planning for a set of agents:
 ```
 rcdis -p input_file:=<setup_file>

@@ -349,6 +349,7 @@ class RobotController(Node):
                 self.path_end = new_path.poses[-1]
                 # self.nav2_path_publisher.publish(self.path)
                 self.initial_goal = False
+                self.path_active = False
             elif is_new_path and path_goal_pose == self.new_goal_poses.next_waypoint.pose:
             # elif self.second_goal:
                 # self.get_logger().info(f"Extending {self.name}'s path to {new_path}.")

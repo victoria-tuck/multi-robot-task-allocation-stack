@@ -220,7 +220,7 @@ class GoalSetter(Node):
                     self.locs[self.goal_idx] += self.queue_to_room[self.goal_room]
                     self.waypoints = self.locs[self.goal_idx]
                     self.loc_idx = next_idx
-                    print(f"New path to room: {self.locs[self.goal_idx]} with next planned position {self.waypoints[self.loc_idx]}")
+                    print(f"New path to room for robot {self.name}: {self.locs[self.goal_idx]} with next planned position {self.waypoints[self.loc_idx]}")
                 else:
                     self.added_position = self.queue_position
                     self.locs[self.goal_idx].append(self.queues[self.goal_room][self.queue_position-1])
@@ -241,7 +241,6 @@ class GoalSetter(Node):
             # self.get_logger().info(f"Checking current position {self.position} against goal {self.waypoints[self.loc_idx]}")
             if dist(self.waypoints[self.loc_idx], self.position) < DIST_THRES:
                 current_clock = self.clock.now()
-                self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
                 # self.get_logger().info(f"Reached next waypoint")
                 # print(self.actual_arrival_times) # ToDo: Make this not count the queue multiple times
                 arrival_point = self.room_positions[self.goal_room]
@@ -251,6 +250,7 @@ class GoalSetter(Node):
                     self.goal_reached = True
                     self.waiting = False
                 elif abs(self.waypoints[self.loc_idx][0] - arrival_point[0]) < 0.3 and abs(self.waypoints[self.loc_idx][1] - arrival_point[1]) < 0.3:
+                    self.actual_arrival_times.append(current_clock.nanoseconds * 1e-9)
                     print("Increased goal index")
                     self.goal_idx += 1
                     self.loc_idx = 0

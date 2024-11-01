@@ -81,3 +81,4 @@ RUN echo "alias rcdis='ros2 run social_navigation_py dispatcher --ros-args -p us
 # RUN echo "alias rcdis='ros2 launch social_navigation dispatcher.launch.py'" >> ~/.bashrc
 RUN echo "alias rctimecollect='ros2 run social_navigation_py goal_setter_for_travel_time --ros-args -p use_sim_time:=True'" >> ~/.bashrc
 RUN echo "alias rcplan='ros2 run social_navigation_py planner_wrapper --ros-args -p use_sim_time:=True'" >> ~/.bashrc
+RUN echo "alias rqueues='ros2 run social_navigation_py room_queues'" >> ~/.bashrc
