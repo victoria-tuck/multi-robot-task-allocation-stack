@@ -54,7 +54,7 @@ Choose nominal controller gains and CBF parameters in `cbf_obstacle_controller.p
 To change the number of controllers that are started, change the case config file in `multi_cbf.launch.py` to your config file or change the name of the file to `case_config.yaml`
 
 ## Running the Code
-Then run the code in the following sequence. To aid in implementation, several aliases are defined in the `~/.bashrc` file upon docker build. Six terminals will be needed. Wait for each command to complete before running the next.
+Then run the code in the following sequence. To aid in implementation, several aliases are defined in the `~/.bashrc` file upon docker build. Six terminals will be needed; run the docker exec command in each terminal. Wait for each of the below commands to complete before running the next.
 
 1. To launch the gazebo environment with the robot inside it
 
@@ -104,6 +104,16 @@ Example:
 ```
 rcdis -p input_file:=/home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/robot_setup_6.json
 ```
+
+## Experiments
+
+To run the experiment included in our paper, run the examples from the 6 steps above. Calculation time data can be processed afterwards with
+
+```
+python3 process_data.py
+```
+
+which will print out the results of Table 1.
 
 ## Debugging
 Many of the nodes have been combined into single launch files for ease of use. However, additional aliases have been included to run these nodes separately when debugging.
