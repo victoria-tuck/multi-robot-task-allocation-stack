@@ -17,7 +17,7 @@ git submodule init
 git submodule update
 ```
 
-Then install the [bitwuzla](https://github.com/bitwuzla/bitwuzla/blob/main/docs/install.rst) bitwuzla Python bindings dependencies. Bitwuzla can be installed by running
+Then install the [bitwuzla](https://github.com/bitwuzla/bitwuzla/blob/main/docs/install.rst) Python bindings dependencies. Bitwuzla can be installed by running
 
 ```
 sh setup_bitwuzla.sh
@@ -146,3 +146,20 @@ The TravelTimeCollector node in travel_time_collector.py has been provided in or
 rctimecollect -p time_collection_params:=<params_file> -p save_file:=<save_file>
 ```
 where <params_file> is the name of a json file containing the number of iterations, save mode, desired format, map locations, and location ids and <save_file> is where the travel time information should be saved.
+
+## Scenic Integration
+
+To integrate with Scenic, navigate to the src folder then install with the following commands:
+```
+git clone git:github.com:Kai-X-Org/ScenicROS2.git
+cd ScenicROS2
+python3 -m pip install -e .
+```
+
+The bookshelf example can be run with
+```
+cd src/scenic/simulators/Gazebo
+scenic test.scenic --simulate
+```
+
+Further documentation can be found on the [documentation page](https://docs.scenic-lang.org/en/latest/). 
