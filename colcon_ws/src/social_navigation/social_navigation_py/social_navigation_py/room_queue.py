@@ -1,8 +1,10 @@
 from queue import Queue
 import rclpy
+import pickle
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 
+from visualization_msgs.msg import Marker, MarkerArray
 from social_navigation_msgs.msg import QueueMsg, QueueRequest
 from std_msgs.msg import String
 
@@ -14,13 +16,51 @@ class Room_Queue(Node):
         self.robot_queue = Queue(maxsize=6)
         self.robot_set = set()
 
+        with open('roadmap_and_queues.pkl', 'rb') as file:
+            _, self.queues, _ = pickle.load(file)
+        self.queue_locations = self.queues[int(room_id)]
+
         self.queue_request_subscriber = self.create_subscription(QueueRequest, '/queue_request', self.request_callback, 1)
         self.remove_request_subscriber = self.create_subscription(String, f'/room{self.room_id}/remove_from_queue', self.queue_remove_callback, 1)
         self.queue_publisher = self.create_publisher(QueueMsg, f'/room{self.room_id}/queue', 10)
+        self.queue_location_publisher = self.create_publisher(MarkerArray, f'/room{self.room_id}/locations', 1)
 
         self.timer_period = 0.5
         self.timer = self.create_timer(self.timer_period, self.publish_queue)
         self.allowed_robot = ""
+        self.location_timer = self.create_timer(self.timer_period, self.publish_locations)
+
+    def publish_locations(self):
+        marker_array = MarkerArray()
+        for idx, (x, y) in enumerate(self.queue_locations):
+            marker = Marker()
+            marker.header.frame_id = "map"
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = f"room{self.room_id}_locations"
+            marker.id = idx
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+
+            marker.pose.position.x = x
+            marker.pose.position.y = y
+            marker.pose.position.z = 0.0
+            marker.pose.orientation.x = 0.0
+            marker.pose.orientation.y = 0.0
+            marker.pose.orientation.z = 0.0
+            marker.pose.orientation.w = 0.0
+
+            marker.scale.x = 0.3
+            marker.scale.y = 0.3
+            marker.scale.z = 0.3
+
+            marker.color.a = 1.0
+            marker.color.r = 1.0
+            marker.color.g = 0.0
+            marker.color.b = 0.0
+
+            marker_array.markers.append(marker)
+
+        self.queue_location_publisher.publish(marker_array)
 
     def request_callback(self, msg):
         if msg.room_id == self.room_id:
