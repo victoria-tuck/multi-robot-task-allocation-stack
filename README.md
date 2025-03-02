@@ -72,7 +72,12 @@ Note: After this step, the Gazebo environment should the robots (which are in th
 rnav2
 ```
 
-3. To launch multiple robotic agent navigation stacks
+3. To start humans moving
+```
+rsfm
+```
+
+4. To launch multiple robotic agent navigation stacks
 ```
 ros2 launch aws_robomaker_hospital_world main.launch.py input_file:=<path_to_setup_file>
 ```
@@ -82,7 +87,7 @@ ros2 launch aws_robomaker_hospital_world main.launch.py input_file:=/home/colcon
 ```
 Note: After this step, the rviz environment should include an arrow for each robot and colored buffers around the walls. If it does not, rerun this command.
 
-4. To launch the navigation stack wrapper
+5. To launch the navigation stack wrapper
 ```
 rcplan --ros-args -p "robots:=<list_of_robot_names>"
 ```
@@ -91,12 +96,12 @@ Example:
 rcplan --ros-args -p "robots:=["robot1", "robot2", "robot3", "robot4", "robot5", "robot6"]"
 ```
 
-5. To launch the room queues
+6. To launch the room queues
 ```
 rqueues
 ```
 
-6. **This will start moving the robots.** For task allocation and high-level path planning for a set of agents:
+7. **This will start moving the robots.** For task allocation and high-level path planning for a set of agents:
 ```
 rcdis -p input_file:=<setup_file>
 ```

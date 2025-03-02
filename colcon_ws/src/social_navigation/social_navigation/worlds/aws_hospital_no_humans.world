@@ -73,7 +73,7 @@
        <ros> <namespace>actor3</namespace> </ros>
        <update_rate>20</update_rate>
       </plugin>
-    </actor> -->
+    </actor>  -->
 
     <!-- <actor name="actor4">
       <pose>5.0 13.0 1.0 0 0 3.14</pose>
