@@ -19,7 +19,7 @@
     </plugin >
 
 
-    <!-- <actor name="actor1">
+    <actor name="actor1">
       <pose>-4 11.02 1.0 0 0 3.14</pose>
       <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
       <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
@@ -45,7 +45,7 @@
        <ros> <namespace>actor2</namespace> </ros>
        <update_rate>20</update_rate>
       </plugin>
-    </actor> -->
+    </actor>
 
     <!-- <actor name="actor2">
       <pose>5.0 -10 1.0 0 0 3.14</pose>
@@ -59,9 +59,9 @@
        <ros> <namespace>actor2</namespace> </ros>
        <update_rate>20</update_rate>
       </plugin>
-    </actor>
+    </actor> -->
 
-    <actor name="actor3">
+    <!-- <actor name="actor3">
       <pose>5.0 1.0 1.0 0 0 3.14</pose>
       <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
       <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
@@ -73,7 +73,7 @@
        <ros> <namespace>actor3</namespace> </ros>
        <update_rate>20</update_rate>
       </plugin>
-    </actor>  -->
+    </actor> -->
 
     <!-- <actor name="actor4">
       <pose>5.0 13.0 1.0 0 0 3.14</pose>
@@ -87,9 +87,9 @@
        <ros> <namespace>actor4</namespace> </ros>
        <update_rate>20</update_rate>
       </plugin>
-    </actor>
+    </actor> -->
 
-    <actor name="actor5">
+    <!-- <actor name="actor5">
       <pose>10.5 4.5 1.0 0 0 3.14</pose>
       <skin> <filename>walk.dae</filename> <scale>1.0</scale> </skin>
       <animation name="walking"> <filename>walk.dae</filename> <scale>1.000000</scale> <interpolate_x>true</interpolate_x> </animation>
