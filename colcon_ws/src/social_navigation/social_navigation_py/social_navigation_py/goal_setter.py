@@ -50,12 +50,14 @@ class GoalSetter(Node):
         self.feedback_timer = self.create_timer(self.timer_period, self.publish_feedback)
         self.status_timer = self.create_timer(self.timer_period, self.publish_status)
         self.release_queue_timer = self.create_timer(self.timer_period, self.release_queue)
+        self.reminaing_plan_timer = self.create_timer(self.timer_period, self.publish_remaining_plan)
         # self.waiting_timer = self.create_timer(self.timer_period, self.publish_waiting)
         self.name = name
         self.location_listener = self.create_subscription(PoseStamped, prefix + '/robot_location', self.listen_location_callback, 1)
         self.feedback_publisher = self.create_publisher(Feedback, prefix + '/feedback', 1)
         self.queue_request_pub = self.create_publisher(QueueRequest, "/queue_request", 1)
         self.queue_remove_pub = {room_id: self.create_publisher(String, f"/room{room_id}/remove_from_queue", 1) for room_id in range(6)}
+        self.remaining_plan_pub = self.create_publisher(Plan, f'{prefix}/remaining_plan', 1)
         # self.waiting_pub = self.create_publisher(Bool, f'{prefix}/waiting', 10)
 
         self.room_positions = {0: (0, 2.2),
@@ -92,6 +94,11 @@ class GoalSetter(Node):
     #     msg.position.x = float(point[0])
     #     msg.position.y = float(point[1])
     #     return msg
+
+    def publish_remaining_plan(self):
+        msg = Plan()
+        msg.plan = self.goal_sequence[self.goal_idx:]
+        self.remaining_plan_pub.publish(msg)
 
     def goal_sequence_callback(self, msg):
         def road_coord(prev_rid, next_rid):

@@ -9,7 +9,7 @@ from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, Pose, TransformStamped
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 # from geometry_msgs.msg import Point
 from tf2_ros.transform_broadcaster import TransformBroadcaster
 
@@ -66,6 +66,7 @@ class RobotController(Node):
         self.human_states = 100*np.ones((2,self.num_humans))
         self.human_states_prev = np.zeros((2,self.num_humans))
         self.human_states_dot = np.zeros((2,self.num_humans))
+        self.robot_status = 'Idle'
 
         # Parameters
         self.robot_radius = 0.15 # 0.12 # Previous values have been 0.2 and 0.18
@@ -144,6 +145,7 @@ class RobotController(Node):
         self.robot_new_odom_pub = self.create_publisher(Odometry, f"{self.prefix}/new_odom", 10)
         self.robot_cluster_pub = self.create_publisher(RobotCluster, f"{self.prefix}/cluster", 10)
         self.remote_control_pub = { robot: self.create_publisher(Twist, f'/{robot}/remote_control', 10) for robot in self.other_robots }
+        self.status_pub = self.create_publisher(String, f'{self.prefix}/robot_status', 1)
         # self.queue_request_pub = self.create_publisher(QueueRequest, "/queue_request", 1)
 
         # Frame broadcaster
@@ -158,6 +160,7 @@ class RobotController(Node):
         self.get_logger().info(f"Current time: {self.time_prev}")
         self.controller_timer = self.create_timer(self.timer_period_s, self.run_controller)
         self.planner_timer = self.create_timer(self.timer_period_s*10, self.run_planner)
+        self.status_timer = self.create_timer(self.timer_period_s*10, self.update_status)
         # self.queue_request_timer = self.create_timer(self.timer_period_s*10, self.run_queue_request)
         self.nearby_robots_timer = self.create_timer(self.timer_period_s, self.nearby_robots)
         self.get_logger().info("User Controller is ONLINE")
@@ -165,6 +168,23 @@ class RobotController(Node):
         self.save_data_timer = self.create_timer(1, self.save_times)
         self.time_to_calc_ind = []
         self.time_to_calc_multi = [[], [], [], [], []]
+
+    def update_status(self):
+        if not self.finalized_cluster:
+            self.robot_status = 'Determining Cluster'
+        elif self.finalized_cluster and self.name != self.robot_cluster[0]:
+                self.robot_status = 'Remote Controlled'
+        elif self.finalized_cluster and len(self.robot_cluster[1]) > 1:
+                self.robot_status = "Cluster Leader"
+        elif self.path_active:
+            self.robot_status = "Moving"
+        elif not self.path_active:
+            self.robot_status = 'Idle'
+        else:
+            self.robot_status = "Undetermined"
+        msg = String()
+        msg.data = self.robot_status
+        self.status_pub.publish(msg)
 
     def save_times(self):
         # nothing = True
