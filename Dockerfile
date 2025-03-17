@@ -18,6 +18,7 @@ RUN python3 -m pip install --upgrade setuptools
 RUN python3 -m pip install numpy==1.26.4 matplotlib
 RUN python3 -m pip install --upgrade "jax[cuda11_pip]==0.4.25" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html jaxlib==0.4.25
 RUN python3 -m pip install matplotlib==3.7.1 pillow==9.5.0 kiwisolver==1.4.4 polytope
+RUN python3 -m pip install myst-parser sphinx sphinx-rtd-theme
 
 RUN echo "export PYTHONPATH=\$PYTHONPATH:/home/colcon_ws/src/social_navigation/src" >> ~/.bashrc
 RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
