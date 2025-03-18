@@ -6,7 +6,7 @@
 - https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 
 ## Installation
-This documentation is for `main` branch of `multi-robot-task-allocation-stack` repository and of this repository. The video accompanying this documentation can be found at <>
+This documentation is for `main` branch of `multi-robot-task-allocation-stack` repository and of this repository.
 
 To setup the SMrTa task allocator, first add the submodules running
 ```
@@ -76,6 +76,7 @@ rnav2
 ```
 rsfm
 ```
+Further humans can be added by adding in or uncommenting "actors" in the world file under colcon_ws/src/social_navigation/social_navigation/worlds.
 
 4. To launch multiple robotic agent navigation stacks
 ```
@@ -109,6 +110,7 @@ Example:
 ```
 rcdis -p input_file:=/home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/robot_setup_6.json
 ```
+The default implemented task allocator is the SMrTa approach which can be found [here](https://arxiv.org/pdf/2403.11737).
 
 ## Experiments
 

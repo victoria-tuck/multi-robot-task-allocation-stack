@@ -31,7 +31,7 @@
        <ros> <namespace>actor1</namespace> </ros>
        <update_rate>20</update_rate>
       </plugin>
-    </actor> -->
+    </actor>
 
    <!-- <actor name="actor2">
       <pose>4.5 -8 1.0 0 0 3.14</pose>
@@ -45,7 +45,7 @@
        <ros> <namespace>actor2</namespace> </ros>
        <update_rate>20</update_rate>
       </plugin>
-    </actor>
+    </actor> -->
 
     <!-- <actor name="actor2">
       <pose>5.0 -10 1.0 0 0 3.14</pose>
