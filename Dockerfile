@@ -34,6 +34,7 @@ RUN make && make install
 # Setup SMrTa
 ADD colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa
 WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa
+RUN pip install setuptools==58.2.0
 RUN pip3 install -r requirements.txt
 RUN pip3 install .
 WORKDIR /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa/bitwuzla
