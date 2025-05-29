@@ -27,7 +27,15 @@ RUN apt-get update && apt-get install -y \
     ros-humble-nav2-bringup \
     ros-humble-turtlebot3* \
     ros-humble-nav2-simple-commander \
-    && rm -rf /var/lib/apt/lists/*
+    mesa-utils \
+    libglu1-mesa-dev \
+    libgl1-mesa-dri \
+    libgl1-mesa-glx \
+    freeglut3-dev \
+    mesa-common-dev \
+    nvidia-opencl-dev \
+    && rm -rf /var/lib/apt/lists/* 
+
 
 # Python setup
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
@@ -51,7 +59,7 @@ RUN echo "export PYTHONPATH=\$PYTHONPATH:/home/colcon_ws/src/social_navigation/s
     echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
     echo "source /usr/share/gazebo/setup.sh" >> ~/.bashrc && \
     echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc && \
-    echo "export DISPLAY=\${DISPLAY:-:0}" >> ~/.bashrc && \
+    echo "export DISPLAY=:0" >> ~/.bashrc && \
     echo "export LIBGL_ALWAYS_INDIRECT=1" >> ~/.bashrc
 
 WORKDIR /home/
@@ -60,6 +68,20 @@ WORKDIR /home/
 RUN git clone https://github.com/robotics-upo/lightsfm.git
 WORKDIR /home/lightsfm
 RUN make && make install
+
+# update gazebo version for wsl2 compatibility
+RUN apt-get remove -y ros-*-gazebo*
+RUN apt-get remove -y libgazebo*
+RUN apt-get remove -y gazebo*
+RUN wget https://packages.osrfoundation.org/gazebo.gpg \
+  -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg  
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] \
+  http://packages.osrfoundation.org/gazebo/ubuntu-stable \
+  $(lsb_release -cs) main" \
+  | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null  
+RUN sudo apt-get update  
+RUN apt-get install -y lsb-release wget gnupg  
+RUN apt-get install -y ros-humble-gz-garden
 
 # Setup SMrTa
 ADD colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa

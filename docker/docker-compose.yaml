@@ -9,14 +9,25 @@ services:
     network_mode: "host"
     volumes:
       - ../colcon_ws:/home/colcon_ws
+      - /mnt/wslg:/mnt/wslg:ro 
+      - /mnt/wslg/.X11-unix:/tmp/.X11-unix
+      - /dev/dxg:/dev/dxg
+      - /usr/lib/wsl:/usr/lib/wsl:ro  # Read-only for NVIDIA libs
       - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
-      - NVIDIA_DISABLE_REQUIRE=1
-      - DISPLAY=$DISPLAY
+      - DISPLAY=:0
+      - WAYLAND_DISPLAY=wayland-0  # Hardcode instead of variable
+      - XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+      - PULSE_SERVER=unix:/mnt/wslg/PulseServer
       - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=all
-    runtime: nvidia
-
+      - NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility,display
+      - LD_LIBRARY_PATH=/usr/lib/wsl/lib:${LD_LIBRARY_PATH}
+      - LIBGL_ALWAYS_INDIRECT=0  # Critical for WSLg OpenGL
+      - GALLIUM_DRIVER=llvmpipe  # Fallback if GPU fails
+    devices:
+      - /dev/dxg:/dev/dxg
+      - /dev/dri/card0:/dev/dri/card0
+      
   ros-ubuntu:
     profiles: ["ubuntu"]
     build:

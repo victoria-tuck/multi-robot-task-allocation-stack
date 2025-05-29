@@ -26,7 +26,11 @@ from the SMrTa folder.
 
 Then to build the environment, run
 ```
-docker compose build
+# For WSL2
+COMPOSE_PROFILES=wsl docker-compose up 
+# For Linux
+COMPOSE_PROFILES=linux docker-compose up 
+
 docker compose up -d
 docker exec -it multi-robot-task-allocation-stack-ros-1 bash
 ```
