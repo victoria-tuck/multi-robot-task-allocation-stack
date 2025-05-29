@@ -24,6 +24,7 @@ services:
       dockerfile: docker/ubuntu.dockerfile
     privileged: true
     tty: true
+    network_mode: "host"
     volumes:
       - ../colcon_ws:/home/colcon_ws
     environment:
