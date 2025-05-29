@@ -7,9 +7,10 @@ services:
     privileged: true
     tty: true
     network_mode: "host"
+    user: "${UID}:${UID}"
     volumes:
       - ../colcon_ws:/home/colcon_ws
-      - /mnt/wslg:/mnt/wslg:ro 
+      - /run/user/${UID}:/run/user/${UID} 
       - /mnt/wslg/.X11-unix:/tmp/.X11-unix
       - /dev/dxg:/dev/dxg
       - /usr/lib/wsl:/usr/lib/wsl:ro  # Read-only for NVIDIA libs
@@ -17,7 +18,7 @@ services:
     environment:
       - DISPLAY=:0
       - WAYLAND_DISPLAY=wayland-0  # Hardcode instead of variable
-      - XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+      - XDG_RUNTIME_DIR=/run/user/${UID} 
       - PULSE_SERVER=unix:/mnt/wslg/PulseServer
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,graphics,utility,display
@@ -27,7 +28,7 @@ services:
     devices:
       - /dev/dxg:/dev/dxg
       - /dev/dri/card0:/dev/dri/card0
-      
+
   ros-ubuntu:
     profiles: ["ubuntu"]
     build:
