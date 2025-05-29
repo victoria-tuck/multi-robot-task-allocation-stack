@@ -19,7 +19,7 @@ setup(
     maintainer_email='hardiksp@umich.edu',
     description='TODO: Package description',
     license='TODO: License declaration',
-    tests_require=['pytest'],
+    setup_requires=['pytest-runner'],
     entry_points={
         'console_scripts': [
             'nav2_cbf = social_navigation_py.nav2_cbf_controller:main',

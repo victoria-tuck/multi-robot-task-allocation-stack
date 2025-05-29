@@ -1,3 +1,3 @@
 [submodule "colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa"]
-	path = colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa
-	url = git@github.com:victoria-tuck/SMrTa-for-Simulation
+    path = colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa
+    url = https://github.com/victoria-tuck/SMrTa-for-Simulation.git
