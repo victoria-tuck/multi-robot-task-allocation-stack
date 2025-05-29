@@ -34,7 +34,7 @@ COMPOSE_PROFILES=linux docker-compose up
 docker compose up -d
 docker exec -it multi-robot-task-allocation-stack-ros-1 bash
 ```
-from the highest level of the repository.
+from the highest level of the repository where `<service>` is `ubuntu` or `wsl` depending on your operating system.
 
 Now, you have to first build the colcon (ROS2) workspace. Navigate to
 ```
