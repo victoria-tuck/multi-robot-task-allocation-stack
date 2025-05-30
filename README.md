@@ -46,6 +46,8 @@ Note sometimes ROS does not figure out package dependency order properly when mu
 Now source the installed packages with following command
 ```
 source install/local_setup.bash
+source /usr/share/gazebo/setup.sh
+
 ```
 Finally, to give docker environment permission to use graphics of hist machine, run the following command **from host machine**
 ```
