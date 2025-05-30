@@ -50,7 +50,8 @@ RUN python3 -m pip install matplotlib==3.7.1 pillow==9.5.0 kiwisolver==1.4.4 pol
 # Environment setup
 RUN echo "export PYTHONPATH=\$PYTHONPATH:/home/colcon_ws/src/social_navigation/src" >> ~/.bashrc && \
     echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
-    echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc
+    echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc && \
+    echo "source source /usr/share/gazebo/setup.sh" >> ~/.bashrc
 
 WORKDIR /home/
 
