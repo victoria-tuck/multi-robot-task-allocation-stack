@@ -8,6 +8,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node, PushRosNamespace
+import yaml 
 
 import argparse
 import time
@@ -35,7 +36,7 @@ def generate_launch_description():
     scenario_file = get_scenario_file_from_arguments(arguments)
     positions = get_robot_positions(scenario_file)
 
-    robot_names = [f'robot{i}' for i in range(1, len(positions))]
+    robot_names = [f'robot{i + 1}' for i in range(len(positions))]
     poses = [{'x': LaunchConfiguration('x_pose', default=str(position[0])),
             'y': LaunchConfiguration('y_pose', default=str(position[1])),
             'z': LaunchConfiguration('z_pose', default='0.01'),
@@ -131,8 +132,8 @@ def generate_launch_description():
 
 def get_robot_positions(file):
     with open(file, 'r') as f:
-        scenario_setup = json.load(f)
-    positions = [[1.2, 15.6]] # Start with dummy robot
+        scenario_setup = yaml.safe_load(f)  # Also fixed: was json.load
+    positions = []  # Changed: removed the empty list
     for robot in scenario_setup["agents"].values():
         print(f"Robot: {robot}")
         positions.append(robot["start"])
