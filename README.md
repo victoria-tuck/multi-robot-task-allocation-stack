@@ -133,9 +133,14 @@ rcsetup input_file:=<setup_file>
 
 2. To start the user controller for multiple robots:
 ```
-multi_rcbf
+multi_rcbf input_file:=<setup_file>
 ```
-with the configuration specified in ```src/social_navigation/social_navigation/configs/case_config.yaml```
+
+Example:
+```
+multi_rcbf input_file:=case_config_3.yaml
+```
+
 
 3. When the controller status is ONLINE, run the following command to set goal and run controller simulation
 ```
