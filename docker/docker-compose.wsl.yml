@@ -1,0 +1,19 @@
+version: "3.3"
+services:
+  ros-wsl:
+    extends:
+      file: docker-compose.yml
+      service: ros-ubuntu
+    environment:
+      - MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - PULSE_SERVER=${PULSE_SERVER}
+      - LD_LIBRARY_PATH=/usr/lib/wsl/lib
+    volumes:
+      - /mnt/wslg:/mnt/wslg
+      - /dev/dxg:/dev/dxg
+      - /usr/lib/wsl:/usr/lib/wsl
+      - /usr/lib/wsl/lib:/usr/lib/wsl/lib
+    devices:
+      - /dev/dxg
