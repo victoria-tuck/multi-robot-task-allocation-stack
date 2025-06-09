@@ -128,8 +128,8 @@ def generate_launch_description():
     ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(launch_gazebo)
-    ld.add_action(static_map_odom_tf)
-    base_init = False
+    # ld.add_action(static_map_odom_tf)
+
     for spawner, namespace in zip(robot_spawners, namespaces):
         namespaced_group = GroupAction([
             PushRosNamespace(namespace),
