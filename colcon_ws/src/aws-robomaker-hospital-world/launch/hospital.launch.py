@@ -8,6 +8,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node, PushRosNamespace
+from launch.actions import GroupAction
 
 import argparse
 import time
@@ -35,7 +36,7 @@ def generate_launch_description():
     scenario_file = get_scenario_file_from_arguments(arguments)
     positions = get_robot_positions(scenario_file)
 
-    robot_names = [f'robot{i}' for i in range(1, len(positions))]
+    robot_names = [f'robot{i + 1}' for i in range(len(positions))]
     poses = [{'x': LaunchConfiguration('x_pose', default=str(position[0])),
             'y': LaunchConfiguration('y_pose', default=str(position[1])),
             'z': LaunchConfiguration('z_pose', default='0.01'),
@@ -89,8 +90,8 @@ def generate_launch_description():
                                       'gui': 'true'}.items(),
             )
     
-    names = [robot_name] + robot_names
-    namespaces = [namespace] + robot_names
+    names = robot_names
+    namespaces = robot_names
     robot_spawners = [ Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
@@ -102,6 +103,13 @@ def generate_launch_description():
             '-x', pose['x'], '-y', pose['y'], '-z', pose['z'],
             '-R', pose['R'], '-P', pose['P'], '-Y', pose['Y']]) 
             for name, robot_namespace, pose in zip(names, namespaces, poses)]
+    
+    static_map_odom_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='map_odom_tf',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
+    )
     
     # start_gazebo_human_spawner_cmd = Node(
     #     package='gazebo_ros',
@@ -120,19 +128,52 @@ def generate_launch_description():
     ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(launch_gazebo)
+    ld.add_action(static_map_odom_tf)
     base_init = False
-    for i, spawner in enumerate(robot_spawners):
-        if base_init:
-            PushRosNamespace(f'robot{i}')
-        ld.add_action(spawner)
-        time.sleep(1)
-        base_init = True
+    for spawner, namespace in zip(robot_spawners, namespaces):
+        namespaced_group = GroupAction([
+            PushRosNamespace(namespace),
+            spawner
+        ])
+        ld.add_action(namespaced_group)
+
+    for relay in create_relays():
+        ld.add_action(relay)
+
     return ld
+
+def create_relays():
+    """Creates relays for robot1 topics"""
+    
+    essential_topics = [
+        'scan',
+        'odom', 
+        'tf',
+        'joint_states',
+        'imu' # Raw color only
+    ]
+    
+    relays = []
+    
+    for topic in essential_topics:
+        relay_name = f'robot1_{topic.replace("/", "_")}_to_global'
+        relays.append(
+            Node(
+                package='topic_tools',
+                executable='relay',
+                name=relay_name,
+                arguments=[f'robot1/{topic}', topic],
+                output='screen'
+            )
+        )
+    
+    return relays
+
 
 def get_robot_positions(file):
     with open(file, 'r') as f:
-        scenario_setup = json.load(f)
-    positions = [[1.2, 15.6]] # Start with dummy robot
+        scenario_setup = json.load(f) 
+    positions = [] 
     for robot in scenario_setup["agents"].values():
         print(f"Robot: {robot}")
         positions.append(robot["start"])
