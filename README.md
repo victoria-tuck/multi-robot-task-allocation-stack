@@ -1,9 +1,3 @@
-## Warning
-
-This is a branch of Victoria Tuck's [Multi Robot Task Allocation Stack](https://github.com/victoria-tuck/multi-robot-task-allocation-stack)! made specifically for WSL2 on windows.  
-It takes as a given that the WSL2 environment is set up and that `nvidia-smi` is posting on the command line.
-In case you are using native linux I strongly suggest to start from the original project as I have done some changes on container files which might break some functions.
-
 ## Hardware requirements
 - NVIDIA discrete GPU (for gazbeo)
 - Diplay should use NVIDA and not integrated graphics
