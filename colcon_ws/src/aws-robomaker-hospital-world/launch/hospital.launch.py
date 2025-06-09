@@ -104,13 +104,6 @@ def generate_launch_description():
             '-R', pose['R'], '-P', pose['P'], '-Y', pose['Y']]) 
             for name, robot_namespace, pose in zip(names, namespaces, poses)]
     
-    static_map_odom_tf = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='map_odom_tf',
-        arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
-    )
-    
     # start_gazebo_human_spawner_cmd = Node(
     #     package='gazebo_ros',
     #     executable='spawn_entity.py',
@@ -128,7 +121,6 @@ def generate_launch_description():
     ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(launch_gazebo)
-    # ld.add_action(static_map_odom_tf)
 
     for spawner, namespace in zip(robot_spawners, namespaces):
         namespaced_group = GroupAction([
