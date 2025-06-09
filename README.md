@@ -1,3 +1,9 @@
+## Warning
+
+This is a branch of Victoria Tuck's [Multi Robot Task Allocation Stack](https://github.com/victoria-tuck/multi-robot-task-allocation-stack)! made specifically for WSL2 on windows.  
+It takes as a given that the WSL2 environment is set up and that `nvidia-smi` is posting on the command line.
+In case you are using native linux I strongly suggest to start from the original project as I have done some changes on container files which might break some functions.
+
 ## Hardware requirements
 - NVIDIA discrete GPU (for gazbeo)
 - Diplay should use NVIDA and not integrated graphics
@@ -42,6 +48,7 @@ Note sometimes ROS does not figure out package dependency order properly when mu
 Now source the installed packages with following command
 ```
 source install/local_setup.bash
+source /usr/share/gazebo/setup.sh
 ```
 Finally, to give docker environment permission to use graphics of hist machine, run the following command **from host machine**
 ```
@@ -133,9 +140,14 @@ rcsetup input_file:=<setup_file>
 
 2. To start the user controller for multiple robots:
 ```
-multi_rcbf
+multi_rcbf input_file:=<setup_file>
 ```
-with the configuration specified in ```src/social_navigation/social_navigation/configs/case_config.yaml```
+
+Example:
+```
+multi_rcbf input_file:=case_config_3.yaml
+```
+
 
 3. When the controller status is ONLINE, run the following command to set goal and run controller simulation
 ```
