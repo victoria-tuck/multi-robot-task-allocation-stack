@@ -36,7 +36,7 @@ def generate_launch_description():
     scenario_file = get_scenario_file_from_arguments(arguments)
     positions = get_robot_positions(scenario_file)
 
-    robot_names = [f'robot{i + 1}' for i in range(len(positions))]  
+    robot_names = [f'robot{i + 1}' for i in range(len(positions))]
     poses = [{'x': LaunchConfiguration('x_pose', default=str(position[0])),
             'y': LaunchConfiguration('y_pose', default=str(position[1])),
             'z': LaunchConfiguration('z_pose', default='0.01'),

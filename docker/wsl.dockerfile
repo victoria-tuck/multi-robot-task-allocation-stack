@@ -1,6 +1,5 @@
-# WSL2-optimized version
-# Note: For CUDA support in WSL2, ensure you have WSL2 CUDA drivers installed on Windows host
 FROM hardikparwana/cuda118desktop:ros-humble-rmf
+
 
 # WSL2-specific environment variables
 ENV DISPLAY=:0
@@ -53,13 +52,11 @@ RUN python3 -m pip install --upgrade "jax[cuda11_pip]==0.4.25" -f https://storag
 RUN python3 -m pip install matplotlib==3.7.1 pillow==9.5.0 kiwisolver==1.4.4 polytope && \
     python3 -m pip install myst-parser sphinx sphinx-rtd-theme
 
-# Environment setup (WSL2-friendly bashrc modifications)
+# Environment setup
 RUN echo "export PYTHONPATH=\$PYTHONPATH:/home/colcon_ws/src/social_navigation/src" >> ~/.bashrc && \
     echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && \
-    echo "source /usr/share/gazebo/setup.sh" >> ~/.bashrc && \
     echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc && \
-    echo "export DISPLAY=\${DISPLAY:-:0}" >> ~/.bashrc && \
-    echo "export LIBGL_ALWAYS_INDIRECT=1" >> ~/.bashrc
+    echo "source source /usr/share/gazebo/setup.sh" >> ~/.bashrc
 
 WORKDIR /home/
 
@@ -67,6 +64,20 @@ WORKDIR /home/
 RUN git clone https://github.com/robotics-upo/lightsfm.git
 WORKDIR /home/lightsfm
 RUN make && make install
+
+# # update gazebo version for wsl2 compatibility
+# RUN apt-get remove -y ros-*-gazebo*
+# RUN apt-get remove -y libgazebo*
+# RUN apt-get remove -y gazebo*
+# RUN wget https://packages.osrfoundation.org/gazebo.gpg \
+#   -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg  
+# RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] \
+#   http://packages.osrfoundation.org/gazebo/ubuntu-stable \
+#   $(lsb_release -cs) main" \
+#   | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null  
+# RUN sudo apt-get update  
+# RUN apt-get install -y lsb-release wget gnupg  
+# RUN apt-get install -y ros-humble-ros-gzgarden
 
 # Setup SMrTa
 ADD colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa /home/colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/SMrTa
@@ -95,3 +106,4 @@ RUN echo "alias rgazebo='ros2 launch aws_robomaker_hospital_world view_hospital.
     echo "alias rcplan='ros2 run social_navigation_py planner_wrapper --ros-args -p use_sim_time:=True'" >> ~/.bashrc && \
     echo "alias rqueues='ros2 run social_navigation_py room_queue'" >> ~/.bashrc
 
+# ENTRYPOINT [ "/bin/bash -i ros2 launcnh aws_robomaker_hospital_world view_hospital.launch.py" ]
