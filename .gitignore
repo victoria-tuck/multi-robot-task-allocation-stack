@@ -21,3 +21,4 @@ colcon_ws/src/social_navigation/social_navigation_py/social_navigation_py/utils/
 .vscode/
 .eggs/
 *.egg-info
+*.csv
