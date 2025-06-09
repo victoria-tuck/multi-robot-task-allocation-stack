@@ -4,7 +4,7 @@ FROM hardikparwana/cuda118desktop:ros-humble-rmf
 
 # WSL2-specific environment variables
 ENV DISPLAY=:0
-ENV LIBGL_ALWAYS_INDIRECT=1
+ENV LIBGL_ALWAYS_INDIRECT=0
 ENV WSL_DISTRO_NAME=Ubuntu
 
 RUN rm /var/lib/apt/lists/*ros*
