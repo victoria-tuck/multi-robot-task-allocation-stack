@@ -31,8 +31,10 @@ RUN apt-get update && apt-get install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup \
     ros-humble-turtlebot3* \
-    ros-humble-nav2-simple-commander \
-    && rm -rf /var/lib/apt/lists/*
+    ros-humble-nav2-simple-commander \ 
+    ros-humble-rqt-tf-tree \
+    ros-humble-topic-tools \
+    && rm -rf /var/lib/apt/lists/* 
 
 # Python setup
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
