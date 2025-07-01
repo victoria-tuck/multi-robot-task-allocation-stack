@@ -71,7 +71,7 @@ class MultiRobotDashboard(Node):
     def make_robot_odom_callback(self, name: str):
         def robot_status_callback(msg: Odometry):
             position = msg.pose.pose.position
-            self.robot_data[name]['Odometry'] = np.array([position.x, position.y])
+            self.robot_data[name]['Odometry'] = np.array([round(position.x, 2), round (position.y, 2)])
         return robot_status_callback
         
     def print_dashboard(self):
@@ -84,7 +84,7 @@ class MultiRobotDashboard(Node):
             return        # Build a table
         print('here')
         table_data = []
-        headers = ["Robot", "Path (Rooms)", "Storage State", "Next Waypoint", "Status", "Odometry", "Distances"]
+        headers = ["Robot", "Path (Rooms)", "Storage State", "Next Waypoint", "Status", "Position", "Distances"]
         
         for robot_name, data in sorted(self.robot_data.items()):
             position = data['Odometry']
@@ -92,6 +92,7 @@ class MultiRobotDashboard(Node):
             for robot_name2, data2 in sorted(self.robot_data.items()):
                 position2 = data2['Odometry']
                 distance = np.linalg.norm(np.array([position[0] - position2[0], position[1] - position2[1]]))
+                distance = round(distance, 2)
                 robot_to_robot_distances.append(distance)
             # Convert the tasks list to a string like (P_R_1, P_R_2)
             tasks_str = "(" + ", ".join(data['Path']) + ")"
