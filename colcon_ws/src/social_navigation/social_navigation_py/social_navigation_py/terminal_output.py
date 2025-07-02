@@ -7,6 +7,7 @@ from tabulate import tabulate
 from social_navigation_msgs.msg import Plan
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
+from copy import deepcopy
 
 class MultiRobotDashboard(Node):
 
@@ -86,14 +87,22 @@ class MultiRobotDashboard(Node):
         table_data = []
         headers = ["Robot", "Path (Rooms)", "Storage State", "Next Waypoint", "Status", "Position", "Distances"]
         
-        for robot_name, data in sorted(self.robot_data.items()):
+        robot_data = deepcopy(self.robot_data)
+        for robot_name, data in sorted(robot_data.items()):
             position = data['Odometry']
             robot_to_robot_distances = []
-            for robot_name2, data2 in sorted(self.robot_data.items()):
-                position2 = data2['Odometry']
-                distance = np.linalg.norm(np.array([position[0] - position2[0], position[1] - position2[1]]))
-                distance = round(distance, 2)
-                robot_to_robot_distances.append(distance)
+            for robot_name2, data2 in sorted(robot_data.items()):
+                if robot_name != robot_name2:
+                    position2 = data2['Odometry']
+                    distance = np.linalg.norm(np.array([position[0] - position2[0], position[1] - position2[1]]))
+                    distance = round(distance, 2)
+                    robot_to_robot_distances.append(distance)
+            if any (x < 10 for x in robot_to_robot_distances):
+                status = "Too close!"
+            else:
+                status = "Safe"
+            data['Status'] = status
+
             # Convert the tasks list to a string like (P_R_1, P_R_2)
             tasks_str = "(" + ", ".join(data['Path']) + ")"
             table_data.append([
