@@ -34,7 +34,8 @@ setup(
             'init_planner = social_navigation_py.init_planner:main', 
             'image_saver = social_navigation_py.image_saver:main',
             'planner_wrapper = social_navigation_py.nav2_planner_wrapper:main',
-            'room_queue = social_navigation_py.room_queue:main'
+            'room_queue = social_navigation_py.room_queue:main',
+            'terminal_output = social_navigation_py.terminal_output:main'
         ],
     },
 )
