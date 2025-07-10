@@ -1,25 +1,6 @@
 # Need this cuda image
 FROM hardikparwana/cuda118desktop:ros-humble-rmf
 
-# RUN apt-get clean
-# RUN grep -i ros /etc/apt/sources.list /etc/apt/sources.list.d/* || echo "No ROS sources found"
-# RUN cat /etc/apt/sources.list.d/*.list
-# RUN cat /etc/apt/sources.list.d/ros2-latest.list
-# RUN rm /etc/apt/sources.list.d/ros2-latest.list
-# RUN apt update && sudo apt install locales
-# RUN locale-gen en_US en_US.UTF-8
-# RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-# RUN export LANG=en_US.UTF-8
-
-# RUN apt install -y software-properties-common
-# RUN add-apt-repository universe
-
-# RUN export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}') && \
-#     curl -L -o /tmp/ros2-apt-source.deb \
-#         "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(./etc/os-release && echo $VERSION_CODENAME)_all.deb" && \
-#     dpkg -i /tmp/ros2-apt-source.deb
-# RUN apt-get update && apt-get install -y curl gnupg lsb-release
-
 # Fix ROS GPG key
 RUN mkdir -p /usr/share/keyrings && \
   curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
@@ -27,11 +8,6 @@ RUN mkdir -p /usr/share/keyrings && \
   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
   http://packages.ros.org/ros2/ubuntu jammy main" > /etc/apt/sources.list.d/ros2-latest.list && \
   apt-get clean && rm -rf /var/lib/apt/lists/* && apt-get update
-
-# Now install topic_tools
-# RUN apt-get install -y ros-humble-topic-tools
-
-
 
 RUN apt-get update
 RUN apt-get install -y wget build-essential libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
