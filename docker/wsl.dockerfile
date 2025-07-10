@@ -1,11 +1,15 @@
-# WSL2-optimized version
-# Note: For CUDA support in WSL2, ensure you have WSL2 CUDA drivers installed on Windows host
 FROM hardikparwana/cuda118desktop:ros-humble-rmf
+
 
 # WSL2-specific environment variables
 ENV DISPLAY=:0
-ENV LIBGL_ALWAYS_INDIRECT=1
+ENV LIBGL_ALWAYS_INDIRECT=0
 ENV WSL_DISTRO_NAME=Ubuntu
+
+RUN rm /var/lib/apt/lists/*ros*
+RUN sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg 
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu \
+     $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 
 # Combine RUN commands to reduce layers (better for WSL2 performance)
 RUN apt-get update && apt-get install -y \
@@ -26,8 +30,10 @@ RUN apt-get update && apt-get install -y \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup \
     ros-humble-turtlebot3* \
-    ros-humble-nav2-simple-commander \
-    && rm -rf /var/lib/apt/lists/*
+    ros-humble-nav2-simple-commander \ 
+    ros-humble-rqt-tf-tree \
+    ros-humble-topic-tools \
+    && rm -rf /var/lib/apt/lists/* 
 
 # Python setup
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
@@ -52,7 +58,7 @@ RUN echo "export PYTHONPATH=\$PYTHONPATH:/home/colcon_ws/src/social_navigation/s
     echo "source /usr/share/gazebo/setup.sh" >> ~/.bashrc && \
     echo "source /home/colcon_ws/install/local_setup.bash" >> ~/.bashrc && \
     echo "export DISPLAY=\${DISPLAY:-:0}" >> ~/.bashrc && \
-    echo "export LIBGL_ALWAYS_INDIRECT=1" >> ~/.bashrc
+    echo "export LIBGL_ALWAYS_INDIRECT=0" >> ~/.bashrc
 
 WORKDIR /home/
 

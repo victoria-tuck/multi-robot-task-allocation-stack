@@ -1,13 +1,3 @@
-# AWS RoboMaker Hospital World ROS package
-
-**Visit the [AWS RoboMaker website](https://aws.amazon.com/robomaker/) to learn more about building intelligent robotic applications with Amazon Web Services.**
-
-![Model: Hospital World](docs/images/hospital_world.jpg)
-### Supported versions of Gazebo
-7.14.0+ | 9.16.0+
-
-Note: `python3` and `python3-pip` is required to run this world.
-
 ## 3D Models included in this Gazebo World
 
 | Model (/models)       | Picture           |
