@@ -91,13 +91,15 @@ class MultiRobotDashboard(Node):
         for robot_name, data in sorted(robot_data.items()):
             position = data['Odometry']
             robot_to_robot_distances = []
+            isUnsafe = False
             for robot_name2, data2 in sorted(robot_data.items()):
-                if robot_name != robot_name2:
-                    position2 = data2['Odometry']
-                    distance = np.linalg.norm(np.array([position[0] - position2[0], position[1] - position2[1]]))
-                    distance = round(distance, 2)
-                    robot_to_robot_distances.append(distance)
-            if any (x < 10 for x in robot_to_robot_distances):
+                position2 = data2['Odometry']
+                distance = np.linalg.norm(np.array([position[0] - position2[0], position[1] - position2[1]]))
+                distance = round(distance, 2)
+                robot_to_robot_distances.append(distance)
+                if robot_name != robot_name2 and distance < 10:
+                    isUnsafe = True
+            if isUnsafe:
                 status = "Too close!"
             else:
                 status = "Safe"
