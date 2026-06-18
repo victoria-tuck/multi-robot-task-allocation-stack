@@ -1,3 +1,10 @@
+## Citation
+
+Please cite the corresponding paper if you use this repository in your work:
+
+Tuck, V. M., Parwana, H., Chen, P. W., Fainekos, G., Hoxha, B., Okamoto, H., Sastry, S. S., & Seshia, S. A. (2025). MRTA-Sim: A Modular Simulator for Multi-Robot Allocation, Planning, and Control in Open-World Environments. arXiv preprint arXiv:2504.15418.
+
+
 ## Hardware requirements
 - NVIDIA discrete GPU (for gazbeo)
 - Diplay should use NVIDA and not integrated graphics
